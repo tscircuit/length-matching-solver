@@ -1,0 +1,6 @@
+node_modules/
+dist/
+cosmos-export/
+*.tsbuildinfo
+*.diff.png
+*.received.svg

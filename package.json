@@ -1,0 +1,43 @@
+{
+  "name": "@tscircuit/differential-pairs-solver",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "start": "cosmos",
+    "build": "tsup lib/index.ts --format esm --dts --sourcemap",
+    "test": "bun test --timeout 9999999",
+    "format:check": "biome format .",
+    "cosmos:export": "cosmos-export"
+  },
+  "dependencies": {
+    "@tscircuit/math-utils": "^0.0.36",
+    "@tscircuit/solver-utils": "^0.0.16",
+    "graphics-debug": "^0.0.96",
+    "polished": "^4.3.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "^1.2.23",
+    "@types/react": "18",
+    "@types/react-dom": "18",
+    "@vitejs/plugin-react": "4",
+    "react": "18",
+    "react-cosmos": "6.2.3",
+    "react-cosmos-plugin-vite": "6.2.0",
+    "react-dom": "18",
+    "tsup": "^8.3.6",
+    "typescript": "^5.9.3",
+    "vite": "6",
+    "vite-tsconfig-paths": "5"
+  }
+}
