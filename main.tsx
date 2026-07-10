@@ -4,7 +4,9 @@ import { createRoot } from "react-dom/client"
 const rootElement = document.getElementById("root")
 
 if (!rootElement) {
-  throw new Error('Vite entrypoint could not find the root element with id "root"')
+  throw new Error(
+    'Vite entrypoint could not find the root element with id "root"',
+  )
 }
 
 createRoot(rootElement).render(

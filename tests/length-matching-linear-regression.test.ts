@@ -1,9 +1,6 @@
 import { expect, test } from "bun:test"
 import sampleProblem from "../fixtures/sample-01/sample-01.srj.json"
-import {
-  LengthMatchingSolver,
-  type LengthMatchingSolverParams,
-} from "../lib"
+import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
 
 test("matches a shorter route using a regression-predicted square meander", () => {
   // SAFETY: This repository-owned JSON is the shared test and Cosmos fixture input. The cast restores literal tuple and obstacle discriminants widened by JSON module inference.

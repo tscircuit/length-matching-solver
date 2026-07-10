@@ -48,7 +48,8 @@ const minimumDistanceBetweenSegments = (
   secondStart: Point2D,
   secondEnd: Point2D,
 ): number => {
-  if (doSegmentsIntersect(firstStart, firstEnd, secondStart, secondEnd)) return 0
+  if (doSegmentsIntersect(firstStart, firstEnd, secondStart, secondEnd))
+    return 0
   return Math.min(
     pointToSegmentDistance(firstStart, secondStart, secondEnd),
     pointToSegmentDistance(firstEnd, secondStart, secondEnd),
@@ -174,8 +175,7 @@ const replaceSegmentWithMeander = (input: {
     x: (end.x - start.x) / segmentLength,
     y: (end.y - start.y) / segmentLength,
   }
-  const leadLength =
-    (segmentLength - input.toothCount * input.toothPitch) / 2
+  const leadLength = (segmentLength - input.toothCount * input.toothPitch) / 2
   const replacement: RoutePoint[] = [{ ...start }]
 
   for (let toothIndex = 0; toothIndex < input.toothCount; toothIndex++) {
@@ -330,7 +330,8 @@ export class LengthMatchingSolver extends BaseSolver {
 
   private getConnectionLength(routeIndexes: number[]): number {
     return routeIndexes.reduce(
-      (total, routeIndex) => total + getRouteLength(this.matchedHdRoutes[routeIndex]!),
+      (total, routeIndex) =>
+        total + getRouteLength(this.matchedHdRoutes[routeIndex]!),
       0,
     )
   }
@@ -344,7 +345,11 @@ export class LengthMatchingSolver extends BaseSolver {
       const route = this.matchedHdRoutes[routeIndex]!
       const toothPitch =
         this.params.minimumToothPitch ?? Math.max(route.traceThickness * 4, 0.2)
-      for (let segmentIndex = 0; segmentIndex < route.route.length - 1; segmentIndex++) {
+      for (
+        let segmentIndex = 0;
+        segmentIndex < route.route.length - 1;
+        segmentIndex++
+      ) {
         const start = route.route[segmentIndex]!
         const end = route.route[segmentIndex + 1]!
         const segmentLength = getSegmentLength(start, end)
@@ -405,7 +410,10 @@ export class LengthMatchingSolver extends BaseSolver {
     const minY = obstacle.center.y - obstacle.height / 2 - margin
     const maxY = obstacle.center.y + obstacle.height / 2 + margin
     if (
-      (start.x >= minX && start.x <= maxX && start.y >= minY && start.y <= maxY) ||
+      (start.x >= minX &&
+        start.x <= maxX &&
+        start.y >= minY &&
+        start.y <= maxY) ||
       (end.x >= minX && end.x <= maxX && end.y >= minY && end.y <= maxY)
     ) {
       return true
@@ -416,13 +424,14 @@ export class LengthMatchingSolver extends BaseSolver {
       { x: maxX, y: maxY },
       { x: minX, y: maxY },
     ]
-    return corners.some((corner, index) =>
-      minimumDistanceBetweenSegments(
-        start,
-        end,
-        corner,
-        corners[(index + 1) % corners.length]!,
-      ) === 0,
+    return corners.some(
+      (corner, index) =>
+        minimumDistanceBetweenSegments(
+          start,
+          end,
+          corner,
+          corners[(index + 1) % corners.length]!,
+        ) === 0,
     )
   }
 
@@ -454,15 +463,18 @@ export class LengthMatchingSolver extends BaseSolver {
         if (!this.isObstacleOnLayer(obstacle, start.z)) {
           continue
         }
-        const isTerminalLead =
-          index === 0 || index === meanderPoints.length - 2
-        if (
-          obstacle.connectedTo.includes(connectionName) &&
-          isTerminalLead
-        ) {
+        const isTerminalLead = index === 0 || index === meanderPoints.length - 2
+        if (obstacle.connectedTo.includes(connectionName) && isTerminalLead) {
           continue
         }
-        if (this.segmentTouchesInflatedObstacle(start, end, obstacle, obstacleMargin)) {
+        if (
+          this.segmentTouchesInflatedObstacle(
+            start,
+            end,
+            obstacle,
+            obstacleMargin,
+          )
+        ) {
           return false
         }
       }
@@ -500,7 +512,9 @@ export class LengthMatchingSolver extends BaseSolver {
     }
     this.validatePair(pair)
     const firstIndexes = this.getConnectionRouteIndexes(pair.connectionNames[0])
-    const secondIndexes = this.getConnectionRouteIndexes(pair.connectionNames[1])
+    const secondIndexes = this.getConnectionRouteIndexes(
+      pair.connectionNames[1],
+    )
 
     if (firstIndexes.length === 0 && secondIndexes.length === 0) return
     if (firstIndexes.length === 0 || secondIndexes.length === 0) {
@@ -542,7 +556,11 @@ export class LengthMatchingSolver extends BaseSolver {
       candidate.maximumDepth * 0.75,
     ]
     const sampleAddedLengths = sampleDepths.map((depth) => {
-      const sampledRoute = replaceSegmentWithMeander({ ...candidate, route, depth })
+      const sampledRoute = replaceSegmentWithMeander({
+        ...candidate,
+        route,
+        depth,
+      })
       return getRouteLength({ ...route, route: sampledRoute }) - originalLength
     }) as [number, number]
     const slope =
@@ -555,7 +573,10 @@ export class LengthMatchingSolver extends BaseSolver {
       route,
       depth: predictedDepth,
     })
-    const predictedRouteLength = getRouteLength({ ...route, route: predictedRoute })
+    const predictedRouteLength = getRouteLength({
+      ...route,
+      route: predictedRoute,
+    })
     const resultingError = Math.abs(
       activePair.targetAddedLength - (predictedRouteLength - originalLength),
     )
@@ -601,7 +622,10 @@ export class LengthMatchingSolver extends BaseSolver {
     }
     if (!valid) return
 
-    this.matchedHdRoutes[candidate.routeIndex] = { ...route, route: predictedRoute }
+    this.matchedHdRoutes[candidate.routeIndex] = {
+      ...route,
+      route: predictedRoute,
+    }
     this.activePair = null
   }
 
@@ -733,7 +757,10 @@ export class LengthMatchingSolver extends BaseSolver {
       })
       if (!this.currentAttempt.valid) {
         lines.push({
-          points: this.currentAttempt.meanderPoints.map(({ x, y }) => ({ x, y })),
+          points: this.currentAttempt.meanderPoints.map(({ x, y }) => ({
+            x,
+            y,
+          })),
           strokeColor: safeTransparentize(connectionColor, 0.45),
           strokeWidth: route.traceThickness,
           strokeDash: [0.1, 0.1],
