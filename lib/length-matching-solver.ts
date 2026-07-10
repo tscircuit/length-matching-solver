@@ -189,7 +189,9 @@ export class LengthMatchingSolver extends BaseSolver {
       bounds: config.bounds,
       layerCount: config.layerCount,
       colorMap: config.colorMap,
+      activePair: this.activePair,
       currentAttempt: this.currentAttempt,
+      solved: this.solved,
     })
   }
 }

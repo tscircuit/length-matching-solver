@@ -25,15 +25,18 @@ const getDeterministicConnectionColor = (connectionName: string): string => {
 /** Create the deterministic palette used by all length-matching visualizations. */
 export const createLengthMatchingColorTheme = (
   colorMap: Record<string, string>,
-): LengthMatchingColorTheme => ({
-  getConnectionColor: (connectionName, routeConnectionName) =>
-    colorMap[connectionName] ??
-    (routeConnectionName ? colorMap[routeConnectionName] : undefined) ??
-    getDeterministicConnectionColor(connectionName),
-  getInnerLayerConnectionColor: (color) => transparentize(0.5, color),
-  getTestedSegmentColor: (color) => transparentize(0.55, color),
-  getRejectedCandidateColor: (color) => transparentize(0.45, color),
-  boardBounds: { fill: "rgba(30,41,59,0.03)", stroke: "rgba(30,41,59,0.55)" },
-  obstacle: { fill: "rgba(255,0,0,0.25)", stroke: "rgba(255,0,0,0.5)" },
-  via: { fill: "blue", stroke: "none" },
-})
+): LengthMatchingColorTheme => {
+  for (const color of Object.values(colorMap)) transparentize(0, color)
+  return {
+    getConnectionColor: (connectionName, routeConnectionName) =>
+      colorMap[connectionName] ??
+      (routeConnectionName ? colorMap[routeConnectionName] : undefined) ??
+      getDeterministicConnectionColor(connectionName),
+    getInnerLayerConnectionColor: (color) => transparentize(0.5, color),
+    getTestedSegmentColor: (color) => transparentize(0.55, color),
+    getRejectedCandidateColor: (color) => transparentize(0.45, color),
+    boardBounds: { fill: "rgba(30,41,59,0.03)", stroke: "rgba(30,41,59,0.55)" },
+    obstacle: { fill: "rgba(255,0,0,0.25)", stroke: "rgba(255,0,0,0.5)" },
+    via: { fill: "blue", stroke: "none" },
+  }
+}

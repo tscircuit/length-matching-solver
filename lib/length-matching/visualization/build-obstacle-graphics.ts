@@ -19,7 +19,6 @@ export const buildObstacleGraphics = (input: {
       height: maxY - minY,
       fill: input.theme.boardBounds.fill,
       stroke: input.theme.boardBounds.stroke,
-      label: "board bounds",
       layer: `z${Array.from({ length: input.layerCount }, (_, z) => z).join(",")}`,
     })
   }
@@ -32,6 +31,5 @@ export const buildObstacleGraphics = (input: {
       fill: input.theme.obstacle.fill,
       stroke: input.theme.obstacle.stroke,
       layer: getGraphicsLayerForObstacle(obstacle, input.layerCount),
-      label: obstacle.obstacleId ?? obstacle.componentId ?? "obstacle",
     })
 }

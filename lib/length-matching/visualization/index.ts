@@ -30,11 +30,12 @@ export const createLengthMatchingVisualization = (
   buildAttemptGraphics({
     routes: input.routes,
     attempt: input.currentAttempt,
+    activePair: input.activePair,
+    showAttempt: !input.solved,
     theme,
     graphics,
   })
   return {
-    title: "Length matching: linear-regression meander search",
     ...graphics,
   }
 }
