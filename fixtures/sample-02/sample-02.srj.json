@@ -75,6 +75,15 @@
       "connectedTo": []
     },
     {
+      "obstacleId": "lower-trace-keepout",
+      "type": "rect",
+      "layers": ["top"],
+      "center": { "x": 5, "y": -1.35 },
+      "width": 3,
+      "height": 0.8,
+      "connectedTo": []
+    },
+    {
       "obstacleId": "data-n-left-pad",
       "type": "rect",
       "layers": ["top"],
