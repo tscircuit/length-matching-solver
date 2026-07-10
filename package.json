@@ -18,7 +18,8 @@
     "test": "bun test --timeout 9999999",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "cosmos:export": "cosmos-export"
+    "cosmos:export": "cosmos-export",
+    "vercel-build": "cosmos-export"
   },
   "dependencies": {
     "@tscircuit/math-utils": "^0.0.36",
