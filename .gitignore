@@ -4,3 +4,4 @@ cosmos-export/
 *.tsbuildinfo
 *.diff.png
 *.received.svg
+.vercel
