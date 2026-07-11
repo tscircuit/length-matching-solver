@@ -6,15 +6,32 @@ import type {
   SegmentCandidate,
 } from "./internal-types"
 
-/** Construct the square-wave replacement for one same-layer route segment. */
-export const replaceSegmentWithMeander = (input: {
+type MeanderGeometryInput = {
   route: HighDensityRoute
   segmentIndex: number
   toothCount: number
   toothPitch: number
-  depth: number
+  toothDepths: number[]
   placement: MeanderPlacement
-}): RoutePoint[] => {
+}
+
+const DEPTH_SEARCH_ITERATIONS = 32
+
+const createMeanderReplacement = (
+  input: MeanderGeometryInput,
+): RoutePoint[] => {
+  if (input.toothDepths.length !== input.toothCount)
+    throw new Error(
+      `LengthMatchingSolver: expected ${input.toothCount} tooth depths, received ${input.toothDepths.length}`,
+    )
+  if (
+    input.toothDepths.some(
+      (toothDepth) => !Number.isFinite(toothDepth) || toothDepth < 0,
+    )
+  )
+    throw new Error(
+      "LengthMatchingSolver: every meander tooth depth must be a non-negative finite number",
+    )
   const start = input.route.route[input.segmentIndex]!
   const end = input.route.route[input.segmentIndex + 1]!
   const segmentLength = getSegmentLength(start, end)
@@ -25,6 +42,8 @@ export const replaceSegmentWithMeander = (input: {
   const leadLength = (segmentLength - input.toothCount * input.toothPitch) / 2
   const replacement: RoutePoint[] = [{ ...start }]
   for (let toothIndex = 0; toothIndex < input.toothCount; toothIndex++) {
+    const toothDepth = input.toothDepths[toothIndex]!
+    if (toothDepth === 0) continue
     const normalSign =
       input.placement === "balanced"
         ? toothIndex % 2 === 0
@@ -43,13 +62,13 @@ export const replaceSegmentWithMeander = (input: {
     }
     const upperEntry = {
       ...entry,
-      x: entry.x + normal.x * input.depth,
-      y: entry.y + normal.y * input.depth,
+      x: entry.x + normal.x * toothDepth,
+      y: entry.y + normal.y * toothDepth,
     }
     const upperExit = {
       ...start,
-      x: start.x + tangent.x * exitDistance + normal.x * input.depth,
-      y: start.y + tangent.y * exitDistance + normal.y * input.depth,
+      x: start.x + tangent.x * exitDistance + normal.x * toothDepth,
+      y: start.y + tangent.y * exitDistance + normal.y * toothDepth,
     }
     const exit = {
       ...start,
@@ -59,11 +78,60 @@ export const replaceSegmentWithMeander = (input: {
     replacement.push(entry, upperEntry, upperExit, exit)
   }
   replacement.push({ ...end })
+  return replacement
+}
+
+/** Construct a variable-height square-wave replacement for one route segment. */
+export const replaceSegmentWithMeander = (
+  input: MeanderGeometryInput,
+): RoutePoint[] => {
+  const replacement = createMeanderReplacement(input)
   return [
     ...input.route.route.slice(0, input.segmentIndex),
     ...replacement,
     ...input.route.route.slice(input.segmentIndex + 2),
   ]
+}
+
+const getMaximumToothDepths = (input: {
+  candidate: SegmentCandidate
+  route: HighDensityRoute
+  isGeometryValid: (meanderPoints: RoutePoint[]) => boolean
+}): number[] => {
+  const maximumToothDepths: number[] = []
+  for (
+    let toothIndex = 0;
+    toothIndex < input.candidate.toothCount;
+    toothIndex++
+  ) {
+    const maximumProfile = Array<number>(input.candidate.toothCount).fill(0)
+    maximumProfile[toothIndex] = input.candidate.maximumDepth
+    const maximumReplacement = createMeanderReplacement({
+      ...input.candidate,
+      route: input.route,
+      toothDepths: maximumProfile,
+    })
+    if (input.isGeometryValid(maximumReplacement)) {
+      maximumToothDepths.push(input.candidate.maximumDepth)
+      continue
+    }
+    let validDepth = 0
+    let invalidDepth = input.candidate.maximumDepth
+    for (let iteration = 0; iteration < DEPTH_SEARCH_ITERATIONS; iteration++) {
+      const testedDepth = (validDepth + invalidDepth) / 2
+      const testedProfile = Array<number>(input.candidate.toothCount).fill(0)
+      testedProfile[toothIndex] = testedDepth
+      const testedReplacement = createMeanderReplacement({
+        ...input.candidate,
+        route: input.route,
+        toothDepths: testedProfile,
+      })
+      if (input.isGeometryValid(testedReplacement)) validDepth = testedDepth
+      else invalidDepth = testedDepth
+    }
+    maximumToothDepths.push(validDepth)
+  }
+  return maximumToothDepths
 }
 
 /** Enumerate deterministic segment, tooth-count, and side choices for tuning. */
@@ -123,7 +191,7 @@ export const createMeanderCandidates = (input: {
   )
 }
 
-/** Measure two depths, fit a line, and predict the candidate depth in one step. */
+/** Fit a scale factor over clearance-limited tooth depths and predict a route. */
 export const evaluateMeanderCandidate = (input: {
   candidate: SegmentCandidate
   route: HighDensityRoute
@@ -133,19 +201,23 @@ export const evaluateMeanderCandidate = (input: {
   isGeometryValid: (meanderPoints: RoutePoint[]) => boolean
 }): RegressionAttempt => {
   const originalLength = getRouteLength(input.route)
-  const sampleDepths: [number, number] = [
-    input.candidate.maximumDepth * 0.25,
-    input.candidate.maximumDepth * 0.75,
-  ]
+  const maximumToothDepths = getMaximumToothDepths(input)
+  const sampleScaleFactors: [number, number] = [0.25, 0.75]
+  const firstSampleDepths = maximumToothDepths.map(
+    (maximumDepth) => maximumDepth * sampleScaleFactors[0],
+  )
+  const secondSampleDepths = maximumToothDepths.map(
+    (maximumDepth) => maximumDepth * sampleScaleFactors[1],
+  )
   const firstSampleRoute = replaceSegmentWithMeander({
     ...input.candidate,
     route: input.route,
-    depth: sampleDepths[0],
+    toothDepths: firstSampleDepths,
   })
   const secondSampleRoute = replaceSegmentWithMeander({
     ...input.candidate,
     route: input.route,
-    depth: sampleDepths[1],
+    toothDepths: secondSampleDepths,
   })
   const sampleAddedLengths: [number, number] = [
     getRouteLength({ ...input.route, route: firstSampleRoute }) -
@@ -155,38 +227,50 @@ export const evaluateMeanderCandidate = (input: {
   ]
   const slope =
     (sampleAddedLengths[1] - sampleAddedLengths[0]) /
-    (sampleDepths[1] - sampleDepths[0])
-  const intercept = sampleAddedLengths[0] - slope * sampleDepths[0]
-  const predictedDepth = (input.targetAddedLength - intercept) / slope
+    (sampleScaleFactors[1] - sampleScaleFactors[0])
+  const intercept = sampleAddedLengths[0] - slope * sampleScaleFactors[0]
+  const predictedScaleFactor =
+    slope > 0 && Number.isFinite(slope)
+      ? (input.targetAddedLength - intercept) / slope
+      : 0
+  const geometryScaleFactor =
+    Number.isFinite(predictedScaleFactor) && predictedScaleFactor > 0
+      ? predictedScaleFactor
+      : 0
+  const predictedToothDepths = maximumToothDepths.map(
+    (maximumDepth) => maximumDepth * geometryScaleFactor,
+  )
   const predictedRoute = replaceSegmentWithMeander({
     ...input.candidate,
     route: input.route,
-    depth: predictedDepth,
+    toothDepths: predictedToothDepths,
   })
   const resultingError = Math.abs(
     input.targetAddedLength -
       (getRouteLength({ ...input.route, route: predictedRoute }) -
         originalLength),
   )
-  const pointCount = input.candidate.toothCount * 4 + 2
-  const meanderPoints = predictedRoute.slice(
-    input.candidate.segmentIndex,
-    input.candidate.segmentIndex + pointCount,
-  )
+  const meanderPoints = createMeanderReplacement({
+    ...input.candidate,
+    route: input.route,
+    toothDepths: predictedToothDepths,
+  })
   const valid =
-    Number.isFinite(predictedDepth) &&
-    predictedDepth > 0 &&
-    predictedDepth <= input.candidate.maximumDepth &&
+    Number.isFinite(predictedScaleFactor) &&
+    predictedScaleFactor > 0 &&
+    predictedScaleFactor <= 1 &&
     resultingError <= input.lengthTolerance &&
     input.isGeometryValid(meanderPoints)
   return {
     ...input.candidate,
     connectionName: input.connectionName,
-    sampleDepths,
+    maximumToothDepths,
+    sampleScaleFactors,
     sampleAddedLengths,
     slope,
     intercept,
-    predictedDepth,
+    predictedScaleFactor,
+    predictedToothDepths,
     predictedRoute,
     resultingError,
     testedSegment: [
