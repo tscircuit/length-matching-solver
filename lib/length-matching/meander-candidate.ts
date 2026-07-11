@@ -99,7 +99,11 @@ const getMaximumToothDepths = (input: {
   isGeometryValid: (meanderPoints: RoutePoint[]) => boolean
 }): number[] => {
   const maximumToothDepths: number[] = []
-  for (let toothIndex = 0; toothIndex < input.candidate.toothCount; toothIndex++) {
+  for (
+    let toothIndex = 0;
+    toothIndex < input.candidate.toothCount;
+    toothIndex++
+  ) {
     const maximumProfile = Array<number>(input.candidate.toothCount).fill(0)
     maximumProfile[toothIndex] = input.candidate.maximumDepth
     const maximumReplacement = createMeanderReplacement({
@@ -224,8 +228,7 @@ export const evaluateMeanderCandidate = (input: {
   const slope =
     (sampleAddedLengths[1] - sampleAddedLengths[0]) /
     (sampleScaleFactors[1] - sampleScaleFactors[0])
-  const intercept =
-    sampleAddedLengths[0] - slope * sampleScaleFactors[0]
+  const intercept = sampleAddedLengths[0] - slope * sampleScaleFactors[0]
   const predictedScaleFactor =
     slope > 0 && Number.isFinite(slope)
       ? (input.targetAddedLength - intercept) / slope

@@ -20,5 +20,8 @@ test("scales independently clearance-limited tooth heights", () => {
   )
   expect(solver.solved).toBe(true)
   expect(distinctHeights.size).toBeGreaterThan(1)
-  expect(getRouteLength(matchedRoute)).toBeCloseTo(getRouteLength(longerRoute), 3)
+  expect(getRouteLength(matchedRoute)).toBeCloseTo(
+    getRouteLength(longerRoute),
+    3,
+  )
 })

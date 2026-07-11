@@ -32,7 +32,7 @@ test("constructs each meander tooth with its assigned height", () => {
     [6, 0],
   ])
   expect(replacedRoute.every((point) => point.z === 0)).toBe(true)
-  expect(
-    replacedRoute.every((point) => point.traceThickness === 0.15),
-  ).toBe(true)
+  expect(replacedRoute.every((point) => point.traceThickness === 0.15)).toBe(
+    true,
+  )
 })
