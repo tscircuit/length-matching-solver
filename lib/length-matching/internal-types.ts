@@ -16,11 +16,13 @@ export type SegmentCandidate = {
 /** Measured regression result retained for solver diagnostics and visualization. */
 export type RegressionAttempt = SegmentCandidate & {
   connectionName: string
-  sampleDepths: [number, number]
+  maximumToothDepths: number[]
+  sampleScaleFactors: [number, number]
   sampleAddedLengths: [number, number]
   slope: number
   intercept: number
-  predictedDepth: number
+  predictedScaleFactor: number
+  predictedToothDepths: number[]
   predictedRoute: RoutePoint[]
   resultingError: number
   testedSegment: [RoutePoint, RoutePoint]

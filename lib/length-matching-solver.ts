@@ -130,7 +130,8 @@ export class LengthMatchingSolver extends BaseSolver {
       segmentIndex: candidate.segmentIndex,
       toothCount: candidate.toothCount,
       placement: candidate.placement,
-      predictedDepth: this.currentAttempt.predictedDepth,
+      predictedScaleFactor: this.currentAttempt.predictedScaleFactor,
+      predictedToothDepths: this.currentAttempt.predictedToothDepths,
       resultingError: this.currentAttempt.resultingError,
       accepted: this.currentAttempt.valid,
     }

@@ -13,7 +13,11 @@ test("reports an unsolved fixture through the browser alert and failed state", (
 
   try {
     // SAFETY: This repository-owned JSON is the sample fixture input. The cast restores literal tuple and obstacle discriminants widened by JSON module inference.
-    const params = sampleProblem as unknown as LengthMatchingSolverParams
+    const params = {
+      ...(sampleProblem as unknown as LengthMatchingSolverParams),
+      maximumMeanderDepth: 0.1,
+      maxToothCount: 1,
+    }
     const solver = new AlertingLengthMatchingSolver(params)
     solver.solve()
 
