@@ -11,6 +11,7 @@ test("rejects a match that requires distributing added length across small segme
     routeIndexes: [1],
     maximumDepth: sampleProblem.maximumMeanderDepth,
     minimumToothPitch: params.minimumToothPitch,
+    minMeanderGap: sampleProblem.minMeanderGap,
     maxToothCount: 8,
   })
   expect(

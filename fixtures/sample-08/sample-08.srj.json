@@ -58,6 +58,7 @@
   ],
   "maximumMeanderDepth": 2,
   "minimumToothPitch": 1,
+  "minMeanderGap": 0.25,
   "bounds": { "minX": 0, "maxX": 23, "minY": -2, "maxY": 11 },
   "obstacles": [
     {
