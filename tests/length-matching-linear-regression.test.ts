@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import sampleProblem from "../fixtures/sample-01/sample-01.srj.json"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
+import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib/length-matching-solver"
 import { getRouteLength } from "../lib/route-geometry"
 
 test("matches a shorter route using a length-fitted curved meander", () => {

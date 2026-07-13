@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import sampleProblem from "../fixtures/sample-07/sample-07.srj.json"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
+import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib/length-matching-solver"
 
 test("rejects length matching when close keepouts leave no room for a meander", () => {
   // SAFETY: This repository-owned JSON is an intentionally unsolvable narrow-corridor fixture. The cast restores JSON literals widened by TypeScript module inference.

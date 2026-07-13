@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import sampleProblem from "../fixtures/sample-03/sample-03.srj.json"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
+import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib/length-matching-solver"
 import { getRouteLength } from "../lib/route-geometry"
 
 test("scales independently clearance-limited tooth heights", () => {
