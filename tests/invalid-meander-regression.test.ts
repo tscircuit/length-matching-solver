@@ -24,6 +24,7 @@ test("rejects a non-positive regression prediction without invalid geometry", ()
       minimumHeight: 0.01,
       toothPitch: 1,
       placement: "negative",
+      heightProfile: "uniform",
     },
     route,
     connectionName: route.connectionName,

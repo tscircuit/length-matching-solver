@@ -21,14 +21,19 @@ Keep new algorithm work in its owning module. Do not import the solver class fro
 
 `LengthMatchingSolver` first tries every candidate as a single-segment match.
 When no single segment can supply the required length, it records each valid
-partial candidate and chooses the tooth count whose available candidates reach
-the target in the fewest segments. The solver then divides the remaining length
-across that many same-tooth-count segments.
+partial candidate and chooses the fewest same-style segment choices whose
+combined capacity reaches the target. Every selected segment uses the same
+tooth count, placement, and tapered profile; the solver allocates the added
+length without exceeding any selected segment's capacity. Among plans using the
+same number of segments, it chooses the highest aggregate quality score.
 
-This is a capacity-based plan, not a visual-style optimizer. It deliberately
-does not yet score placement, depth variation, or bend smoothness. Add those
-costs in the multi-segment planning module rather than in geometry validation or
-the solver lifecycle.
+Every feasible full match receives a default quality score from 0 to 100. The
+solver chooses the highest score: shallow, low-detour curves score highest;
+deep excursions and extra bends reduce the score. Within one segment, a
+multi-tooth meander follows a tapered height envelope: smaller lobes at each
+end, higher lobes toward its center, and per-tooth clearance caps. The score is
+a routing-style preference, not a fabrication rule, and lives in
+`meander-quality.ts`.
 
 ## Visualization API
 

@@ -1,6 +1,7 @@
 import type { DifferentialPair, Obstacle, RoutePoint } from "../types"
 
 export type MeanderPlacement = "balanced" | "negative" | "positive"
+export type MeanderHeightProfile = "tapered" | "uniform"
 
 /** One straight route segment and square-wave configuration to evaluate. */
 export type SegmentCandidate = {
@@ -12,6 +13,7 @@ export type SegmentCandidate = {
   minimumHeight: number
   toothPitch: number
   placement: MeanderPlacement
+  heightProfile: MeanderHeightProfile
 }
 
 /** Measured regression result retained for solver diagnostics and visualization. */
@@ -29,6 +31,7 @@ export type RegressionAttempt = SegmentCandidate & {
   resultingError: number
   testedSegment: [RoutePoint, RoutePoint]
   meanderPoints: RoutePoint[]
+  qualityScore: number
   valid: boolean
 }
 
@@ -41,8 +44,14 @@ export type ActivePair = {
   candidateIndex: number
   lastMatchedSegmentIndexByRoute: Map<number, number>
   partialAttempts: RegressionAttempt[]
-  selectedToothCount: number | null
-  plannedSegmentCount: number | null
+  fullAttempts: RegressionAttempt[]
+  plannedAttemptTargets: Map<string, PlannedAttemptTarget> | null
+}
+
+export type PlannedAttemptTarget = {
+  routeIndex: number
+  segmentIndex: number
+  targetAddedLength: number
 }
 
 export type LengthMatchingConfig = {
