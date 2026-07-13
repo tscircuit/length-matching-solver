@@ -2,14 +2,14 @@
   "name": "@tscircuit/length-matching-solver",
   "version": "0.0.1",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "main": "./lib/index.ts",
+  "module": "./lib/index.ts",
+  "types": "./lib/index.ts",
+  "files": ["lib"],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./lib/index.ts",
+      "import": "./lib/index.ts"
     }
   },
   "scripts": {
