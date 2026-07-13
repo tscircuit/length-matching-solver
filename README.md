@@ -1,9 +1,9 @@
-# @tscircuit/differential-pairs-solver
+# @tscircuit/length-matching-solver
 
 Standalone differential-pair length matching for routed PCB traces.
 
 ```ts
-import { LengthMatchingSolver } from "@tscircuit/differential-pairs-solver"
+import { LengthMatchingSolver } from "@tscircuit/length-matching-solver"
 
 const solver = new LengthMatchingSolver({
   hdRoutes,

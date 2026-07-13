@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@tscircuit/differential-pairs-solver",
+      "name": "@tscircuit/length-matching-solver",
       "dependencies": {
         "@tscircuit/math-utils": "^0.0.36",
         "@tscircuit/solver-utils": "^0.0.16",
