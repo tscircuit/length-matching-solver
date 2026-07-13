@@ -2,8 +2,9 @@ import type { RegressionAttempt } from "./internal-types"
 
 /**
  * Score a meander from 0 to 100, where higher scores are gentler and more
- * compact. The score is deliberately relative: it ranks feasible ways to add
- * the same length instead of declaring a PCB-manufacturing rule.
+ * compact. For the same added length, fewer reversals win before shallow depth
+ * breaks the tie. The score ranks feasible choices; it is not a manufacturing
+ * rule.
  */
 export const getMeanderQualityScore = (
   input: Pick<
@@ -34,11 +35,13 @@ export const getMeanderQualityScore = (
     input.heightProfile === "tapered"
       ? 0
       : Math.min(18, (depthVariation / meanDepth) * 18)
-  const bendPenalty = 12 * (1 - 1 / input.toothCount)
+  // A short correction should stay a single smooth lobe whenever it fits.
+  const bendPenalty = 18 * (input.toothCount - 1)
   const detourPenalty =
     15 * Math.min(1, input.addedLength / input.segmentLength)
-  return Math.max(
+  const score = Math.max(
     0,
     100 - depthPenalty - variationPenalty - bendPenalty - detourPenalty,
   )
+  return Math.round(score * 1_000_000) / 1_000_000
 }

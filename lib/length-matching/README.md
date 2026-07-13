@@ -28,8 +28,8 @@ length without exceeding any selected segment's capacity. Among plans using the
 same number of segments, it chooses the highest aggregate quality score.
 
 Every feasible full match receives a default quality score from 0 to 100. The
-solver chooses the highest score: shallow, low-detour curves score highest;
-deep excursions and extra bends reduce the score. Within one segment, a
+solver first prefers fewer reversals, then shallow, low-detour curves; deep
+excursions and extra bends reduce the score. Within one segment, a
 multi-tooth meander follows a tapered height envelope: smaller lobes at each
 end, higher lobes toward its center, and per-tooth clearance caps. The score is
 a routing-style preference, not a fabrication rule, and lives in

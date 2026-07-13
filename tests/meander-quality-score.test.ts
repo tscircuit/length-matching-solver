@@ -1,7 +1,15 @@
 import { expect, test } from "bun:test"
 import { getMeanderQualityScore } from "../lib/length-matching/meander-quality"
 
-test("ranks shallow and even meanders above tall or uneven alternatives", () => {
+test("prefers a single lobe over multi-lobe or uneven alternatives", () => {
+  const singleLobeScore = getMeanderQualityScore({
+    addedLength: 4,
+    predictedToothDepths: [1.35],
+    segmentLength: 20,
+    toothCount: 1,
+    toothPitch: 2,
+    heightProfile: "uniform",
+  })
   const shallowEvenScore = getMeanderQualityScore({
     addedLength: 4,
     predictedToothDepths: [0.4, 0.4],
@@ -29,5 +37,6 @@ test("ranks shallow and even meanders above tall or uneven alternatives", () => 
 
   expect(shallowEvenScore).toBeGreaterThan(tallScore)
   expect(shallowEvenScore).toBeGreaterThan(unevenScore)
+  expect(singleLobeScore).toBeGreaterThan(shallowEvenScore)
   expect(tallScore).toBeGreaterThanOrEqual(0)
 })
