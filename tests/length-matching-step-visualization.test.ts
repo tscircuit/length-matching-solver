@@ -11,8 +11,8 @@ test("renders distinct geometry for pair selection, acceptance, and completion",
   expect(solver.visualize().lines).toHaveLength(3)
 
   solver.step()
-  expect(solver.visualize().lines).toHaveLength(8)
+  expect(solver.visualize().lines).toHaveLength(31)
 
   solver.step()
-  expect(solver.visualize().lines).toHaveLength(6)
+  expect(solver.visualize().lines).toHaveLength(29)
 })
