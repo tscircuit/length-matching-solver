@@ -18,7 +18,11 @@ import {
   createMeanderCandidates,
   evaluateMeanderCandidate,
 } from "./length-matching/meander-candidate"
-import { selectPartialMeanderPlan } from "./length-matching/multi-segment-plan"
+import {
+  getPlannedAttemptTargets,
+  getRegressionAttemptKey,
+  selectPartialMeanderPlan,
+} from "./length-matching/multi-segment-plan"
 import type {
   LengthMatchingSolverOutput,
   LengthMatchingSolverParams,
@@ -101,8 +105,8 @@ export class LengthMatchingSolver extends BaseSolver {
       candidateIndex: 0,
       lastMatchedSegmentIndexByRoute: new Map(),
       partialAttempts: [],
-      selectedToothCount: null,
-      plannedSegmentCount: null,
+      fullAttempts: [],
+      plannedAttemptTargets: null,
     }
   }
 
@@ -116,17 +120,16 @@ export class LengthMatchingSolver extends BaseSolver {
       route: attempt.predictedRoute,
     }
     activePair.remainingAddedLength -= attempt.addedLength
-    activePair.selectedToothCount = attempt.toothCount
     activePair.lastMatchedSegmentIndexByRoute.set(
       attempt.routeIndex,
       attempt.segmentIndex,
     )
     activePair.candidateIndex = 0
     activePair.partialAttempts = []
-    activePair.plannedSegmentCount =
-      activePair.plannedSegmentCount && activePair.plannedSegmentCount > 1
-        ? activePair.plannedSegmentCount - 1
-        : null
+    activePair.fullAttempts = []
+    activePair.plannedAttemptTargets?.delete(getRegressionAttemptKey(attempt))
+    if (activePair.plannedAttemptTargets?.size === 0)
+      activePair.plannedAttemptTargets = null
     if (activePair.remainingAddedLength <= activePair.pair.lengthTolerance)
       this.activePair = null
   }
@@ -141,12 +144,32 @@ export class LengthMatchingSolver extends BaseSolver {
       if (
         (lastMatchedSegmentIndex === undefined ||
           nextCandidate.segmentIndex < lastMatchedSegmentIndex) &&
-        (activePair.selectedToothCount === null ||
-          nextCandidate.toothCount === activePair.selectedToothCount)
+        (!activePair.plannedAttemptTargets ||
+          (activePair.plannedAttemptTargets.has(
+            getRegressionAttemptKey(nextCandidate),
+          ) &&
+            ![...activePair.plannedAttemptTargets.values()].some((attempt) => {
+              return (
+                attempt.routeIndex === nextCandidate.routeIndex &&
+                attempt.segmentIndex > nextCandidate.segmentIndex
+              )
+            })))
       )
         candidate = nextCandidate
     }
     if (!candidate) {
+      const bestFullAttempt =
+        activePair.fullAttempts.reduce<RegressionAttempt | null>(
+          (bestAttempt, attempt) =>
+            !bestAttempt || attempt.qualityScore > bestAttempt.qualityScore
+              ? attempt
+              : bestAttempt,
+          null,
+        )
+      if (bestFullAttempt) {
+        this.acceptAttempt(activePair, bestFullAttempt)
+        return
+      }
       const partialPlan = selectPartialMeanderPlan({
         attempts: activePair.partialAttempts,
         targetAddedLength: activePair.remainingAddedLength,
@@ -156,22 +179,35 @@ export class LengthMatchingSolver extends BaseSolver {
         throw new Error(
           `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
         )
-      activePair.selectedToothCount = partialPlan.firstAttempt.toothCount
-      activePair.plannedSegmentCount = partialPlan.segmentCount
+      activePair.plannedAttemptTargets = getPlannedAttemptTargets({
+        attempts: partialPlan.attempts,
+        targetAddedLength: activePair.remainingAddedLength,
+      })
       activePair.candidateIndex = 0
       activePair.partialAttempts = []
+      activePair.fullAttempts = []
       return
     }
     const route = this.matchedHdRoutes[candidate.routeIndex]!
     const config = this.getConfig()
+    const plannedTargetAddedLength = activePair.plannedAttemptTargets?.get(
+      getRegressionAttemptKey(candidate),
+    )
+    if (
+      activePair.plannedAttemptTargets !== null &&
+      plannedTargetAddedLength === undefined
+    )
+      throw new Error(
+        `LengthMatchingSolver: missing planned target for ${getRegressionAttemptKey(candidate)}`,
+      )
     this.currentAttempt = evaluateMeanderCandidate({
       candidate,
       route,
       connectionName: activePair.shorterConnectionName,
       targetAddedLength:
-        activePair.plannedSegmentCount === null
+        plannedTargetAddedLength === undefined
           ? activePair.remainingAddedLength
-          : activePair.remainingAddedLength / activePair.plannedSegmentCount,
+          : plannedTargetAddedLength.targetAddedLength,
       lengthTolerance: activePair.pair.lengthTolerance,
       isGeometryValid: (meanderPoints) =>
         isCandidateGeometryValid({
@@ -194,15 +230,19 @@ export class LengthMatchingSolver extends BaseSolver {
       predictedScaleFactor: this.currentAttempt.predictedScaleFactor,
       predictedToothDepths: this.currentAttempt.predictedToothDepths,
       resultingError: this.currentAttempt.resultingError,
+      qualityScore: this.currentAttempt.qualityScore,
       accepted: this.currentAttempt.valid,
     }
     if (!this.currentAttempt.valid) return
-    if (
-      activePair.plannedSegmentCount !== null ||
-      activePair.remainingAddedLength - this.currentAttempt.addedLength <=
-        activePair.pair.lengthTolerance
-    ) {
+    if (activePair.plannedAttemptTargets !== null) {
       this.acceptAttempt(activePair, this.currentAttempt)
+      return
+    }
+    if (
+      activePair.remainingAddedLength - this.currentAttempt.addedLength <=
+      activePair.pair.lengthTolerance
+    ) {
+      activePair.fullAttempts.push(this.currentAttempt)
       return
     }
     activePair.partialAttempts.push(this.currentAttempt)
