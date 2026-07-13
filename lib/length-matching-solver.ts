@@ -18,6 +18,7 @@ import {
   createMeanderCandidates,
   evaluateMeanderCandidate,
 } from "./length-matching/meander-candidate"
+import { selectPartialMeanderPlan } from "./length-matching/multi-segment-plan"
 import type {
   LengthMatchingSolverOutput,
   LengthMatchingSolverParams,
@@ -95,24 +96,82 @@ export class LengthMatchingSolver extends BaseSolver {
       pair,
       shorterConnectionName,
       targetAddedLength: difference,
+      remainingAddedLength: difference,
       candidates,
       candidateIndex: 0,
+      lastMatchedSegmentIndexByRoute: new Map(),
+      partialAttempts: [],
+      selectedToothCount: null,
+      plannedSegmentCount: null,
     }
   }
 
+  private acceptAttempt(
+    activePair: ActivePair,
+    attempt: RegressionAttempt,
+  ): void {
+    const route = this.matchedHdRoutes[attempt.routeIndex]!
+    this.matchedHdRoutes[attempt.routeIndex] = {
+      ...route,
+      route: attempt.predictedRoute,
+    }
+    activePair.remainingAddedLength -= attempt.addedLength
+    activePair.selectedToothCount = attempt.toothCount
+    activePair.lastMatchedSegmentIndexByRoute.set(
+      attempt.routeIndex,
+      attempt.segmentIndex,
+    )
+    activePair.candidateIndex = 0
+    activePair.partialAttempts = []
+    activePair.plannedSegmentCount =
+      activePair.plannedSegmentCount && activePair.plannedSegmentCount > 1
+        ? activePair.plannedSegmentCount - 1
+        : null
+    if (activePair.remainingAddedLength <= activePair.pair.lengthTolerance)
+      this.activePair = null
+  }
+
   private tryCandidate(activePair: ActivePair): void {
-    const candidate = activePair.candidates[activePair.candidateIndex++]
-    if (!candidate)
-      throw new Error(
-        `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+    let candidate: ActivePair["candidates"][number] | undefined
+    while (!candidate) {
+      const nextCandidate = activePair.candidates[activePair.candidateIndex++]
+      if (!nextCandidate) break
+      const lastMatchedSegmentIndex =
+        activePair.lastMatchedSegmentIndexByRoute.get(nextCandidate.routeIndex)
+      if (
+        (lastMatchedSegmentIndex === undefined ||
+          nextCandidate.segmentIndex < lastMatchedSegmentIndex) &&
+        (activePair.selectedToothCount === null ||
+          nextCandidate.toothCount === activePair.selectedToothCount)
       )
+        candidate = nextCandidate
+    }
+    if (!candidate) {
+      const partialPlan = selectPartialMeanderPlan({
+        attempts: activePair.partialAttempts,
+        targetAddedLength: activePair.remainingAddedLength,
+        lengthTolerance: activePair.pair.lengthTolerance,
+      })
+      if (!partialPlan)
+        throw new Error(
+          `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+        )
+      activePair.selectedToothCount = partialPlan.firstAttempt.toothCount
+      activePair.plannedSegmentCount = partialPlan.segmentCount
+      activePair.candidateIndex = 0
+      activePair.partialAttempts = []
+      return
+    }
     const route = this.matchedHdRoutes[candidate.routeIndex]!
     const config = this.getConfig()
     this.currentAttempt = evaluateMeanderCandidate({
       candidate,
       route,
       connectionName: activePair.shorterConnectionName,
-      targetAddedLength: activePair.targetAddedLength,
+      targetAddedLength:
+        activePair.plannedSegmentCount === null
+          ? activePair.remainingAddedLength
+          : activePair.remainingAddedLength / activePair.plannedSegmentCount,
       lengthTolerance: activePair.pair.lengthTolerance,
       isGeometryValid: (meanderPoints) =>
         isCandidateGeometryValid({
@@ -138,11 +197,15 @@ export class LengthMatchingSolver extends BaseSolver {
       accepted: this.currentAttempt.valid,
     }
     if (!this.currentAttempt.valid) return
-    this.matchedHdRoutes[candidate.routeIndex] = {
-      ...route,
-      route: this.currentAttempt.predictedRoute,
+    if (
+      activePair.plannedSegmentCount !== null ||
+      activePair.remainingAddedLength - this.currentAttempt.addedLength <=
+        activePair.pair.lengthTolerance
+    ) {
+      this.acceptAttempt(activePair, this.currentAttempt)
+      return
     }
-    this.activePair = null
+    activePair.partialAttempts.push(this.currentAttempt)
   }
 
   private getConfig(): LengthMatchingConfig {

@@ -25,6 +25,7 @@ export type RegressionAttempt = SegmentCandidate & {
   predictedScaleFactor: number
   predictedToothDepths: number[]
   predictedRoute: RoutePoint[]
+  addedLength: number
   resultingError: number
   testedSegment: [RoutePoint, RoutePoint]
   meanderPoints: RoutePoint[]
@@ -35,8 +36,13 @@ export type ActivePair = {
   pair: DifferentialPair
   shorterConnectionName: string
   targetAddedLength: number
+  remainingAddedLength: number
   candidates: SegmentCandidate[]
   candidateIndex: number
+  lastMatchedSegmentIndexByRoute: Map<number, number>
+  partialAttempts: RegressionAttempt[]
+  selectedToothCount: number | null
+  plannedSegmentCount: number | null
 }
 
 export type LengthMatchingConfig = {

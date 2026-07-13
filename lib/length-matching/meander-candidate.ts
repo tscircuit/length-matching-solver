@@ -1,164 +1,17 @@
 import { getRouteLength, getSegmentLength } from "../route-geometry"
 import type { HighDensityRoute, RoutePoint } from "../types"
+import {
+  createMeanderReplacement,
+  replaceSegmentWithMeander,
+} from "./meander-geometry"
 import type {
   MeanderPlacement,
   RegressionAttempt,
   SegmentCandidate,
 } from "./internal-types"
 
-type MeanderGeometryInput = {
-  route: HighDensityRoute
-  segmentIndex: number
-  toothCount: number
-  toothPitch: number
-  toothDepths: number[]
-  placement: MeanderPlacement
-}
-
 const DEPTH_SEARCH_ITERATIONS = 32
-const CURVE_SEGMENT_COUNT = 6
-
-const roundMeanderCorners = (points: RoutePoint[]): RoutePoint[] => {
-  if (points.length < 3) return points
-  const roundedPoints: RoutePoint[] = [{ ...points[0]! }]
-  for (let index = 1; index < points.length - 1; index++) {
-    const previous = points[index - 1]!
-    const corner = points[index]!
-    const next = points[index + 1]!
-    const incomingLength = Math.hypot(
-      corner.x - previous.x,
-      corner.y - previous.y,
-    )
-    const outgoingLength = Math.hypot(next.x - corner.x, next.y - corner.y)
-    if (incomingLength === 0 || outgoingLength === 0)
-      throw new Error(
-        "LengthMatchingSolver: meander contains a zero-length segment",
-      )
-    const incoming = {
-      x: (corner.x - previous.x) / incomingLength,
-      y: (corner.y - previous.y) / incomingLength,
-    }
-    const outgoing = {
-      x: (next.x - corner.x) / outgoingLength,
-      y: (next.y - corner.y) / outgoingLength,
-    }
-    if (Math.abs(incoming.x * outgoing.y - incoming.y * outgoing.x) < 1e-9) {
-      roundedPoints.push({ ...corner })
-      continue
-    }
-    const radius = Math.min(incomingLength, outgoingLength) / 2
-    const curveStart = {
-      ...corner,
-      x: corner.x - incoming.x * radius,
-      y: corner.y - incoming.y * radius,
-    }
-    const curveEnd = {
-      ...corner,
-      x: corner.x + outgoing.x * radius,
-      y: corner.y + outgoing.y * radius,
-    }
-    const lastRoundedPoint = roundedPoints.at(-1)!
-    if (
-      curveStart.x !== lastRoundedPoint.x ||
-      curveStart.y !== lastRoundedPoint.y
-    )
-      roundedPoints.push(curveStart)
-    for (let segment = 1; segment < CURVE_SEGMENT_COUNT; segment++) {
-      const progress = segment / CURVE_SEGMENT_COUNT
-      const remaining = 1 - progress
-      roundedPoints.push({
-        ...corner,
-        x:
-          remaining ** 2 * curveStart.x +
-          2 * remaining * progress * corner.x +
-          progress ** 2 * curveEnd.x,
-        y:
-          remaining ** 2 * curveStart.y +
-          2 * remaining * progress * corner.y +
-          progress ** 2 * curveEnd.y,
-      })
-    }
-    roundedPoints.push(curveEnd)
-  }
-  roundedPoints.push({ ...points[points.length - 1]! })
-  return roundedPoints
-}
-
-const createMeanderReplacement = (
-  input: MeanderGeometryInput,
-): RoutePoint[] => {
-  if (input.toothDepths.length !== input.toothCount)
-    throw new Error(
-      `LengthMatchingSolver: expected ${input.toothCount} tooth depths, received ${input.toothDepths.length}`,
-    )
-  if (
-    input.toothDepths.some(
-      (toothDepth) => !Number.isFinite(toothDepth) || toothDepth < 0,
-    )
-  )
-    throw new Error(
-      "LengthMatchingSolver: every meander tooth depth must be a non-negative finite number",
-    )
-  const start = input.route.route[input.segmentIndex]!
-  const end = input.route.route[input.segmentIndex + 1]!
-  const segmentLength = getSegmentLength(start, end)
-  const tangent = {
-    x: (end.x - start.x) / segmentLength,
-    y: (end.y - start.y) / segmentLength,
-  }
-  const leadLength = (segmentLength - input.toothCount * input.toothPitch) / 2
-  const replacement: RoutePoint[] = [{ ...start }]
-  for (let toothIndex = 0; toothIndex < input.toothCount; toothIndex++) {
-    const toothDepth = input.toothDepths[toothIndex]!
-    if (toothDepth === 0) continue
-    const normalSign =
-      input.placement === "balanced"
-        ? toothIndex % 2 === 0
-          ? -1
-          : 1
-        : input.placement === "negative"
-          ? -1
-          : 1
-    const normal = { x: -tangent.y * normalSign, y: tangent.x * normalSign }
-    const entryDistance = leadLength + toothIndex * input.toothPitch
-    const exitDistance = entryDistance + input.toothPitch / 2
-    const entry = {
-      ...start,
-      x: start.x + tangent.x * entryDistance,
-      y: start.y + tangent.y * entryDistance,
-    }
-    const upperEntry = {
-      ...entry,
-      x: entry.x + normal.x * toothDepth,
-      y: entry.y + normal.y * toothDepth,
-    }
-    const upperExit = {
-      ...start,
-      x: start.x + tangent.x * exitDistance + normal.x * toothDepth,
-      y: start.y + tangent.y * exitDistance + normal.y * toothDepth,
-    }
-    const exit = {
-      ...start,
-      x: start.x + tangent.x * exitDistance,
-      y: start.y + tangent.y * exitDistance,
-    }
-    replacement.push(entry, upperEntry, upperExit, exit)
-  }
-  replacement.push({ ...end })
-  return roundMeanderCorners(replacement)
-}
-
-/** Construct a variable-height meander with tangentially rounded turns. */
-export const replaceSegmentWithMeander = (
-  input: MeanderGeometryInput,
-): RoutePoint[] => {
-  const replacement = createMeanderReplacement(input)
-  return [
-    ...input.route.route.slice(0, input.segmentIndex),
-    ...replacement,
-    ...input.route.route.slice(input.segmentIndex + 2),
-  ]
-}
+export { replaceSegmentWithMeander } from "./meander-geometry"
 
 const getMaximumToothDepths = (input: {
   candidate: SegmentCandidate
@@ -345,15 +198,18 @@ export const evaluateMeanderCandidate = (input: {
     slope > 0 && Number.isFinite(slope)
       ? (input.targetAddedLength - intercept) / slope
       : 0
+  const matchedAddedLength = Math.min(
+    input.targetAddedLength,
+    maximumAddedLength,
+  )
   const predictedScaleFactor =
-    input.targetAddedLength > 0 &&
-    input.targetAddedLength <= maximumAddedLength + input.lengthTolerance
+    input.targetAddedLength > 0 && matchedAddedLength > 0
       ? findScaleFactorForTargetLength({
           candidate: input.candidate,
           route: input.route,
           maximumToothDepths,
           originalLength,
-          targetAddedLength: input.targetAddedLength,
+          targetAddedLength: matchedAddedLength,
         })
       : regressionPredictedScaleFactor
   const geometryScaleFactor =
@@ -368,11 +224,9 @@ export const evaluateMeanderCandidate = (input: {
     route: input.route,
     toothDepths: predictedToothDepths,
   })
-  const resultingError = Math.abs(
-    input.targetAddedLength -
-      (getRouteLength({ ...input.route, route: predictedRoute }) -
-        originalLength),
-  )
+  const addedLength =
+    getRouteLength({ ...input.route, route: predictedRoute }) - originalLength
+  const resultingError = Math.abs(matchedAddedLength - addedLength)
   const meanderPoints = createMeanderReplacement({
     ...input.candidate,
     route: input.route,
@@ -399,6 +253,7 @@ export const evaluateMeanderCandidate = (input: {
     predictedScaleFactor,
     predictedToothDepths,
     predictedRoute,
+    addedLength,
     resultingError,
     testedSegment: [
       { ...input.route.route[input.candidate.segmentIndex]! },
