@@ -21,6 +21,7 @@ test("rejects a non-positive regression prediction without invalid geometry", ()
       segmentLength: 6,
       toothCount: 1,
       maximumDepth: 2,
+      minimumHeight: 0.01,
       toothPitch: 1,
       placement: "negative",
     },

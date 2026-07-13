@@ -9,6 +9,7 @@ export type SegmentCandidate = {
   segmentLength: number
   toothCount: number
   maximumDepth: number
+  minimumHeight: number
   toothPitch: number
   placement: MeanderPlacement
 }
@@ -41,6 +42,8 @@ export type ActivePair = {
 export type LengthMatchingConfig = {
   maximumMeanderDepth: number
   minimumToothPitch?: number
+  minMeanderGap: number
+  minMeanderHeight?: number
   maxToothCount: number
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }

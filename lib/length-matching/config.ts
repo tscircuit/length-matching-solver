@@ -8,6 +8,7 @@ export const validateAndResolveParams = (
 ): LengthMatchingConfig => {
   const maximumMeanderDepth = params.maximumMeanderDepth ?? 5
   const maxToothCount = params.maxToothCount ?? 12
+  const minMeanderGap = params.minMeanderGap ?? 0.25
   if (!Number.isFinite(maximumMeanderDepth) || maximumMeanderDepth <= 0) {
     throw new Error(
       "LengthMatchingSolver: maximumMeanderDepth must be a positive finite number",
@@ -22,6 +23,28 @@ export const validateAndResolveParams = (
       "LengthMatchingSolver: minimumToothPitch must be a positive finite number",
     )
   }
+  if (!Number.isFinite(minMeanderGap) || minMeanderGap <= 0) {
+    throw new Error(
+      "LengthMatchingSolver: minMeanderGap must be a positive finite number",
+    )
+  }
+  if (
+    params.minMeanderHeight !== undefined &&
+    (!Number.isFinite(params.minMeanderHeight) ||
+      params.minMeanderHeight <= 0)
+  ) {
+    throw new Error(
+      "LengthMatchingSolver: minMeanderHeight must be a positive finite number",
+    )
+  }
+  if (
+    params.minMeanderHeight !== undefined &&
+    params.minMeanderHeight > maximumMeanderDepth
+  ) {
+    throw new Error(
+      "LengthMatchingSolver: minMeanderHeight cannot exceed maximumMeanderDepth",
+    )
+  }
   if (
     !Number.isFinite(maxToothCount) ||
     !Number.isInteger(maxToothCount) ||
@@ -34,6 +57,8 @@ export const validateAndResolveParams = (
   return {
     maximumMeanderDepth,
     minimumToothPitch: params.minimumToothPitch,
+    minMeanderGap,
+    minMeanderHeight: params.minMeanderHeight,
     maxToothCount,
     obstacles: params.obstacles ?? [],
     bounds: params.bounds,

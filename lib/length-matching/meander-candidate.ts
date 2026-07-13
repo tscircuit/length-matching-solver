@@ -235,13 +235,21 @@ export const createMeanderCandidates = (input: {
   routeIndexes: number[]
   maximumDepth: number
   minimumToothPitch?: number
+  minMeanderGap: number
+  minMeanderHeight?: number
   maxToothCount: number
 }): SegmentCandidate[] => {
   const candidates: SegmentCandidate[] = []
   for (const routeIndex of input.routeIndexes) {
     const route = input.routes[routeIndex]!
-    const toothPitch =
-      input.minimumToothPitch ?? Math.max(route.traceThickness * 4, 0.2)
+    const minimumTraceCenterlineSpacing =
+      route.traceThickness + input.minMeanderGap
+    const toothPitch = Math.max(
+      input.minimumToothPitch ?? 0,
+      minimumTraceCenterlineSpacing * 2,
+    )
+    const minimumHeight =
+      input.minMeanderHeight ?? minimumTraceCenterlineSpacing
     for (
       let segmentIndex = 0;
       segmentIndex < route.route.length - 1;
@@ -267,6 +275,7 @@ export const createMeanderCandidates = (input: {
             segmentLength,
             toothCount,
             maximumDepth: input.maximumDepth,
+            minimumHeight,
             toothPitch,
             placement,
           })
@@ -373,6 +382,10 @@ export const evaluateMeanderCandidate = (input: {
     Number.isFinite(predictedScaleFactor) &&
     predictedScaleFactor > 0 &&
     predictedScaleFactor <= 1 &&
+    predictedToothDepths.every(
+      (toothDepth) =>
+        toothDepth === 0 || toothDepth >= input.candidate.minimumHeight,
+    ) &&
     resultingError <= input.lengthTolerance &&
     input.isGeometryValid(meanderPoints)
   return {

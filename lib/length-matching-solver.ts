@@ -83,6 +83,8 @@ export class LengthMatchingSolver extends BaseSolver {
       routeIndexes: firstIsShorter ? firstIndexes : secondIndexes,
       maximumDepth: this.getConfig().maximumMeanderDepth,
       minimumToothPitch: this.getConfig().minimumToothPitch,
+      minMeanderGap: this.getConfig().minMeanderGap,
+      minMeanderHeight: this.getConfig().minMeanderHeight,
       maxToothCount: this.getConfig().maxToothCount,
     })
     if (candidates.length === 0)

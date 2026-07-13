@@ -12,6 +12,13 @@ export type LengthMatchingSolverParams = {
   differentialPairs?: DifferentialPair[]
   maximumMeanderDepth?: number
   minimumToothPitch?: number
+  /** Minimum edge-to-edge spacing between adjacent meander traces. */
+  minMeanderGap?: number
+  /**
+   * Minimum baseline-to-tooth centerline distance. Defaults per route to the
+   * trace width plus minMeanderGap; an explicit value overrides that default.
+   */
+  minMeanderHeight?: number
   maxToothCount?: number
   obstacles?: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }

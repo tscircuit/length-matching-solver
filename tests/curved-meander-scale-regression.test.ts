@@ -21,6 +21,7 @@ test("fits a feasible curved meander when linear regression overestimates its sc
       segmentLength: 20,
       toothCount: 1,
       maximumDepth: 1,
+      minimumHeight: 0.01,
       toothPitch: 1,
       placement: "negative",
     },

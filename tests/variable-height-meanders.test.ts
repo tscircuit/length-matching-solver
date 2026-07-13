@@ -4,6 +4,8 @@ import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
 import { getRouteLength } from "../lib/route-geometry"
 
 test("scales independently clearance-limited tooth heights", () => {
+  // This fixture explicitly overrides the manufacturing default because its
+  // purpose is to exercise clearance-limited teeth below that default.
   // SAFETY: This repository-owned JSON is the sample fixture input. The cast restores literal tuple and obstacle discriminants widened by JSON module inference.
   const params = sampleProblem as unknown as LengthMatchingSolverParams
   const solver = new LengthMatchingSolver(params)
