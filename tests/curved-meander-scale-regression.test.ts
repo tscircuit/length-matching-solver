@@ -17,8 +17,12 @@ test("fits a feasible curved meander when linear regression overestimates its sc
   const attempt = evaluateMeanderCandidate({
     candidate: {
       routeIndex: 0,
-      segmentIndex: 0,
-      segmentLength: 20,
+      span: {
+        startIndex: 0,
+        endIndex: 1,
+        length: 20,
+        traceThickness: 0.15,
+      },
       toothCount: 1,
       maximumDepth: 1,
       minimumHeight: 0.01,

@@ -16,8 +16,12 @@ test("fits a tapered height envelope within one multi-tooth segment", () => {
   const attempt = evaluateMeanderCandidate({
     candidate: {
       routeIndex: 0,
-      segmentIndex: 0,
-      segmentLength: 12,
+      span: {
+        startIndex: 0,
+        endIndex: 1,
+        length: 12,
+        traceThickness: 0.15,
+      },
       toothCount: 3,
       maximumDepth: 2,
       minimumHeight: 0.1,

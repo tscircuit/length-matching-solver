@@ -1,10 +1,11 @@
 import { getSegmentLength } from "../route-geometry"
 import type { HighDensityRoute, RoutePoint } from "../types"
 import type { MeanderPlacement } from "./internal-types"
+import type { StraightRouteSpan } from "./straight-route-spans"
 
 export type MeanderGeometryInput = {
   route: HighDensityRoute
-  segmentIndex: number
+  span: StraightRouteSpan
   toothCount: number
   toothPitch: number
   toothDepths: number[]
@@ -12,6 +13,19 @@ export type MeanderGeometryInput = {
 }
 
 const CURVE_SEGMENT_COUNT = 6
+
+const createGeneratedPoint = (
+  source: RoutePoint,
+  x: number,
+  y: number,
+): RoutePoint => ({
+  x,
+  y,
+  z: source.z,
+  ...(source.traceThickness === undefined
+    ? {}
+    : { traceThickness: source.traceThickness }),
+})
 
 const roundMeanderCorners = (points: RoutePoint[]): RoutePoint[] => {
   if (points.length < 3) return points
@@ -94,16 +108,36 @@ export const createMeanderReplacement = (
     throw new Error(
       "LengthMatchingSolver: every meander tooth depth must be a non-negative finite number",
     )
-  const start = input.route.route[input.segmentIndex]!
-  const end = input.route.route[input.segmentIndex + 1]!
+  if (
+    !Number.isInteger(input.span.startIndex) ||
+    !Number.isInteger(input.span.endIndex) ||
+    input.span.startIndex < 0 ||
+    input.span.endIndex <= input.span.startIndex ||
+    input.span.endIndex >= input.route.route.length
+  )
+    throw new Error(
+      `LengthMatchingSolver: invalid straight route span ${input.span.startIndex}-${input.span.endIndex}`,
+    )
+  const start = input.route.route[input.span.startIndex]!
+  const end = input.route.route[input.span.endIndex]!
   const segmentLength = getSegmentLength(start, end)
+  if (
+    segmentLength <= 0 ||
+    start.z !== end.z ||
+    Math.abs(segmentLength - input.span.length) > 1e-9
+  )
+    throw new Error(
+      `LengthMatchingSolver: straight route span ${input.span.startIndex}-${input.span.endIndex} does not match its route geometry`,
+    )
   const tangent = {
     x: (end.x - start.x) / segmentLength,
     y: (end.y - start.y) / segmentLength,
   }
   const occupiedLength = (input.toothCount - 0.5) * input.toothPitch
   const leadLength = (segmentLength - occupiedLength) / 2
-  const replacement: RoutePoint[] = [{ ...start }]
+  const replacement: RoutePoint[] = [
+    createGeneratedPoint(start, start.x, start.y),
+  ]
   for (let toothIndex = 0; toothIndex < input.toothCount; toothIndex++) {
     const toothDepth = input.toothDepths[toothIndex]!
     if (toothDepth === 0) continue
@@ -118,28 +152,28 @@ export const createMeanderReplacement = (
     const normal = { x: -tangent.y * normalSign, y: tangent.x * normalSign }
     const entryDistance = leadLength + toothIndex * input.toothPitch
     const exitDistance = entryDistance + input.toothPitch / 2
-    const entry = {
-      ...start,
-      x: start.x + tangent.x * entryDistance,
-      y: start.y + tangent.y * entryDistance,
-    }
+    const entry = createGeneratedPoint(
+      start,
+      start.x + tangent.x * entryDistance,
+      start.y + tangent.y * entryDistance,
+    )
     replacement.push(
       entry,
-      {
-        ...entry,
-        x: entry.x + normal.x * toothDepth,
-        y: entry.y + normal.y * toothDepth,
-      },
-      {
-        ...start,
-        x: start.x + tangent.x * exitDistance + normal.x * toothDepth,
-        y: start.y + tangent.y * exitDistance + normal.y * toothDepth,
-      },
-      {
-        ...start,
-        x: start.x + tangent.x * exitDistance,
-        y: start.y + tangent.y * exitDistance,
-      },
+      createGeneratedPoint(
+        start,
+        entry.x + normal.x * toothDepth,
+        entry.y + normal.y * toothDepth,
+      ),
+      createGeneratedPoint(
+        start,
+        start.x + tangent.x * exitDistance + normal.x * toothDepth,
+        start.y + tangent.y * exitDistance + normal.y * toothDepth,
+      ),
+      createGeneratedPoint(
+        start,
+        start.x + tangent.x * exitDistance,
+        start.y + tangent.y * exitDistance,
+      ),
     )
   }
   replacement.push({ ...end })
@@ -150,7 +184,7 @@ export const createMeanderReplacement = (
 export const replaceSegmentWithMeander = (
   input: MeanderGeometryInput,
 ): RoutePoint[] => [
-  ...input.route.route.slice(0, input.segmentIndex),
+  ...input.route.route.slice(0, input.span.startIndex),
   ...createMeanderReplacement(input),
-  ...input.route.route.slice(input.segmentIndex + 2),
+  ...input.route.route.slice(input.span.endIndex + 1),
 ]

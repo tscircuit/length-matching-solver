@@ -5,9 +5,12 @@
 - `config.ts`: validate public inputs and resolve defaults.
 - `connection-routes.ts`: map logical connections to routed branches and lengths.
 - `../route-geometry.ts`: shared planar segment and route-length primitives.
+- `straight-route-spans.ts`: partition routed points into maximal tunable spans.
 - `meander-candidate.ts`: enumerate tooth-count, placement, and pitch choices,
-  then fit clearance-limited tooth depths.
-- `meander-geometry.ts`: construct and corner-round a meander replacement for one route segment.
+  then fit clearance-limited tooth depths for each span.
+- `meander-geometry.ts`: construct and corner-round a meander replacement for one straight route span.
+- `candidate-route-clearance.ts`: validate meanders against untouched route
+  geometry and same-connection sibling branches.
 - `meander-quality.ts`: rank feasible candidates with stackup-independent
   geometry proxies.
 - `multi-segment-plan.ts`: identify pitch-specific attempts and choose the
@@ -26,6 +29,13 @@ test index for relaxed meanders live in
 Keep new algorithm work in its owning module. Do not import the solver class from these modules.
 
 ## Multi-segment matching
+
+A tunable straight span is a maximal run of consecutive, same-layer,
+forward-collinear edges. Direction changes, reversals, layer changes,
+jumper-pad points, through-obstacle metadata, and unsupported width changes
+terminate a span; redundant zero-length points are absorbed. Spans retain
+indexes into the original route; accepted replacements are applied from higher
+indexes to lower indexes so later stored end indexes remain stable.
 
 `LengthMatchingSolver` first tries every candidate as a single-segment match.
 When no single segment can supply the required length, it records each valid
@@ -58,6 +68,9 @@ lives in `meander-quality.ts`.
 - `usb-default-clearance-sample.test.ts`: broad, shallow free-space behavior.
 - `length-matching-linear-regression.test.ts`: fitted geometry and SVG snapshot.
 - `multi-segment-route-length-matching.test.ts`: partial-plan consistency.
+- `collinear-route-points.test.ts`: redundant collinear points form one span.
+- `straight-route-spans.test.ts`: span boundaries and semantic metadata.
+- `self-route-clearance.test.ts`: meanders cannot cross untouched own-route edges.
 - `narrow-corridor-no-meander.test.ts`: loud failure when no candidate fits.
 - `constrained-compact-meander-selection.test.ts`: compact-pitch success when
   relaxed alternatives collide with obstacles.

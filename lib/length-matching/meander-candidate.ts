@@ -1,4 +1,4 @@
-import { getRouteLength, getSegmentLength } from "../route-geometry"
+import { getRouteLength } from "../route-geometry"
 import type { HighDensityRoute, RoutePoint } from "../types"
 import {
   createMeanderReplacement,
@@ -11,6 +11,7 @@ import type {
   RegressionAttempt,
   SegmentCandidate,
 } from "./internal-types"
+import { getTunableStraightRouteSpans } from "./straight-route-spans"
 
 const DEPTH_SEARCH_ITERATIONS = 32
 const DEFAULT_MIN_MEANDER_GAP = 0.3
@@ -145,23 +146,15 @@ export const createMeanderCandidates = (input: {
     )
     const minimumHeight =
       input.minMeanderHeight ?? minimumTraceCenterlineSpacing
-    for (
-      let segmentIndex = 0;
-      segmentIndex < route.route.length - 1;
-      segmentIndex++
-    ) {
-      const start = route.route[segmentIndex]!
-      const end = route.route[segmentIndex + 1]!
-      const segmentLength = getSegmentLength(start, end)
-      if (segmentLength <= 0 || start.z !== end.z) continue
+    for (const span of getTunableStraightRouteSpans(route)) {
       const toothCapacity = Math.min(
-        Math.max(0, Math.floor(segmentLength / toothPitch) - 1),
+        Math.max(0, Math.floor(span.length / toothPitch) - 1),
         input.maxToothCount,
       )
       for (let toothCount = 1; toothCount <= toothCapacity; toothCount++) {
         // Explore the open segment as well as the minimum-clearance footprint.
         // The geometric mean supplies one deterministic constrained compromise.
-        const maximumRelaxedPitch = segmentLength / (toothCount + 1)
+        const maximumRelaxedPitch = span.length / (toothCount + 1)
         const pitchOptions = [
           maximumRelaxedPitch,
           Math.sqrt(toothPitch * maximumRelaxedPitch),
@@ -180,8 +173,7 @@ export const createMeanderCandidates = (input: {
           for (const placement of placements)
             candidates.push({
               routeIndex,
-              segmentIndex,
-              segmentLength,
+              span,
               toothCount,
               maximumDepth: input.maximumDepth,
               minimumHeight,
@@ -202,7 +194,7 @@ export const createMeanderCandidates = (input: {
       left.toothCount - right.toothCount ||
       placementPriority[left.placement] - placementPriority[right.placement] ||
       right.toothPitch - left.toothPitch ||
-      right.segmentLength - left.segmentLength,
+      right.span.length - left.span.length,
   )
 }
 
@@ -321,8 +313,8 @@ export const evaluateMeanderCandidate = (input: {
     addedLength,
     resultingError,
     testedSegment: [
-      { ...input.route.route[input.candidate.segmentIndex]! },
-      { ...input.route.route[input.candidate.segmentIndex + 1]! },
+      { ...input.route.route[input.candidate.span.startIndex]! },
+      { ...input.route.route[input.candidate.span.endIndex]! },
     ],
     meanderPoints,
     qualityScore: 0,

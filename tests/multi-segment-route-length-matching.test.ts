@@ -16,7 +16,7 @@ test("matches a route using one consistent multi-segment meander style", () => {
     maxToothCount: 8,
   })
   expect(
-    new Set(candidates.map((candidate) => candidate.segmentIndex)),
+    new Set(candidates.map((candidate) => candidate.span.startIndex)),
   ).toEqual(new Set([0, 1, 2, 3, 4]))
 
   const solver = new LengthMatchingSolver(params)

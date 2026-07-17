@@ -1,13 +1,13 @@
 import type { DifferentialPair, Obstacle, RoutePoint } from "../types"
+import type { StraightRouteSpan } from "./straight-route-spans"
 
 export type MeanderPlacement = "balanced" | "negative" | "positive"
 export type MeanderHeightProfile = "tapered" | "uniform"
 
-/** One straight route segment and square-wave configuration to evaluate. */
+/** One straight route span and square-wave configuration to evaluate. */
 export type SegmentCandidate = {
   routeIndex: number
-  segmentIndex: number
-  segmentLength: number
+  span: StraightRouteSpan
   toothCount: number
   maximumDepth: number
   minimumHeight: number
@@ -50,7 +50,7 @@ export type ActivePair = {
 
 export type PlannedAttemptTarget = {
   routeIndex: number
-  segmentIndex: number
+  span: StraightRouteSpan
   targetAddedLength: number
 }
 
