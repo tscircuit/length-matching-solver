@@ -10,6 +10,8 @@
 - `meander-geometry.ts`: construct and corner-round a meander replacement for one route segment.
 - `meander-quality.ts`: rank feasible candidates with stackup-independent
   geometry proxies.
+- `dual-meander-plan.ts`: atomically pair minimum-height-compatible meanders
+  when a direct length correction is too small to realize.
 - `multi-segment-plan.ts`: identify pitch-specific attempts and choose the
   minimum-segment same-tooth-count partial plan.
 - `geometry-validation.ts`: bounds, obstacle, and trace-clearance decisions.
@@ -50,6 +52,22 @@ end, higher lobes toward its center, and per-tooth clearance caps. The score is
 a stackup-independent geometry preference, not an impedance or delay model, and
 lives in `meander-quality.ts`.
 
+## Dual-route matching
+
+When a direct correction fits geometrically but would violate minimum meander
+height, the solver searches both members together. A dual plan must satisfy
+`shorterAddedLength - longerAddedLength = originalLengthDifference` within the
+pair tolerance. Both trial routes are jointly checked against obstacles,
+unrelated routes, and each other before either route is committed.
+Geometry-blocked single-route searches retain their original loud failure. The
+dual planner can combine multiple segments per connection while preserving one
+tooth-count, placement, and height-profile style on each member. It ranks plan
+shapes at their minimum valid height, then fits the exact joint targets and
+chooses the highest-quality feasible pitch for every selected segment.
+For two or more segments, the planner explores capacity-prioritized prefixes
+using the existing fragmentation-penalized quality score. Every individual
+segment also remains eligible as a one-segment option for mixed plans.
+
 ## Focused tests
 
 - `meander-quality-score.test.ts`: electrical-risk proxy ranking.
@@ -61,6 +79,10 @@ lives in `meander-quality.ts`.
 - `narrow-corridor-no-meander.test.ts`: loud failure when no candidate fits.
 - `constrained-compact-meander-selection.test.ts`: compact-pitch success when
   relaxed alternatives collide with obstacles.
+- `small-gap-requires-dual-meanders.test.ts`: atomic two-connection tuning when
+  the original mismatch is below minimum meander capacity.
+- `multi-segment-dual-meander.test.ts`: mixed one-segment and multi-segment
+  common-mode compensation.
 
 ## Visualization API
 

@@ -8,6 +8,7 @@ import {
   findConnectionRouteIndexes,
   getConnectionLength,
 } from "./length-matching/connection-routes"
+import { selectDualMeanderPlan } from "./length-matching/dual-meander-plan"
 import { isCandidateGeometryValid } from "./length-matching/geometry-validation"
 import type {
   ActivePair,
@@ -84,6 +85,7 @@ export class LengthMatchingSolver extends BaseSolver {
     if (difference <= pair.lengthTolerance) return
     const firstIsShorter = firstLength < secondLength
     const shorterConnectionName = pair.connectionNames[firstIsShorter ? 0 : 1]
+    const longerConnectionName = pair.connectionNames[firstIsShorter ? 1 : 0]
     const candidates = createMeanderCandidates({
       routes: this.matchedHdRoutes,
       routeIndexes: firstIsShorter ? firstIndexes : secondIndexes,
@@ -99,6 +101,8 @@ export class LengthMatchingSolver extends BaseSolver {
       )
     this.activePair = {
       pair,
+      longerConnectionName,
+      longerRouteIndexes: firstIsShorter ? secondIndexes : firstIndexes,
       shorterConnectionName,
       targetAddedLength: difference,
       remainingAddedLength: difference,
@@ -108,6 +112,7 @@ export class LengthMatchingSolver extends BaseSolver {
       partialAttempts: [],
       fullAttempts: [],
       plannedAttemptTargets: null,
+      hasMinimumHeightBlockedAttempt: false,
     }
   }
 
@@ -181,10 +186,17 @@ export class LengthMatchingSolver extends BaseSolver {
         this.acceptAttempt(activePair, bestFullAttempt)
         return
       }
-      if (!partialPlan)
-        throw new Error(
-          `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
-        )
+      if (!partialPlan) {
+        const canTryDualPlan =
+          activePair.hasMinimumHeightBlockedAttempt &&
+          activePair.plannedAttemptTargets === null &&
+          activePair.lastMatchedSegmentIndexByRoute.size === 0
+        if (!canTryDualPlan)
+          throw new Error(
+            `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+          )
+        return this.tryDualMeanderPlan(activePair)
+      }
       activePair.plannedAttemptTargets = getPlannedAttemptTargets({
         attempts: partialPlan.attempts,
         targetAddedLength: activePair.remainingAddedLength,
@@ -227,6 +239,8 @@ export class LengthMatchingSolver extends BaseSolver {
         }),
     })
     this.candidatesTried++
+    if (this.currentAttempt.invalidReason === "below-minimum-height")
+      activePair.hasMinimumHeightBlockedAttempt = true
     this.stats = {
       pair: `${activePair.pair.connectionNames[0]}/${activePair.pair.connectionNames[1]}`,
       candidatesTried: this.candidatesTried,
@@ -253,6 +267,72 @@ export class LengthMatchingSolver extends BaseSolver {
       return
     }
     activePair.partialAttempts.push(this.currentAttempt)
+  }
+
+  private tryDualMeanderPlan(activePair: ActivePair): void {
+    if (activePair.remainingAddedLength !== activePair.targetAddedLength)
+      throw new Error(
+        `LengthMatchingSolver: cannot start a dual-meander plan after partially tuning "${activePair.shorterConnectionName}"`,
+      )
+    const config = this.getConfig()
+    const longerCandidates = createMeanderCandidates({
+      routes: this.matchedHdRoutes,
+      routeIndexes: activePair.longerRouteIndexes,
+      maximumDepth: config.maximumMeanderDepth,
+      minimumToothPitch: config.minimumToothPitch,
+      minMeanderGap: config.minMeanderGap,
+      minMeanderHeight: config.minMeanderHeight,
+      maxToothCount: config.maxToothCount,
+    })
+    const plan = selectDualMeanderPlan({
+      routes: this.matchedHdRoutes,
+      longerConnectionName: activePair.longerConnectionName,
+      shorterConnectionName: activePair.shorterConnectionName,
+      originalLengthDifference: activePair.targetAddedLength,
+      lengthTolerance: activePair.pair.lengthTolerance,
+      longerCandidates,
+      shorterCandidates: activePair.candidates,
+      obstacles: config.obstacles,
+      bounds: config.bounds,
+      layerCount: config.layerCount,
+      obstacleMargin: config.obstacleMargin,
+    })
+    if (!plan)
+      throw new Error(
+        `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+      )
+    const updatedRoutes = [...this.matchedHdRoutes]
+    for (const attempt of [...plan.longerAttempts, ...plan.shorterAttempts]) {
+      const route = this.matchedHdRoutes[attempt.routeIndex]
+      if (!route)
+        throw new Error(
+          `LengthMatchingSolver: cannot commit dual meander to missing route ${attempt.routeIndex}`,
+        )
+      updatedRoutes[attempt.routeIndex] = {
+        ...route,
+        route: attempt.predictedRoute,
+      }
+    }
+    this.matchedHdRoutes = updatedRoutes
+    this.currentAttempt = plan.shorterAttempts[0]
+    const longerAddedLength = plan.longerAttempts.reduce(
+      (total, attempt) => total + attempt.addedLength,
+      0,
+    )
+    const shorterAddedLength = plan.shorterAttempts.reduce(
+      (total, attempt) => total + attempt.addedLength,
+      0,
+    )
+    this.stats = {
+      pair: `${activePair.pair.connectionNames[0]}/${activePair.pair.connectionNames[1]}`,
+      mode: "dual-meander",
+      longerAddedLength,
+      shorterAddedLength,
+      resultingError: Math.abs(
+        shorterAddedLength - longerAddedLength - activePair.targetAddedLength,
+      ),
+    }
+    this.activePair = null
   }
 
   private getConfig(): LengthMatchingConfig {

@@ -15,11 +15,14 @@ solver.solve()
 const { matchedHdRoutes } = solver.getOutput()
 ```
 
-The solver adds obstacle-aware, tapered multi-lobe meanders to the shorter
-connection until each differential pair is within its configured length
-tolerance. For a multi-segment match, every selected segment uses the same
-tooth count, placement, and tapered profile. Invalid or impossible solver states
-throw with a specific error instead of returning partially matched routes.
+The solver adds obstacle-aware, tapered multi-lobe meanders until each
+differential pair is within its configured length tolerance. It normally tunes
+only the shorter connection. When realizing the correction would require a
+tooth shallower than `minMeanderHeight`, it can add a jointly validated meander
+to each pair member instead of weakening the geometry constraint. For a
+multi-segment match, every selected segment uses the same tooth count,
+placement, and tapered profile. Invalid or impossible solver states throw with
+a specific error instead of returning partially matched routes.
 
 ## Meander geometry quality
 

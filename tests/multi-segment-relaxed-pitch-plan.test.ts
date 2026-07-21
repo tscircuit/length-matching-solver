@@ -28,6 +28,7 @@ test("selects relaxed pitch variants when they can supply a multi-segment plan",
     predictedToothDepths: [1, 1],
     predictedRoute: [],
     addedLength: input.addedLength,
+    maximumAddedLength: input.addedLength,
     resultingError: 0,
     testedSegment: [
       { x: input.segmentIndex * 10, y: 0, z: 0 },
@@ -35,6 +36,7 @@ test("selects relaxed pitch variants when they can supply a multi-segment plan",
     ],
     meanderPoints: [],
     qualityScore: input.qualityScore,
+    invalidReason: null,
     valid: true,
   })
   const attempts = [0, 1].flatMap((segmentIndex) => [

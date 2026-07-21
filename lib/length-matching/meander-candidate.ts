@@ -10,11 +10,20 @@ import type {
   MeanderPlacement,
   RegressionAttempt,
   SegmentCandidate,
+  ValidRegressionAttempt,
 } from "./internal-types"
 
 const DEPTH_SEARCH_ITERATIONS = 32
 const DEFAULT_MIN_MEANDER_GAP = 0.3
 export { replaceSegmentWithMeander } from "./meander-geometry"
+
+type MeanderCandidateEvaluationInput = {
+  candidate: SegmentCandidate
+  route: HighDensityRoute
+  connectionName: string
+  lengthTolerance: number
+  isGeometryValid: (meanderPoints: RoutePoint[]) => boolean
+}
 
 const getToothHeightWeights = (input: {
   toothCount: number
@@ -297,16 +306,27 @@ export const evaluateMeanderCandidate = (input: {
     route: input.route,
     toothDepths: predictedToothDepths,
   })
-  const valid =
+  const scaleIsValid =
     Number.isFinite(predictedScaleFactor) &&
     predictedScaleFactor > 0 &&
-    predictedScaleFactor <= 1 &&
-    predictedToothDepths.every(
-      (toothDepth) =>
-        toothDepth === 0 || toothDepth >= input.candidate.minimumHeight,
-    ) &&
-    resultingError <= input.lengthTolerance &&
-    input.isGeometryValid(meanderPoints)
+    predictedScaleFactor <= 1
+  const minimumHeightIsValid = predictedToothDepths.every(
+    (toothDepth) =>
+      toothDepth === 0 || toothDepth >= input.candidate.minimumHeight,
+  )
+  const geometryIsValid = input.isGeometryValid(meanderPoints)
+  const invalidReason: RegressionAttempt["invalidReason"] = !scaleIsValid
+    ? "invalid-scale"
+    : resultingError > input.lengthTolerance
+      ? "target-error"
+      : !geometryIsValid
+        ? "invalid-geometry"
+        : !minimumHeightIsValid
+          ? "below-minimum-height"
+          : null
+  const outcome = invalidReason
+    ? { valid: false as const, invalidReason }
+    : { valid: true as const, invalidReason: null }
   const attempt: RegressionAttempt = {
     ...input.candidate,
     connectionName: input.connectionName,
@@ -319,6 +339,7 @@ export const evaluateMeanderCandidate = (input: {
     predictedToothDepths,
     predictedRoute,
     addedLength,
+    maximumAddedLength,
     resultingError,
     testedSegment: [
       { ...input.route.route[input.candidate.segmentIndex]! },
@@ -326,7 +347,51 @@ export const evaluateMeanderCandidate = (input: {
     ],
     meanderPoints,
     qualityScore: 0,
-    valid,
+    ...outcome,
   }
   return { ...attempt, qualityScore: getMeanderQualityScore(attempt) }
+}
+
+/** Evaluate the shallowest minimum-height profile, or return null if rejected. */
+export const evaluateMinimumMeanderCandidate = (
+  input: MeanderCandidateEvaluationInput,
+): ValidRegressionAttempt | null => {
+  const toothHeightWeights = getToothHeightWeights(input.candidate)
+  const minimumDepthLevel = Math.max(
+    ...toothHeightWeights.map(
+      (weight) => input.candidate.minimumHeight / weight,
+    ),
+  )
+  // Four final bisection quanta keep a representable minimum-height tooth from
+  // being rejected when the last midpoint lands microscopically below it.
+  const depthSearchMargin =
+    input.candidate.maximumDepth / 2 ** (DEPTH_SEARCH_ITERATIONS - 2)
+  const minimumToothDepths = toothHeightWeights.map(
+    (weight) => weight * (minimumDepthLevel + depthSearchMargin),
+  )
+  if (
+    minimumToothDepths.some(
+      (toothDepth) => toothDepth > input.candidate.maximumDepth,
+    )
+  )
+    return null
+  const minimumMeanderPoints = createMeanderReplacement({
+    ...input.candidate,
+    route: input.route,
+    toothDepths: minimumToothDepths,
+  })
+  if (!input.isGeometryValid(minimumMeanderPoints)) return null
+  const minimumRoute = replaceSegmentWithMeander({
+    ...input.candidate,
+    route: input.route,
+    toothDepths: minimumToothDepths,
+  })
+  const targetAddedLength =
+    getRouteLength({ ...input.route, route: minimumRoute }) -
+    getRouteLength(input.route)
+  const attempt = evaluateMeanderCandidate({
+    ...input,
+    targetAddedLength,
+  })
+  return attempt.valid ? attempt : null
 }
