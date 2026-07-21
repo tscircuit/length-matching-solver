@@ -62,9 +62,9 @@ test("combines one longer-route meander with multiple shorter-route meanders", (
   expect(longerAddedLength).toBeGreaterThan(0.7)
   expect(longerAddedLength).toBeLessThan(0.75)
   expect(shorterAddedLength).toBeGreaterThan(1)
-    expect(
-      Math.abs(
-        getRouteLength(matchedLongerRoute) - getRouteLength(matchedShorterRoute),
-      ),
+  expect(
+    Math.abs(
+      getRouteLength(matchedLongerRoute) - getRouteLength(matchedShorterRoute),
+    ),
   ).toBeLessThanOrEqual(0.01)
 })
