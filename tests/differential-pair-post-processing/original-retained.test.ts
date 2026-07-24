@@ -15,7 +15,16 @@ test("retains both originals when spacing and DRC are unsatisfiable", () => {
   if (pairResult?.status !== "original_retained") {
     throw new Error("Expected the unsatisfiable pair to be retained")
   }
+  expect(String(pairResult.differentialPairName)).toBe("USB")
   expect(pairResult.failure.category).toBe("spacing_bounds_unsatisfiable")
+  expect(pairResult.failure.message).toBe(
+    "effective minimum centerline spacing 0.6 exceeds maximum 0.4",
+  )
+  expect(String(pairResult.failure.positiveSourceTraceId)).toBe(
+    "source_trace_positive",
+  )
+  expect(String(pairResult.failure.negativeSourceTraceId)).toBe(
+    "source_trace_negative",
+  )
   expect(params.pcbTraces).toEqual(originalPcbTraces)
-  expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
 })

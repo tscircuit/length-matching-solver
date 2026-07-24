@@ -17,16 +17,37 @@ test("changes layers only through a paired via transition", () => {
   if (pairResult?.status !== "routed") {
     throw new Error("Expected the pair to route through paired vias")
   }
-  expect(pairResult.pcbVias).toHaveLength(2)
+  const positiveRouteVias = pairResult.positivePcbTrace.route.filter(
+    (routePoint) => routePoint.route_type === "via",
+  )
+  const negativeRouteVias = pairResult.negativePcbTrace.route.filter(
+    (routePoint) => routePoint.route_type === "via",
+  )
+  expect(positiveRouteVias).toHaveLength(1)
+  expect(negativeRouteVias).toHaveLength(1)
+
+  const positiveRouteVia = positiveRouteVias[0]!
+  const negativeRouteVia = negativeRouteVias[0]!
   expect(
-    pairResult.positivePcbTrace.route.filter(
-      (routePoint) => routePoint.route_type === "via",
-    ),
-  ).toHaveLength(1)
+    `${String(positiveRouteVia.from_layer)}->${String(positiveRouteVia.to_layer)}`,
+  ).toBe("top->bottom")
   expect(
-    pairResult.negativePcbTrace.route.filter(
-      (routePoint) => routePoint.route_type === "via",
-    ),
-  ).toHaveLength(1)
-  expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
+    `${String(negativeRouteVia.from_layer)}->${String(negativeRouteVia.to_layer)}`,
+  ).toBe("top->bottom")
+  expect(positiveRouteVia.x).toBe(negativeRouteVia.x)
+  expect(positiveRouteVia.y - negativeRouteVia.y).toBeCloseTo(0.3)
+  expect(pairResult.pcbVias).toEqual([
+    expect.objectContaining({
+      x: positiveRouteVia.x,
+      y: positiveRouteVia.y,
+      layers: ["top", "bottom"],
+      pcb_trace_id: "pcb_trace_positive",
+    }),
+    expect.objectContaining({
+      x: negativeRouteVia.x,
+      y: negativeRouteVia.y,
+      layers: ["top", "bottom"],
+      pcb_trace_id: "pcb_trace_negative",
+    }),
+  ])
 })
