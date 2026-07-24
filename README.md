@@ -58,6 +58,10 @@ Algorithm ownership and data flow are indexed in
 [`lib/length-matching/README.md`](lib/length-matching/README.md). Visualization
 has a separate [code map](lib/length-matching/visualization/README.md).
 
+The matcher’s tuning unit is a maximal same-layer, forward-collinear span in the
+original route point array. See `straight-route-spans.ts` for breakpoint rules
+and `candidate-route-clearance.ts` for route-self-intersection checks.
+
 ## Development
 
 ```sh

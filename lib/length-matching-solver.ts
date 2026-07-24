@@ -128,7 +128,7 @@ export class LengthMatchingSolver extends BaseSolver {
     activePair.remainingAddedLength -= attempt.addedLength
     activePair.lastMatchedSegmentIndexByRoute.set(
       attempt.routeIndex,
-      attempt.segmentIndex,
+      attempt.span.startIndex,
     )
     activePair.candidateIndex = 0
     activePair.partialAttempts = []
@@ -149,7 +149,7 @@ export class LengthMatchingSolver extends BaseSolver {
         activePair.lastMatchedSegmentIndexByRoute.get(nextCandidate.routeIndex)
       if (
         (lastMatchedSegmentIndex === undefined ||
-          nextCandidate.segmentIndex < lastMatchedSegmentIndex) &&
+          nextCandidate.span.startIndex < lastMatchedSegmentIndex) &&
         (!activePair.plannedAttemptTargets ||
           (activePair.plannedAttemptTargets.has(
             getRegressionAttemptKey(nextCandidate),
@@ -157,7 +157,7 @@ export class LengthMatchingSolver extends BaseSolver {
             ![...activePair.plannedAttemptTargets.values()].some((attempt) => {
               return (
                 attempt.routeIndex === nextCandidate.routeIndex &&
-                attempt.segmentIndex > nextCandidate.segmentIndex
+                attempt.span.startIndex > nextCandidate.span.startIndex
               )
             })))
       )
@@ -230,6 +230,7 @@ export class LengthMatchingSolver extends BaseSolver {
       isGeometryValid: (meanderPoints) =>
         isCandidateGeometryValid({
           route,
+          span: candidate.span,
           meanderPoints,
           routedRoutes: this.matchedHdRoutes,
           obstacles: config.obstacles,
@@ -244,7 +245,8 @@ export class LengthMatchingSolver extends BaseSolver {
     this.stats = {
       pair: `${activePair.pair.connectionNames[0]}/${activePair.pair.connectionNames[1]}`,
       candidatesTried: this.candidatesTried,
-      segmentIndex: candidate.segmentIndex,
+      spanStartIndex: candidate.span.startIndex,
+      spanEndIndex: candidate.span.endIndex,
       toothCount: candidate.toothCount,
       toothPitch: candidate.toothPitch,
       placement: candidate.placement,

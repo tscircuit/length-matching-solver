@@ -10,8 +10,12 @@ test("selects relaxed pitch variants when they can supply a multi-segment plan",
     qualityScore: number
   }): RegressionAttempt => ({
     routeIndex: 0,
-    segmentIndex: input.segmentIndex,
-    segmentLength: 10,
+    span: {
+      startIndex: input.segmentIndex,
+      endIndex: input.segmentIndex + 1,
+      length: 10,
+      traceThickness: 0.15,
+    },
     toothCount: 2,
     maximumDepth: 5,
     minimumHeight: 0.1,

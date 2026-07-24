@@ -17,8 +17,12 @@ test("rejects a non-positive regression prediction without invalid geometry", ()
   const attempt = evaluateMeanderCandidate({
     candidate: {
       routeIndex: 0,
-      segmentIndex: 0,
-      segmentLength: 6,
+      span: {
+        startIndex: 0,
+        endIndex: 1,
+        length: 6,
+        traceThickness: 0.15,
+      },
       toothCount: 1,
       maximumDepth: 2,
       minimumHeight: 0.01,

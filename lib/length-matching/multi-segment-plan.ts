@@ -33,7 +33,7 @@ export const getRegressionAttemptKey = (
   attempt: Pick<
     SegmentCandidate,
     | "routeIndex"
-    | "segmentIndex"
+    | "span"
     | "toothCount"
     | "placement"
     | "toothPitch"
@@ -44,7 +44,8 @@ export const getRegressionAttemptKey = (
 ): string =>
   [
     attempt.routeIndex,
-    attempt.segmentIndex,
+    attempt.span.startIndex,
+    attempt.span.endIndex,
     attempt.toothCount,
     attempt.placement,
     attempt.toothPitch,
@@ -76,7 +77,7 @@ export const getPlannedAttemptTargets = (input: {
     )
     targets.set(getRegressionAttemptKey(attempt), {
       routeIndex: attempt.routeIndex,
-      segmentIndex: attempt.segmentIndex,
+      span: attempt.span,
       targetAddedLength: target,
     })
     remainingLength -= target
@@ -92,7 +93,7 @@ export const selectPartialMeanderPlan = (input: {
 }): PartialMeanderPlan | null => {
   const attemptsByStyle = new Map<string, Map<string, RegressionAttempt[]>>()
   for (const attempt of input.attempts) {
-    const segmentKey = `${attempt.routeIndex}:${attempt.segmentIndex}`
+    const segmentKey = `${attempt.routeIndex}:${attempt.span.startIndex}:${attempt.span.endIndex}`
     const styleKey = getMeanderStyleKey(attempt)
     const attemptsBySegment = attemptsByStyle.get(styleKey)
     if (!attemptsBySegment) {
@@ -148,7 +149,7 @@ export const selectPartialMeanderPlan = (input: {
         )
         if (feasibleAttempts.length === 0)
           throw new Error(
-            `LengthMatchingSolver: no pitch can supply planned target for route ${options.maximumCapacityAttempt.routeIndex} segment ${options.maximumCapacityAttempt.segmentIndex}`,
+            `LengthMatchingSolver: no pitch can supply planned target for route ${options.maximumCapacityAttempt.routeIndex} span ${options.maximumCapacityAttempt.span.startIndex}-${options.maximumCapacityAttempt.span.endIndex}`,
           )
         return feasibleAttempts.reduce((bestAttempt, attempt) =>
           attempt.qualityScore > bestAttempt.qualityScore ||

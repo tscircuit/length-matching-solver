@@ -1,6 +1,8 @@
 import { getMinimumSegmentDistance } from "../route-geometry"
 import type { HighDensityRoute, Obstacle, RoutePoint } from "../types"
+import { isCandidateRouteClear } from "./candidate-route-clearance"
 import { getLogicalConnectionName } from "./connection-routes"
+import type { StraightRouteSpan } from "./straight-route-spans"
 
 const isObstacleOnLayer = (
   obstacle: Obstacle,
@@ -54,6 +56,7 @@ const segmentTouchesInflatedObstacle = (
 /** Check candidate bounds, obstacle clearance, and clearance from other connections. */
 export const isCandidateGeometryValid = (input: {
   route: HighDensityRoute
+  span: StraightRouteSpan
   meanderPoints: RoutePoint[]
   routedRoutes: HighDensityRoute[]
   obstacles: Obstacle[]
@@ -72,6 +75,16 @@ export const isCandidateGeometryValid = (input: {
     )
   )
     return false
+  if (
+    !isCandidateRouteClear({
+      route: input.route,
+      span: input.span,
+      meanderPoints: input.meanderPoints,
+      routedRoutes: input.routedRoutes,
+      obstacleMargin: input.obstacleMargin,
+    })
+  )
+    return false
   const connectionName = getLogicalConnectionName(input.route)
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
   for (let index = 0; index < input.meanderPoints.length - 1; index++) {
@@ -85,27 +98,6 @@ export const isCandidateGeometryValid = (input: {
         continue
       if (segmentTouchesInflatedObstacle(start, end, obstacle, obstacleMargin))
         return false
-    }
-    for (const otherRoute of input.routedRoutes) {
-      if (getLogicalConnectionName(otherRoute) === connectionName) continue
-      for (
-        let otherIndex = 0;
-        otherIndex < otherRoute.route.length - 1;
-        otherIndex++
-      ) {
-        const otherStart = otherRoute.route[otherIndex]!
-        const otherEnd = otherRoute.route[otherIndex + 1]!
-        if (start.z !== otherStart.z || start.z !== otherEnd.z) continue
-        const requiredDistance =
-          input.route.traceThickness / 2 +
-          otherRoute.traceThickness / 2 +
-          input.obstacleMargin
-        if (
-          getMinimumSegmentDistance(start, end, otherStart, otherEnd) <
-          requiredDistance
-        )
-          return false
-      }
     }
   }
   return true

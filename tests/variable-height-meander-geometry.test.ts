@@ -16,7 +16,7 @@ test("constructs each meander tooth with its assigned height and rounded turns",
 
   const replacedRoute = replaceSegmentWithMeander({
     route,
-    segmentIndex: 0,
+    span: { startIndex: 0, endIndex: 1, length: 6, traceThickness: 0.15 },
     toothCount: 2,
     toothPitch: 1,
     toothDepths: [1, 0],
@@ -24,7 +24,7 @@ test("constructs each meander tooth with its assigned height and rounded turns",
   })
   const centeredRoute = replaceSegmentWithMeander({
     route,
-    segmentIndex: 0,
+    span: { startIndex: 0, endIndex: 1, length: 6, traceThickness: 0.15 },
     toothCount: 2,
     toothPitch: 1,
     toothDepths: [1, 1],

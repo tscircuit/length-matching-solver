@@ -73,8 +73,8 @@ const appendSelectedSegmentGraphics = (input: {
   if (!candidate) return
   const route = input.routes[candidate.routeIndex]
   if (!route) return
-  const start = route.route[candidate.segmentIndex]
-  const end = route.route[candidate.segmentIndex + 1]
+  const start = route.route[candidate.span.startIndex]
+  const end = route.route[candidate.span.endIndex]
   if (!start || !end) return
   input.graphics.lines.push({
     points: [start, end],
