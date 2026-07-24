@@ -23,6 +23,17 @@ const minimumFileLinesPlugin = {
       create(context) {
         return {
           Program(node) {
+            const isModuleWiring =
+              node.body.length > 0 &&
+              node.body.every(
+                (statement) =>
+                  (statement.type === "ExportNamedDeclaration" &&
+                    statement.source !== null) ||
+                  (statement.type === "ImportDeclaration" &&
+                    statement.specifiers.length === 0),
+              )
+            if (isModuleWiring) return
+
             const minimum = context.options[0]?.minimum ?? 6
             const actual = context.sourceCode
               .getLines()
