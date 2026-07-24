@@ -113,12 +113,8 @@ export const solveDifferentialPair = ({
       "pair members do not share a layer at both terminal stations",
     )
   }
-  const positiveWidth = Math.max(
-    ...positiveWires.map((wire) => wire.width),
-  )
-  const negativeWidth = Math.max(
-    ...negativeWires.map((wire) => wire.width),
-  )
+  const positiveWidth = Math.max(...positiveWires.map((wire) => wire.width))
+  const negativeWidth = Math.max(...negativeWires.map((wire) => wire.width))
   const effectiveMinimumSpacing = Math.max(
     params.minCenterlineSpacing,
     positiveWidth / 2 +
@@ -168,11 +164,9 @@ export const solveDifferentialPair = ({
     y: positiveEnd.y - negativeEnd.y,
   }
   const startOrientation =
-    startLaneVector.x * unsignedNormal.x +
-    startLaneVector.y * unsignedNormal.y
+    startLaneVector.x * unsignedNormal.x + startLaneVector.y * unsignedNormal.y
   const endOrientation =
-    endLaneVector.x * unsignedNormal.x +
-    endLaneVector.y * unsignedNormal.y
+    endLaneVector.x * unsignedNormal.x + endLaneVector.y * unsignedNormal.y
   if (
     Math.abs(startOrientation) > 1e-9 &&
     Math.abs(endOrientation) > 1e-9 &&
@@ -193,21 +187,10 @@ export const solveDifferentialPair = ({
   const targetSpacing =
     (effectiveMinimumSpacing + params.maxCenterlineSpacing) / 2
   const laneOffset = {
-    x:
-      unsignedNormal.x *
-      orientationSign *
-      targetSpacing *
-      0.5,
-    y:
-      unsignedNormal.y *
-      orientationSign *
-      targetSpacing *
-      0.5,
+    x: unsignedNormal.x * orientationSign * targetSpacing * 0.5,
+    y: unsignedNormal.y * orientationSign * targetSpacing * 0.5,
   }
-  const getLanePoint = (
-    midpoint: Point,
-    polarity: 1 | -1,
-  ): Point => ({
+  const getLanePoint = (midpoint: Point, polarity: 1 | -1): Point => ({
     x: midpoint.x + laneOffset.x * polarity,
     y: midpoint.y + laneOffset.y * polarity,
   })
@@ -229,10 +212,7 @@ export const solveDifferentialPair = ({
       negativeEnd.x - getLanePoint(originalEndMidpoint, -1).x,
       negativeEnd.y - getLanePoint(originalEndMidpoint, -1).y,
     ) > 1e-8
-  const minimumEscapeDistance = Math.max(
-    effectiveMinimumSpacing * 2,
-    0.5,
-  )
+  const minimumEscapeDistance = Math.max(effectiveMinimumSpacing * 2, 0.5)
   if (
     (startNeedsEscape || endNeedsEscape) &&
     spineLength <
@@ -246,10 +226,7 @@ export const solveDifferentialPair = ({
   }
   const maximumEscapeDistance =
     spineLength /
-    Math.max(
-      Number(startNeedsEscape) + Number(endNeedsEscape) + 1,
-      2,
-    )
+    Math.max(Number(startNeedsEscape) + Number(endNeedsEscape) + 1, 2)
   const escapeDistances = [0]
   if (startNeedsEscape || endNeedsEscape) {
     escapeDistances.length = 0
@@ -279,22 +256,14 @@ export const solveDifferentialPair = ({
   for (const escapeDistance of escapeDistances) {
     const startMidpoint = startNeedsEscape
       ? {
-          x:
-            originalStartMidpoint.x +
-            spineDirection.x * escapeDistance,
-          y:
-            originalStartMidpoint.y +
-            spineDirection.y * escapeDistance,
+          x: originalStartMidpoint.x + spineDirection.x * escapeDistance,
+          y: originalStartMidpoint.y + spineDirection.y * escapeDistance,
         }
       : originalStartMidpoint
     const endMidpoint = endNeedsEscape
       ? {
-          x:
-            originalEndMidpoint.x -
-            spineDirection.x * escapeDistance,
-          y:
-            originalEndMidpoint.y -
-            spineDirection.y * escapeDistance,
+          x: originalEndMidpoint.x - spineDirection.x * escapeDistance,
+          y: originalEndMidpoint.y - spineDirection.y * escapeDistance,
         }
       : originalEndMidpoint
     if (
@@ -354,9 +323,7 @@ export const solveDifferentialPair = ({
       negativeOriginalStart: negativeStart,
       negativeOriginalEnd: negativeEnd,
     })
-    const validateCandidate = (
-      routedPairCandidate: RoutedPairCandidate,
-    ) =>
+    const validateCandidate = (routedPairCandidate: RoutedPairCandidate) =>
       validateDifferentialPairCandidate({
         pair,
         params,

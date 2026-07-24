@@ -52,9 +52,7 @@ test("routes multiple pairs in canonical order and promotes earlier copper", () 
   expect(
     solver
       .getOutput()
-      .pairResults.map((pairResult) =>
-        String(pairResult.differentialPairName),
-      ),
+      .pairResults.map((pairResult) => String(pairResult.differentialPairName)),
   ).toEqual(["A_PAIR", "B_PAIR"])
   expect(
     solver

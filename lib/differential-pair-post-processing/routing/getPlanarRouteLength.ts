@@ -1,11 +1,6 @@
-import type {
-  PcbTraceRoutePoint,
-  PcbTraceWireRoutePoint,
-} from "../types"
+import type { PcbTraceRoutePoint, PcbTraceWireRoutePoint } from "../types"
 
-export const getPlanarRouteLength = (
-  route: PcbTraceRoutePoint[],
-): number => {
+export const getPlanarRouteLength = (route: PcbTraceRoutePoint[]): number => {
   let routeLength = 0
   let lastWire: PcbTraceWireRoutePoint | undefined
   for (const routePoint of route) {

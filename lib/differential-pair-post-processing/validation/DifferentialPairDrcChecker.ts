@@ -70,14 +70,9 @@ export class DifferentialPairDrcChecker {
       if (!obstacle.layers.includes(start.layer)) continue
       const containedTerminalCount = this.terminalPoints.filter(
         (terminalPoint) =>
-          this.pointIsInsideObstacle(
-            terminalPoint,
-            obstacle,
-            traceRadius,
-          ),
+          this.pointIsInsideObstacle(terminalPoint, obstacle, traceRadius),
       ).length
-      const terminalObstacle =
-        isTerminalEscape && containedTerminalCount === 1
+      const terminalObstacle = isTerminalEscape && containedTerminalCount === 1
       if (
         !terminalObstacle &&
         this.segmentHitsObstacle(start, end, obstacle, traceRadius)
@@ -91,15 +86,10 @@ export class DifferentialPairDrcChecker {
     }
 
     for (const unrelatedPcbTrace of this.unrelatedPcbTraces) {
-      for (const unrelatedSegment of this.getWireSegments(
-        unrelatedPcbTrace,
-      )) {
+      for (const unrelatedSegment of this.getWireSegments(unrelatedPcbTrace)) {
         if (unrelatedSegment.start.layer !== start.layer) continue
         const unrelatedRadius =
-          Math.max(
-            unrelatedSegment.start.width,
-            unrelatedSegment.end.width,
-          ) / 2
+          Math.max(unrelatedSegment.start.width, unrelatedSegment.end.width) / 2
         if (
           getMinimumSegmentDistance(
             start,
@@ -167,10 +157,7 @@ export class DifferentialPairDrcChecker {
       }
     }
 
-    for (const replacementPcbVia of [
-      positivePcbVia,
-      negativePcbVia,
-    ]) {
+    for (const replacementPcbVia of [positivePcbVia, negativePcbVia]) {
       const viaRadius = replacementPcbVia.outer_diameter / 2
       if (
         replacementPcbVia.x <
@@ -244,17 +231,13 @@ export class DifferentialPairDrcChecker {
           unrelatedPcbTrace,
         )) {
           if (
-            !replacementPcbVia.layers.includes(
-              unrelatedSegment.start.layer,
-            )
+            !replacementPcbVia.layers.includes(unrelatedSegment.start.layer)
           ) {
             continue
           }
           const unrelatedRadius =
-            Math.max(
-              unrelatedSegment.start.width,
-              unrelatedSegment.end.width,
-            ) / 2
+            Math.max(unrelatedSegment.start.width, unrelatedSegment.end.width) /
+            2
           if (
             getMinimumSegmentDistance(
               unrelatedSegment.start,
@@ -286,15 +269,11 @@ export class DifferentialPairDrcChecker {
   ): boolean {
     if (obstacle.type === "circle") {
       return (
-        Math.hypot(
-          point.x - obstacle.center.x,
-          point.y - obstacle.center.y,
-        ) <=
+        Math.hypot(point.x - obstacle.center.x, point.y - obstacle.center.y) <=
         obstacle.radius + (obstacle.clearance ?? 0) + clearance
       )
     }
-    const rotationRadians =
-      ((obstacle.ccwRotationDegrees ?? 0) * Math.PI) / 180
+    const rotationRadians = ((obstacle.ccwRotationDegrees ?? 0) * Math.PI) / 180
     const cosine = Math.cos(rotationRadians)
     const sine = Math.sin(rotationRadians)
     const relativeX = point.x - obstacle.center.x
@@ -328,8 +307,7 @@ export class DifferentialPairDrcChecker {
         obstacle.radius + (obstacle.clearance ?? 0) + clearance
       )
     }
-    const rotationRadians =
-      ((obstacle.ccwRotationDegrees ?? 0) * Math.PI) / 180
+    const rotationRadians = ((obstacle.ccwRotationDegrees ?? 0) * Math.PI) / 180
     const cosine = Math.cos(rotationRadians)
     const sine = Math.sin(rotationRadians)
     const toLocal = (point: Point): Point => {
@@ -342,8 +320,7 @@ export class DifferentialPairDrcChecker {
     }
     const localStart = toLocal(start)
     const localEnd = toLocal(end)
-    const halfWidth =
-      obstacle.width / 2 + (obstacle.clearance ?? 0) + clearance
+    const halfWidth = obstacle.width / 2 + (obstacle.clearance ?? 0) + clearance
     const halfHeight =
       obstacle.height / 2 + (obstacle.clearance ?? 0) + clearance
     let entry = 0
@@ -369,9 +346,7 @@ export class DifferentialPairDrcChecker {
     return true
   }
 
-  private getWireSegments(
-    pcbTrace: PcbTraceForPostProcessing,
-  ): Array<{
+  private getWireSegments(pcbTrace: PcbTraceForPostProcessing): Array<{
     start: PcbTraceWireRoutePoint
     end: PcbTraceWireRoutePoint
   }> {

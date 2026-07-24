@@ -67,10 +67,7 @@ export const findCoupledPath = ({
   let totalExploredStateCount = 0
   let hitIterationLimit = false
 
-  const getLaneOffsetForSegment = (
-    start: Point,
-    end: Point,
-  ): Point => {
+  const getLaneOffsetForSegment = (start: Point, end: Point): Point => {
     const segmentVector = {
       x: end.x - start.x,
       y: end.y - start.y,
@@ -190,16 +187,20 @@ export const findCoupledPath = ({
   const getNearbyGridCoordinates = (
     point: Point,
   ): Array<{ gridX: number; gridY: number }> => {
-    const centerGridX = Math.round(
-      (point.x - params.board.minX) / gridStep,
-    )
-    const centerGridY = Math.round(
-      (point.y - params.board.minY) / gridStep,
-    )
+    const centerGridX = Math.round((point.x - params.board.minX) / gridStep)
+    const centerGridY = Math.round((point.y - params.board.minY) / gridStep)
     const coordinates: Array<{ gridX: number; gridY: number }> = []
     for (let radius = 0; radius <= 3; radius++) {
-      for (let gridY = centerGridY - radius; gridY <= centerGridY + radius; gridY++) {
-        for (let gridX = centerGridX - radius; gridX <= centerGridX + radius; gridX++) {
+      for (
+        let gridY = centerGridY - radius;
+        gridY <= centerGridY + radius;
+        gridY++
+      ) {
+        for (
+          let gridX = centerGridX - radius;
+          gridX <= centerGridX + radius;
+          gridX++
+        ) {
           if (
             gridX < 0 ||
             gridX > maximumGridX ||
@@ -259,12 +260,9 @@ export const findCoupledPath = ({
       }
       return (
         Math.abs(
-          firstVector.x * secondVector.y -
-            firstVector.y * secondVector.x,
+          firstVector.x * secondVector.y - firstVector.y * secondVector.x,
         ) > 1e-9 ||
-        firstVector.x * secondVector.x +
-          firstVector.y * secondVector.y <=
-          0
+        firstVector.x * secondVector.x + firstVector.y * secondVector.y <= 0
       )
     })
   }
@@ -296,9 +294,7 @@ export const findCoupledPath = ({
   ) {
     const openQueue = new CoupledPathSearchQueue()
     const bestPathLengthByState = new Map<string, number>()
-    const startCoordinates = getNearbyGridCoordinates(
-      geometry.startMidpoint,
-    )
+    const startCoordinates = getNearbyGridCoordinates(geometry.startMidpoint)
     for (const { gridX, gridY } of startCoordinates) {
       const gridPoint = getGridPoint(gridX, gridY)
       if (
@@ -374,25 +370,20 @@ export const findCoupledPath = ({
           continue
         }
         const nextPoint = getGridPoint(nextGridX, nextGridY)
-        if (
-          !isSegmentValid(currentState, nextPoint, currentState.layer)
-        ) {
+        if (!isSegmentValid(currentState, nextPoint, currentState.layer)) {
           continue
         }
         const segmentLength =
-          gridStep *
-          (direction.x !== 0 && direction.y !== 0 ? Math.SQRT2 : 1)
+          gridStep * (direction.x !== 0 && direction.y !== 0 ? Math.SQRT2 : 1)
         const bendPenalty =
           currentState.directionIndex >= 0 &&
           currentState.directionIndex !== directionIndex
             ? gridStep * 0.02
             : 0
-        const pathLength =
-          currentState.pathLength + segmentLength + bendPenalty
+        const pathLength = currentState.pathLength + segmentLength + bendPenalty
         const stateKey = `${nextGridX}:${nextGridY}:${currentState.layer}:${currentState.viaPairCount}`
         if (
-          (bestPathLengthByState.get(stateKey) ??
-            Number.POSITIVE_INFINITY) <=
+          (bestPathLengthByState.get(stateKey) ?? Number.POSITIVE_INFINITY) <=
           pathLength + 1e-9
         ) {
           continue
@@ -428,10 +419,7 @@ export const findCoupledPath = ({
                 currentState.x - currentState.parent.x,
                 currentState.y - currentState.parent.y,
               ) > 1e-12
-              ? getLaneOffsetForSegment(
-                  currentState.parent,
-                  currentState,
-                )
+              ? getLaneOffsetForSegment(currentState.parent, currentState)
               : geometry.laneOffset,
             currentState.layer,
             destinationLayer,
@@ -444,8 +432,7 @@ export const findCoupledPath = ({
         const pathLength = currentState.pathLength + gridStep * 0.05
         const stateKey = `${currentState.gridX}:${currentState.gridY}:${destinationLayer}:${nextViaPairCount}`
         if (
-          (bestPathLengthByState.get(stateKey) ??
-            Number.POSITIVE_INFINITY) <=
+          (bestPathLengthByState.get(stateKey) ?? Number.POSITIVE_INFINITY) <=
           pathLength + 1e-9
         ) {
           continue

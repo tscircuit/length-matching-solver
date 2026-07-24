@@ -15,9 +15,7 @@ test("retains both originals when spacing and DRC are unsatisfiable", () => {
   if (pairResult?.status !== "original_retained") {
     throw new Error("Expected the unsatisfiable pair to be retained")
   }
-  expect(pairResult.failure.category).toBe(
-    "spacing_bounds_unsatisfiable",
-  )
+  expect(pairResult.failure.category).toBe("spacing_bounds_unsatisfiable")
   expect(params.pcbTraces).toEqual(originalPcbTraces)
   expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
 })

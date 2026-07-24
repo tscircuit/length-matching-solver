@@ -42,10 +42,7 @@ export const createRoutedPairCandidate = ({
       `Differential pair "${pair.name}" coupled path must contain at least two points`,
     )
   }
-  const getLaneOffsetForEdge = (
-    start: Point,
-    end: Point,
-  ): Point => {
+  const getLaneOffsetForEdge = (start: Point, end: Point): Point => {
     const edgeVector = { x: end.x - start.x, y: end.y - start.y }
     const edgeLength = Math.hypot(edgeVector.x, edgeVector.y)
     if (edgeLength <= 1e-12) {
@@ -135,16 +132,14 @@ export const createRoutedPairCandidate = ({
       Math.ceil(Math.abs(angleChange) / (Math.PI / 12)),
     )
     while (
-      geometry.targetSpacing /
-        Math.cos(Math.abs(angleChange) / stepCount / 2) >
+      geometry.targetSpacing / Math.cos(Math.abs(angleChange) / stepCount / 2) >
         params.maxCenterlineSpacing + 1e-9 &&
       stepCount < 10_000
     ) {
       stepCount++
     }
     const angleStep = Math.abs(angleChange) / stepCount
-    const expandedRadius =
-      geometry.targetSpacing / 2 / Math.cos(angleStep / 2)
+    const expandedRadius = geometry.targetSpacing / 2 / Math.cos(angleStep / 2)
     appendLaneStation(
       midpoint,
       {
@@ -192,12 +187,7 @@ export const createRoutedPairCandidate = ({
   let currentLaneOffset = firstSpatialPathPoint
     ? getLaneOffsetForEdge(path[0]!, firstSpatialPathPoint)
     : geometry.laneOffset
-  appendLaneStation(
-    path[0]!,
-    currentLaneOffset,
-    path[0]!.layer,
-    true,
-  )
+  appendLaneStation(path[0]!, currentLaneOffset, path[0]!.layer, true)
 
   for (let pathPointIndex = 1; pathPointIndex < path.length; pathPointIndex++) {
     const previousPathPoint = path[pathPointIndex - 1]!
@@ -212,16 +202,8 @@ export const createRoutedPairCandidate = ({
           `Differential pair "${pair.name}" changed layers while moving in the plane`,
         )
       }
-      const positiveViaPoint = getLanePoint(
-        pathPoint,
-        currentLaneOffset,
-        1,
-      )
-      const negativeViaPoint = getLanePoint(
-        pathPoint,
-        currentLaneOffset,
-        -1,
-      )
+      const positiveViaPoint = getLanePoint(pathPoint, currentLaneOffset, 1)
+      const negativeViaPoint = getLanePoint(pathPoint, currentLaneOffset, -1)
       positiveRoute.push({
         route_type: "via",
         ...positiveViaPoint,
@@ -266,10 +248,7 @@ export const createRoutedPairCandidate = ({
       continue
     }
     if (planarDistance <= 1e-12) continue
-    const edgeLaneOffset = getLaneOffsetForEdge(
-      previousPathPoint,
-      pathPoint,
-    )
+    const edgeLaneOffset = getLaneOffsetForEdge(previousPathPoint, pathPoint)
     if (
       Math.hypot(
         edgeLaneOffset.x - currentLaneOffset.x,
@@ -287,10 +266,12 @@ export const createRoutedPairCandidate = ({
     currentLaneOffset = edgeLaneOffset
   }
 
-  const positiveLastWire =
-    positiveRoute[positiveRoute.length - 1] as PcbTraceWireRoutePoint
-  const negativeLastWire =
-    negativeRoute[negativeRoute.length - 1] as PcbTraceWireRoutePoint
+  const positiveLastWire = positiveRoute[
+    positiveRoute.length - 1
+  ] as PcbTraceWireRoutePoint
+  const negativeLastWire = negativeRoute[
+    negativeRoute.length - 1
+  ] as PcbTraceWireRoutePoint
   positiveLastWire.is_terminal_escape = true
   negativeLastWire.is_terminal_escape = true
   positiveRoute.push({

@@ -63,16 +63,12 @@ export const correctLengthSkew = ({
       shorterStart.x - longerStart.x,
       shorterStart.y - longerStart.y,
     )
-    const maximumTuningHeight =
-      params.maxCenterlineSpacing - pairSeparation
+    const maximumTuningHeight = params.maxCenterlineSpacing - pairSeparation
     const minimumHalfPitch = Math.max(
       0.15,
-      shorterStart.width +
-        params.designRules.traceToTraceClearance,
+      shorterStart.width + params.designRules.traceToTraceClearance,
     )
-    const maximumToothCount = Math.floor(
-      segmentLength / (minimumHalfPitch * 2),
-    )
+    const maximumToothCount = Math.floor(segmentLength / (minimumHalfPitch * 2))
     if (
       pairSeparation <= 1e-9 ||
       maximumTuningHeight <= 1e-9 ||
@@ -84,15 +80,10 @@ export const correctLengthSkew = ({
       x: (shorterStart.x - longerStart.x) / pairSeparation,
       y: (shorterStart.y - longerStart.y) / pairSeparation,
     }
-    for (
-      let toothCount = 1;
-      toothCount <= maximumToothCount;
-      toothCount++
-    ) {
+    for (let toothCount = 1; toothCount <= maximumToothCount; toothCount++) {
       const halfPitch = segmentLength / (toothCount * 2)
       const tuningHeightSquared =
-        ((segmentLength + requiredAddedLength) / (toothCount * 2)) **
-          2 -
+        ((segmentLength + requiredAddedLength) / (toothCount * 2)) ** 2 -
         halfPitch ** 2
       if (tuningHeightSquared <= 0) continue
       const tuningHeight = Math.sqrt(tuningHeightSquared)
@@ -111,26 +102,18 @@ export const correctLengthSkew = ({
           x:
             shorterStart.x +
             (shorterEnd.x - shorterStart.x) * progress +
-            (isToothPeak
-              ? outwardDirection.x * tuningHeight
-              : 0),
+            (isToothPeak ? outwardDirection.x * tuningHeight : 0),
           y:
             shorterStart.y +
             (shorterEnd.y - shorterStart.y) * progress +
-            (isToothPeak
-              ? outwardDirection.y * tuningHeight
-              : 0),
+            (isToothPeak ? outwardDirection.y * tuningHeight : 0),
           width: shorterStart.width,
           layer: shorterStart.layer,
         })
         longerInsertions.push({
           route_type: "wire",
-          x:
-            longerStart.x +
-            (longerEnd.x - longerStart.x) * progress,
-          y:
-            longerStart.y +
-            (longerEnd.y - longerStart.y) * progress,
+          x: longerStart.x + (longerEnd.x - longerStart.x) * progress,
+          y: longerStart.y + (longerEnd.y - longerStart.y) * progress,
           width: longerStart.width,
           layer: longerStart.layer,
         })

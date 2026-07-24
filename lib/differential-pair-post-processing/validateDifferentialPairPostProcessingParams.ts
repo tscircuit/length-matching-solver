@@ -53,10 +53,7 @@ export const validateDifferentialPairPostProcessingParams = (
         `DifferentialPairPostProcessingSolver: designRules.${ruleName} must be finite and nonnegative`,
       )
   }
-  if (
-    params.designRules.viaOuterDiameter <
-    params.designRules.viaHoleDiameter
-  )
+  if (params.designRules.viaOuterDiameter < params.designRules.viaHoleDiameter)
     throw new DifferentialPairInputError(
       "invalid_design_rule",
       "DifferentialPairPostProcessingSolver: viaOuterDiameter must be at least viaHoleDiameter",
@@ -153,8 +150,7 @@ export const validateDifferentialPairPostProcessingParams = (
       obstacle.layers.length === 0 ||
       obstacle.layers.some((layer) => !canonicalLayerNames.has(layer)) ||
       (obstacle.clearance !== undefined &&
-        (!Number.isFinite(obstacle.clearance) ||
-          obstacle.clearance < 0)) ||
+        (!Number.isFinite(obstacle.clearance) || obstacle.clearance < 0)) ||
       hasInvalidShape
     )
       throw new DifferentialPairInputError(

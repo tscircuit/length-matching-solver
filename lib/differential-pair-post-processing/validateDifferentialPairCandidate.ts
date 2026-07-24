@@ -1,9 +1,6 @@
 import { getMinimumSegmentDistance } from "../route-geometry/getMinimumSegmentDistance"
 import { getPlanarRouteLength } from "./routing/getPlanarRouteLength"
-import type {
-  PairLaneGeometry,
-  RoutedPairCandidate,
-} from "./routing/types"
+import type { PairLaneGeometry, RoutedPairCandidate } from "./routing/types"
 import type {
   DifferentialPairRoutingFailure,
   PcbTraceWireRoutePoint,
@@ -172,8 +169,7 @@ export const validateDifferentialPairCandidate = ({
       x: endDelta.x - startDelta.x,
       y: endDelta.y - startDelta.y,
     }
-    const deltaChangeLengthSquared =
-      deltaChange.x ** 2 + deltaChange.y ** 2
+    const deltaChangeLengthSquared = deltaChange.x ** 2 + deltaChange.y ** 2
     const minimumProgress =
       deltaChangeLengthSquared <= 1e-18
         ? 0
@@ -181,10 +177,8 @@ export const validateDifferentialPairCandidate = ({
             0,
             Math.min(
               1,
-              -(
-                startDelta.x * deltaChange.x +
-                startDelta.y * deltaChange.y
-              ) / deltaChangeLengthSquared,
+              -(startDelta.x * deltaChange.x + startDelta.y * deltaChange.y) /
+                deltaChangeLengthSquared,
             ),
           )
     const minimumDistance = Math.hypot(
@@ -205,10 +199,7 @@ export const validateDifferentialPairCandidate = ({
         { layer: positiveStart.layer },
       )
     }
-    if (
-      startDelta.x * endDelta.x + startDelta.y * endDelta.y <=
-      0
-    ) {
+    if (startDelta.x * endDelta.x + startDelta.y * endDelta.y <= 0) {
       return failure(
         "terminal_escape_failed",
         "candidate changes positive/negative lane ordering",

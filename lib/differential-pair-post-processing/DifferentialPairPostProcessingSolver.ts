@@ -25,16 +25,13 @@ export class DifferentialPairPostProcessingSolver extends BaseSolver {
     private readonly params: DifferentialPairPostProcessingSolverParams,
   ) {
     super()
-    this.resolvedParams =
-      validateDifferentialPairPostProcessingParams(params)
+    this.resolvedParams = validateDifferentialPairPostProcessingParams(params)
     this.canonicalPairs = this.resolvedParams.differentialPairs
       .slice()
       .sort((pairA, pairB) =>
         pairA.name < pairB.name ? -1 : pairA.name > pairB.name ? 1 : 0,
       )
-    this.transactionalPcbTraces = structuredClone(
-      this.resolvedParams.pcbTraces,
-    )
+    this.transactionalPcbTraces = structuredClone(this.resolvedParams.pcbTraces)
     this.transactionalPcbVias = structuredClone(this.resolvedParams.pcbVias)
     this.MAX_ITERATIONS = this.canonicalPairs.length + 1
   }
@@ -109,9 +106,8 @@ export class DifferentialPairPostProcessingSolver extends BaseSolver {
             `Differential pair "${pair.name}" replaced an unknown PCB trace`,
           )
         }
-        this.transactionalPcbTraces[pcbTraceIndex] = structuredClone(
-          replacementPcbTrace,
-        )
+        this.transactionalPcbTraces[pcbTraceIndex] =
+          structuredClone(replacementPcbTrace)
       }
       for (
         let pcbViaIndex = this.transactionalPcbVias.length - 1;
@@ -152,13 +148,13 @@ export class DifferentialPairPostProcessingSolver extends BaseSolver {
     }
     graphics.rects!.push({
       center: {
-        x: (this.resolvedParams.board.minX + this.resolvedParams.board.maxX) / 2,
-        y: (this.resolvedParams.board.minY + this.resolvedParams.board.maxY) / 2,
+        x:
+          (this.resolvedParams.board.minX + this.resolvedParams.board.maxX) / 2,
+        y:
+          (this.resolvedParams.board.minY + this.resolvedParams.board.maxY) / 2,
       },
-      width:
-        this.resolvedParams.board.maxX - this.resolvedParams.board.minX,
-      height:
-        this.resolvedParams.board.maxY - this.resolvedParams.board.minY,
+      width: this.resolvedParams.board.maxX - this.resolvedParams.board.minX,
+      height: this.resolvedParams.board.maxY - this.resolvedParams.board.minY,
       fill: "rgba(20, 25, 35, 0.08)",
       stroke: "rgba(150, 170, 200, 0.8)",
       layer: "board",
@@ -203,9 +199,7 @@ export class DifferentialPairPostProcessingSolver extends BaseSolver {
         if (previousWire && previousWire.layer === routePoint.layer) {
           graphics.lines!.push({
             points: [previousWire, routePoint],
-            strokeColor: positiveSourceTraceIds.has(
-              pcbTrace.source_trace_id,
-            )
+            strokeColor: positiveSourceTraceIds.has(pcbTrace.source_trace_id)
               ? "#e05a5a"
               : "#5a8fe0",
             strokeWidth: routePoint.width,
