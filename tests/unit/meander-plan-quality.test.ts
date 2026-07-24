@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getMeanderPlanQualityScore } from "../lib/length-matching/multi-segment-plan"
+import { getMeanderPlanQualityScore } from "../../lib/length-matching/multi-segment-plan"
 
 test("allows materially gentler distributed plans without rewarding fragmentation", () => {
   const deepSingleSegmentScore = getMeanderPlanQualityScore([

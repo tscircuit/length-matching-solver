@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test"
-import { evaluateMeanderCandidate } from "../lib/length-matching/meander-candidate"
-import type { HighDensityRoute } from "../lib/types"
+import { evaluateMeanderCandidate } from "../../lib/length-matching/meander-candidate"
+import type { HighDensityRoute } from "../../lib/types"
 
-test("fits a feasible curved meander when linear regression overestimates its scale", () => {
+test("rejects a non-positive regression prediction without invalid geometry", () => {
   const route: HighDensityRoute = {
     connectionName: "short-route",
     traceThickness: 0.15,
@@ -10,7 +10,7 @@ test("fits a feasible curved meander when linear regression overestimates its sc
     vias: [],
     route: [
       { x: 0, y: 0, z: 0 },
-      { x: 20, y: 0, z: 0 },
+      { x: 6, y: 0, z: 0 },
     ],
   }
 
@@ -18,9 +18,9 @@ test("fits a feasible curved meander when linear regression overestimates its sc
     candidate: {
       routeIndex: 0,
       segmentIndex: 0,
-      segmentLength: 20,
+      segmentLength: 6,
       toothCount: 1,
-      maximumDepth: 1,
+      maximumDepth: 2,
       minimumHeight: 0.01,
       toothPitch: 1,
       placement: "negative",
@@ -28,12 +28,16 @@ test("fits a feasible curved meander when linear regression overestimates its sc
     },
     route,
     connectionName: route.connectionName,
-    targetAddedLength: 1.4278766054,
+    targetAddedLength: -1,
     lengthTolerance: 0.001,
     isGeometryValid: () => true,
   })
 
-  expect(attempt.valid).toBe(true)
-  expect(attempt.predictedScaleFactor).toBeCloseTo(1, 6)
-  expect(attempt.resultingError).toBeLessThan(0.001)
+  expect(attempt.valid).toBe(false)
+  expect(attempt.predictedScaleFactor).toBeLessThan(0)
+  expect(
+    attempt.predictedRoute.every(
+      (point) => Number.isFinite(point.x) && Number.isFinite(point.y),
+    ),
+  ).toBe(true)
 })

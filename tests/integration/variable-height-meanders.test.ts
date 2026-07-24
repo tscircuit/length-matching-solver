@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
-import sampleProblem from "../fixtures/sample-03/sample-03.srj.json"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
-import { getRouteLength } from "../lib/route-geometry"
+import sampleProblem from "../../fixtures/sample-03/sample-03.srj.json"
+import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../../lib"
+import { getRouteLength } from "../../lib/route-geometry"
 
 test("scales independently clearance-limited tooth heights", () => {
   // This fixture explicitly overrides the manufacturing default because its

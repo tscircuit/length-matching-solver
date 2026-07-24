@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
+import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../../lib"
 
 test("uses the compact pitch when obstacles reject relaxed alternatives", () => {
   const params: LengthMatchingSolverParams = {

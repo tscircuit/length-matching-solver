@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import sampleProblem from "../fixtures/sample-01/sample-01.srj.json"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
+import sampleProblem from "../../fixtures/sample-01/sample-01.srj.json"
+import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../../lib"
 
 test("renders distinct geometry for pair selection, scoring, and completion", () => {
   // SAFETY: This repository-owned fixture is exercised by the solver regression test. The cast restores JSON literals widened by TypeScript module inference.

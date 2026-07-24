@@ -13,6 +13,28 @@ export const buildAttemptGraphics = (input: {
   theme: LengthMatchingColorTheme
   graphics: LengthMatchingGraphics
 }): void => {
+  const appendSelectedSegmentGraphics = (selectedInput: {
+    routes: HighDensityRoute[]
+    activePair: ActivePair | null
+    theme: LengthMatchingColorTheme
+    graphics: LengthMatchingGraphics
+  }): void => {
+    const candidate =
+      selectedInput.activePair?.candidates[selectedInput.activePair.candidateIndex]
+    if (!candidate) return
+    const route = selectedInput.routes[candidate.routeIndex]
+    if (!route) return
+    const start = route.route[candidate.segmentIndex]
+    const end = route.route[candidate.segmentIndex + 1]
+    if (!start || !end) return
+    selectedInput.graphics.lines.push({
+      points: [start, end],
+      strokeColor: "rgba(234, 179, 8, 0.6)",
+      strokeWidth: route.traceThickness * 2,
+      strokeDash: [0.1, 0.1],
+      layer: getGraphicsLayerForRoute(start.z),
+    })
+  }
   if (!input.showAttempt) return
   if (!input.attempt) {
     appendSelectedSegmentGraphics(input)
@@ -60,27 +82,4 @@ export const buildAttemptGraphics = (input: {
       layer: getGraphicsLayerForRoute(end.z),
     },
   )
-}
-
-const appendSelectedSegmentGraphics = (input: {
-  routes: HighDensityRoute[]
-  activePair: ActivePair | null
-  theme: LengthMatchingColorTheme
-  graphics: LengthMatchingGraphics
-}): void => {
-  const candidate =
-    input.activePair?.candidates[input.activePair.candidateIndex]
-  if (!candidate) return
-  const route = input.routes[candidate.routeIndex]
-  if (!route) return
-  const start = route.route[candidate.segmentIndex]
-  const end = route.route[candidate.segmentIndex + 1]
-  if (!start || !end) return
-  input.graphics.lines.push({
-    points: [start, end],
-    strokeColor: "rgba(234, 179, 8, 0.6)",
-    strokeWidth: route.traceThickness * 2,
-    strokeDash: [0.1, 0.1],
-    layer: getGraphicsLayerForRoute(start.z),
-  })
 }

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import sampleProblem from "../fixtures/sample-09/sample-09.srj.json"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
+import sampleProblem from "../../fixtures/sample-09/sample-09.srj.json"
+import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../../lib"
 
 test("matches a USB pair with relaxed meanders in available space", () => {
   // SAFETY: This repository-owned JSON is shared with the Cosmos fixture. The cast restores literal tuple and obstacle discriminants widened by JSON module inference.

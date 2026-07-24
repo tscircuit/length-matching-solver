@@ -14,18 +14,19 @@ export type LengthMatchingColorTheme = {
   via: { fill: string; stroke: string }
 }
 
-const getDeterministicConnectionColor = (connectionName: string): string => {
-  if (!connectionName) return "rgba(0, 0, 0, 0.5)"
-  const characterSum = connectionName
-    .split("")
-    .reduce((total, character) => total + character.charCodeAt(0), 0)
-  return `hsl(${((characterSum * 300) / connectionName.length) % 360}, 100%, 50%)`
-}
-
 /** Create the deterministic palette used by all length-matching visualizations. */
 export const createLengthMatchingColorTheme = (
   colorMap: Record<string, string>,
 ): LengthMatchingColorTheme => {
+  const getDeterministicConnectionColor = (
+    connectionName: string,
+  ): string => {
+    if (!connectionName) return "rgba(0, 0, 0, 0.5)"
+    const characterSum = connectionName
+      .split("")
+      .reduce((total, character) => total + character.charCodeAt(0), 0)
+    return `hsl(${((characterSum * 300) / connectionName.length) % 360}, 100%, 50%)`
+  }
   for (const color of Object.values(colorMap)) transparentize(0, color)
   return {
     getConnectionColor: (connectionName, routeConnectionName) =>
