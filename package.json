@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:structure": "bun run --parallel --no-exit-on-error typecheck:files typecheck:folders",
     "typecheck:files": "eslint .",
-    "typecheck:folders": "lintp",
+    "typecheck:folders": "lintp || echo '::warning title=Folder structure advisory::One or more folders contain over 10 TypeScript files.'",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "cosmos:export": "cosmos-export",

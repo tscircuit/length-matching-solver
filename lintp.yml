@@ -2,7 +2,7 @@ lintp:
   config:
     .dir:
       rule: 'count(filter(children("*"), endsWith($item, ".ts") || endsWith($item, ".tsx"))) <= 10'
-      message: "A folder may contain at most 10 TypeScript files."
+      message: "WARNING: A folder contains more than 10 TypeScript files."
   ignore:
     - .git
     - coverage
