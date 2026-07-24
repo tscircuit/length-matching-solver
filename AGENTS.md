@@ -76,6 +76,8 @@ you can debug—it is silently wrong routed geometry.
 ## File Organization Rules
 
 - Every TypeScript file must contain fewer than 500 lines of code.
+- A TypeScript file with fewer than six non-empty lines produces an advisory
+  warning.
 - Keep exactly one test case per test file.
 - A folder with more than ten TypeScript files produces an advisory warning.
   Prefer clearly named subfolders that categorize files by purpose.
