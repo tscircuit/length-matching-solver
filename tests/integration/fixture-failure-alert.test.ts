@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
-import sampleProblem from "../fixtures/sample-03/sample-03.srj.json"
-import { AlertingLengthMatchingSolver } from "../fixtures/alerting-length-matching-solver"
-import type { LengthMatchingSolverParams } from "../lib"
+import sampleProblem from "../../fixtures/sample-03/sample-03.srj.json"
+import { AlertingLengthMatchingSolver } from "../../fixtures/alerting-length-matching-solver"
+import type { LengthMatchingSolverParams } from "../../lib"
 
 test("reports an unsolved fixture through the browser alert and failed state", () => {
   const originalWindow = globalThis.window

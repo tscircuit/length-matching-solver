@@ -1,0 +1,248 @@
+import { getRouteLength } from "../../route-geometry"
+import type { HighDensityRoute, RoutePoint } from "../../types"
+import type {
+  MeanderHeightProfile,
+  RegressionAttempt,
+  SegmentCandidate,
+} from "../internal-types"
+import { getMeanderQualityScore } from "../meander-quality"
+import { createMeanderReplacement } from "./createMeanderReplacement"
+import { replaceSegmentWithMeander } from "./replaceSegmentWithMeander"
+
+const DEPTH_SEARCH_ITERATIONS = 32
+
+/** Fit a scale factor over clearance-limited tooth depths and predict a route. */
+export const evaluateMeanderCandidate = (input: {
+  candidate: SegmentCandidate
+  route: HighDensityRoute
+  connectionName: string
+  targetAddedLength: number
+  lengthTolerance: number
+  isGeometryValid: (meanderPoints: RoutePoint[]) => boolean
+}): RegressionAttempt => {
+  const getToothHeightWeights = (profile: {
+    toothCount: number
+    heightProfile: MeanderHeightProfile
+  }): number[] => {
+    if (profile.heightProfile !== "tapered")
+      return Array<number>(profile.toothCount).fill(1)
+    const weights = Array.from(
+      { length: profile.toothCount },
+      (_, toothIndex) =>
+        Math.sin((Math.PI * (toothIndex + 1)) / (profile.toothCount + 1)),
+    )
+    const maximumWeight = Math.max(...weights)
+    return weights.map((weight) => weight / maximumWeight)
+  }
+  const getMaximumToothDepths = (): number[] => {
+    const maximumToothDepths: number[] = []
+    for (
+      let toothIndex = 0;
+      toothIndex < input.candidate.toothCount;
+      toothIndex++
+    ) {
+      const maximumProfile = Array<number>(input.candidate.toothCount).fill(0)
+      maximumProfile[toothIndex] = input.candidate.maximumDepth
+      const maximumReplacement = createMeanderReplacement({
+        ...input.candidate,
+        route: input.route,
+        toothDepths: maximumProfile,
+      })
+      if (input.isGeometryValid(maximumReplacement)) {
+        maximumToothDepths.push(input.candidate.maximumDepth)
+        continue
+      }
+      let validDepth = 0
+      let invalidDepth = input.candidate.maximumDepth
+      for (
+        let iteration = 0;
+        iteration < DEPTH_SEARCH_ITERATIONS;
+        iteration++
+      ) {
+        const testedDepth = (validDepth + invalidDepth) / 2
+        const testedProfile = Array<number>(input.candidate.toothCount).fill(0)
+        testedProfile[toothIndex] = testedDepth
+        const testedReplacement = createMeanderReplacement({
+          ...input.candidate,
+          route: input.route,
+          toothDepths: testedProfile,
+        })
+        if (input.isGeometryValid(testedReplacement)) validDepth = testedDepth
+        else invalidDepth = testedDepth
+      }
+      maximumToothDepths.push(validDepth)
+    }
+    return maximumToothDepths
+  }
+  const findCappedDepthProfileForTargetLength = (profile: {
+    maximumToothDepths: number[]
+    toothHeightWeights: number[]
+    originalLength: number
+    targetAddedLength: number
+  }): { toothDepths: number[]; depthLevel: number } => {
+    let lowerDepthLevel = 0
+    let upperDepthLevel = input.candidate.maximumDepth
+    for (let iteration = 0; iteration < DEPTH_SEARCH_ITERATIONS; iteration++) {
+      const depthLevel = (lowerDepthLevel + upperDepthLevel) / 2
+      const toothDepths = profile.maximumToothDepths.map(
+        (maximumDepth, toothIndex) =>
+          Math.min(
+            maximumDepth,
+            depthLevel * profile.toothHeightWeights[toothIndex]!,
+          ),
+      )
+      const candidateRoute = replaceSegmentWithMeander({
+        ...input.candidate,
+        route: input.route,
+        toothDepths,
+      })
+      const addedLength =
+        getRouteLength({ ...input.route, route: candidateRoute }) -
+        profile.originalLength
+      const meanderPoints = createMeanderReplacement({
+        ...input.candidate,
+        route: input.route,
+        toothDepths,
+      })
+      if (!input.isGeometryValid(meanderPoints)) {
+        upperDepthLevel = depthLevel
+        continue
+      }
+      if (addedLength < profile.targetAddedLength) lowerDepthLevel = depthLevel
+      else upperDepthLevel = depthLevel
+    }
+    const depthLevel = (lowerDepthLevel + upperDepthLevel) / 2
+    return {
+      depthLevel,
+      toothDepths: profile.maximumToothDepths.map((maximumDepth, toothIndex) =>
+        Math.min(
+          maximumDepth,
+          depthLevel * profile.toothHeightWeights[toothIndex]!,
+        ),
+      ),
+    }
+  }
+  const originalLength = getRouteLength(input.route)
+  const maximumToothDepths = getMaximumToothDepths()
+  const toothHeightWeights = getToothHeightWeights(input.candidate)
+  const maximumDepthLevel = input.candidate.maximumDepth
+  const maximumProfile = maximumToothDepths.map((maximumDepth, toothIndex) =>
+    Math.min(maximumDepth, maximumDepthLevel * toothHeightWeights[toothIndex]!),
+  )
+  const sampleScaleFactors: [number, number] = [0.25, 0.75]
+  const firstSampleDepths = maximumProfile.map(
+    (maximumDepth) => maximumDepth * sampleScaleFactors[0],
+  )
+  const secondSampleDepths = maximumProfile.map(
+    (maximumDepth) => maximumDepth * sampleScaleFactors[1],
+  )
+  const firstSampleRoute = replaceSegmentWithMeander({
+    ...input.candidate,
+    route: input.route,
+    toothDepths: firstSampleDepths,
+  })
+  const secondSampleRoute = replaceSegmentWithMeander({
+    ...input.candidate,
+    route: input.route,
+    toothDepths: secondSampleDepths,
+  })
+  const sampleAddedLengths: [number, number] = [
+    getRouteLength({ ...input.route, route: firstSampleRoute }) -
+      originalLength,
+    getRouteLength({ ...input.route, route: secondSampleRoute }) -
+      originalLength,
+  ]
+  const maximumScaleRoute = replaceSegmentWithMeander({
+    ...input.candidate,
+    route: input.route,
+    toothDepths: maximumProfile,
+  })
+  const maximumAddedLength =
+    getRouteLength({ ...input.route, route: maximumScaleRoute }) -
+    originalLength
+  const slope =
+    (sampleAddedLengths[1] - sampleAddedLengths[0]) /
+    (sampleScaleFactors[1] - sampleScaleFactors[0])
+  const intercept = sampleAddedLengths[0] - slope * sampleScaleFactors[0]
+  const regressionPredictedScaleFactor =
+    slope > 0 && Number.isFinite(slope)
+      ? (input.targetAddedLength - intercept) / slope
+      : 0
+  const matchedAddedLength = Math.min(
+    input.targetAddedLength,
+    maximumAddedLength,
+  )
+  const fittedProfile =
+    input.targetAddedLength > 0 && matchedAddedLength > 0
+      ? findCappedDepthProfileForTargetLength({
+          maximumToothDepths,
+          toothHeightWeights,
+          originalLength,
+          targetAddedLength: matchedAddedLength,
+        })
+      : {
+          depthLevel: regressionPredictedScaleFactor * maximumDepthLevel,
+          toothDepths: maximumProfile.map((maximumDepth) =>
+            Math.max(0, maximumDepth * regressionPredictedScaleFactor),
+          ),
+        }
+  const predictedScaleFactor = fittedProfile.depthLevel / maximumDepthLevel
+  const predictedToothDepths = fittedProfile.toothDepths
+  const predictedRoute = replaceSegmentWithMeander({
+    ...input.candidate,
+    route: input.route,
+    toothDepths: predictedToothDepths,
+  })
+  const addedLength =
+    getRouteLength({ ...input.route, route: predictedRoute }) - originalLength
+  const resultingError = Math.abs(matchedAddedLength - addedLength)
+  const meanderPoints = createMeanderReplacement({
+    ...input.candidate,
+    route: input.route,
+    toothDepths: predictedToothDepths,
+  })
+  const scaleIsValid =
+    Number.isFinite(predictedScaleFactor) &&
+    predictedScaleFactor > 0 &&
+    predictedScaleFactor <= 1
+  const minimumHeightIsValid = predictedToothDepths.every(
+    (toothDepth) =>
+      toothDepth === 0 || toothDepth >= input.candidate.minimumHeight,
+  )
+  const geometryIsValid = input.isGeometryValid(meanderPoints)
+  const invalidReason: RegressionAttempt["invalidReason"] = !scaleIsValid
+    ? "invalid-scale"
+    : resultingError > input.lengthTolerance
+      ? "target-error"
+      : !geometryIsValid
+        ? "invalid-geometry"
+        : !minimumHeightIsValid
+          ? "below-minimum-height"
+          : null
+  const outcome = invalidReason
+    ? { valid: false as const, invalidReason }
+    : { valid: true as const, invalidReason: null }
+  const attempt: RegressionAttempt = {
+    ...input.candidate,
+    connectionName: input.connectionName,
+    maximumToothDepths,
+    sampleScaleFactors,
+    sampleAddedLengths,
+    slope,
+    intercept,
+    predictedScaleFactor,
+    predictedToothDepths,
+    predictedRoute,
+    addedLength,
+    maximumAddedLength,
+    resultingError,
+    testedSegment: [
+      { ...input.route.route[input.candidate.segmentIndex]! },
+      { ...input.route.route[input.candidate.segmentIndex + 1]! },
+    ],
+    meanderPoints,
+    qualityScore: 0,
+    ...outcome,
+  }
+  return { ...attempt, qualityScore: getMeanderQualityScore(attempt) }
+}

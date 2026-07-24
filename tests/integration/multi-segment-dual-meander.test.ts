@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
-import { LengthMatchingSolver } from "../lib"
-import { getRouteLength } from "../lib/route-geometry"
-import type { HighDensityRoute } from "../lib/types"
+import { LengthMatchingSolver } from "../../lib"
+import { getRouteLength } from "../../lib/route-geometry"
+import type { HighDensityRoute } from "../../lib/types"
 
 test("combines one longer-route meander with multiple shorter-route meanders", () => {
   const longerRoute: HighDensityRoute = {

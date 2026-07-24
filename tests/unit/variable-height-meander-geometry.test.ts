@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import { replaceSegmentWithMeander } from "../lib/length-matching/meander-candidate"
-import type { HighDensityRoute } from "../lib/types"
+import { replaceSegmentWithMeander } from "../../lib/length-matching/meander-candidate"
+import type { HighDensityRoute } from "../../lib/types"
 
 test("constructs each meander tooth with its assigned height and rounded turns", () => {
   const route: HighDensityRoute = {

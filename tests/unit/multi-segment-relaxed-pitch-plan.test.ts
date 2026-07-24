@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import type { RegressionAttempt } from "../lib/length-matching/internal-types"
-import { selectPartialMeanderPlan } from "../lib/length-matching/multi-segment-plan"
+import type { RegressionAttempt } from "../../lib/length-matching/internal-types"
+import { selectPartialMeanderPlan } from "../../lib/length-matching/multi-segment-plan"
 
 test("selects relaxed pitch variants when they can supply a multi-segment plan", () => {
   const createAttempt = (input: {

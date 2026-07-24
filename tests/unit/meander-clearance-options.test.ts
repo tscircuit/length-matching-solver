@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
-import { validateAndResolveParams } from "../lib/length-matching/config"
-import { createMeanderCandidates } from "../lib/length-matching/meander-candidate"
-import type { HighDensityRoute } from "../lib/types"
+import { validateAndResolveParams } from "../../lib/length-matching/config"
+import { createMeanderCandidates } from "../../lib/length-matching/meander-candidate"
+import type { HighDensityRoute } from "../../lib/types"
 
 test("derives meander clearance defaults from trace width and accepts overrides", () => {
   const defaultConfig = validateAndResolveParams({

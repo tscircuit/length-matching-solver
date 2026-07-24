@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test"
-import { evaluateMeanderCandidate } from "../lib/length-matching/meander-candidate"
+import { evaluateMeanderCandidate } from "../../lib/length-matching/meander-candidate"
 import type {
   MeanderHeightProfile,
   MeanderPlacement,
   RegressionAttempt,
-} from "../lib/length-matching/internal-types"
-import type { HighDensityRoute } from "../lib/types"
+} from "../../lib/length-matching/internal-types"
+import type { HighDensityRoute } from "../../lib/types"
 
 test("prefers broad distributed meanders over concentrated or compact alternatives", () => {
   const route: HighDensityRoute = {

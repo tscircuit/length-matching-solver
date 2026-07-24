@@ -1,8 +1,11 @@
 import { expect, test } from "bun:test"
-import sampleProblem from "../fixtures/sample-08/sample-08.srj.json"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
-import { createMeanderCandidates } from "../lib/length-matching/meander-candidate"
-import { getRouteLength } from "../lib/route-geometry"
+import sampleProblem from "../../fixtures/sample-08/sample-08.srj.json"
+import {
+  LengthMatchingSolver,
+  type LengthMatchingSolverParams,
+} from "../../lib"
+import { createMeanderCandidates } from "../../lib/length-matching/meander-candidate"
+import { getRouteLength } from "../../lib/route-geometry"
 
 test("matches a route using one consistent multi-segment meander style", () => {
   // SAFETY: This repository-owned JSON is the shared test and Cosmos fixture input. The cast restores literal tuple and obstacle discriminants widened by JSON module inference.

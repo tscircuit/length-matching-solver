@@ -3,12 +3,11 @@ import type { LengthMatchingSolverParams } from "../../lib/length-matching-solve
 import { AlertingLengthMatchingSolver } from "../alerting-length-matching-solver"
 import sampleProblem from "./sample-06.srj.json"
 
-const createSolver = (): AlertingLengthMatchingSolver => {
-  // SAFETY: This repository-owned JSON is exercised by the paired-route regression test. The cast restores JSON literals widened by TypeScript module inference.
-  const params = sampleProblem as unknown as LengthMatchingSolverParams
-  return new AlertingLengthMatchingSolver(params)
-}
-
 export default function LengthMatchingFixture(): React.JSX.Element {
+  const createSolver = (): AlertingLengthMatchingSolver => {
+    // SAFETY: This repository-owned JSON is exercised by the paired-route regression test. The cast restores JSON literals widened by TypeScript module inference.
+    const params = sampleProblem as unknown as LengthMatchingSolverParams
+    return new AlertingLengthMatchingSolver(params)
+  }
   return <GenericSolverDebugger createSolver={createSolver} />
 }

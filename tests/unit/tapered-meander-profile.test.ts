@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import { evaluateMeanderCandidate } from "../lib/length-matching/meander-candidate"
-import type { HighDensityRoute } from "../lib/types"
+import { evaluateMeanderCandidate } from "../../lib/length-matching/meander-candidate"
+import type { HighDensityRoute } from "../../lib/types"
 
 test("fits a tapered height envelope within one multi-tooth segment", () => {
   const route: HighDensityRoute = {
