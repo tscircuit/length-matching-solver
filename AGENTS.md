@@ -5,8 +5,10 @@
 - Build: `bun run build`
 - Run tests: `bun test --timeout 9999999`
 - Run specific test: `bun test tests/length-matching-linear-regression.test.ts --timeout 9999999`
+- Run TypeScript checks: `bun run typecheck`
+- Run file-structure checks: `bun run typecheck:structure`
 
-> Don't format or lint the code.
+> Don't format or run general style linting. Run the structural checks above.
 
 ## Validation Policy
 
@@ -66,15 +68,20 @@ you can debug—it is silently wrong routed geometry.
   and return values have explicit types.
 - Always define function return types in new code.
 - Structure types so invalid states are not representable where practical.
+- Keep implementation details private wherever possible. Public functions and
+  classes should be thin entry points that validate inputs and imperatively
+  orchestrate focused functions from appropriately named private/internal
+  modules and subfolders instead of containing detailed implementation logic.
 
 ## File Organization Rules
 
 - Every TypeScript file must contain fewer than 500 lines of code.
 - Keep exactly one test case per test file.
-- A folder may contain at most five files. When a folder would exceed this
-  limit, create clearly named subfolders and categorize the files by purpose.
-- Keep only one function or class per TypeScript implementation file. The
-  filename must exactly match that function or class name, including casing.
+- A folder may contain at most ten TypeScript files. When a folder would exceed
+  this limit, create clearly named subfolders and categorize the files by
+  purpose.
+- Keep only one top-level function or class per TypeScript implementation file.
+  The filename must exactly match that function or class name, including casing.
 
 ## Architecture
 
