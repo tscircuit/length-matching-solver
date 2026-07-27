@@ -17,6 +17,7 @@ export const createCoupledPairCandidate = (input: {
   edgeGap: number
   side: 1 | -1
   layerCount: number
+  terminalFanout?: boolean
 }): PairCandidate => {
   const samePoint = (left: Point, right: Point): boolean =>
     Math.hypot(left.x - right.x, left.y - right.y) <= 1e-8
@@ -46,6 +47,15 @@ export const createCoupledPairCandidate = (input: {
       const normal = createNormal(previous ?? point, next ?? point)
       return { x: normal.x * halfSpacing, y: normal.y * halfSpacing }
     }
+    if (input.terminalFanout && index === 1)
+      return createNormal(previous, point)
+    if (input.terminalFanout && index === input.path.length - 2)
+      return createNormal(point, next)
+    if (
+      input.terminalFanout &&
+      input.path[index + 1]?.layer !== point.layer
+    )
+      return createNormal(previous, point)
     const incomingNormal = createNormal(previous, point)
     const outgoingNormal = createNormal(point, next)
     const bisector = {
@@ -78,7 +88,20 @@ export const createCoupledPairCandidate = (input: {
   const viaTemplates = [input.first.transitions[0], input.second.transitions[0]]
   let viaPairCount = 0
 
-  for (let index = 0; index < input.path.length; index++) {
+  const routeStartIndex = input.terminalFanout ? 1 : 0
+  const lastStationIndex = input.path.length - 2
+  const lastStation = input.path[lastStationIndex]
+  const penultimateStation = input.path[lastStationIndex - 1]
+  const omitTerminalMiterStations =
+    input.terminalFanout &&
+    lastStation?.layer === firstEnd.layer &&
+    penultimateStation?.layer === lastStation.layer
+  const routeEndIndex = input.terminalFanout
+    ? omitTerminalMiterStations
+      ? lastStationIndex - 1
+      : input.path.length - 1
+    : input.path.length
+  for (let index = routeStartIndex; index < routeEndIndex; index++) {
     const station = input.path[index]!
     const offset = getOffset(index)
     for (const lane of [0, 1] as const) {
@@ -135,8 +158,31 @@ export const createCoupledPairCandidate = (input: {
     if (input.path[index - 1]?.layer !== station.layer && index > 0)
       viaPairCount++
   }
-  routes[0].push({ route_type: "wire", x: firstEnd.x, y: firstEnd.y, width: firstEnd.width, layer: firstEnd.layer })
-  routes[1].push({ route_type: "wire", x: secondLogicalEnd.x, y: secondLogicalEnd.y, width: secondLogicalEnd.width, layer: secondLogicalEnd.layer })
+  const appendTerminal = (
+    route: SimplifiedPcbTraceRoutePoint[],
+    endpoint: typeof firstEnd,
+  ): void => {
+    const last = route.at(-1)
+    if (!last || last.route_type !== "wire")
+      throw new Error("PostProcessingSolver: terminal fanout has no preceding wire")
+    if (input.terminalFanout && last.x !== endpoint.x && last.y !== endpoint.y)
+      route.push({
+        route_type: "wire",
+        x: endpoint.x,
+        y: last.y,
+        width: endpoint.width,
+        layer: endpoint.layer,
+      })
+    route.push({
+      route_type: "wire",
+      x: endpoint.x,
+      y: endpoint.y,
+      width: endpoint.width,
+      layer: endpoint.layer,
+    })
+  }
+  appendTerminal(routes[0], firstEnd)
+  appendTerminal(routes[1], secondLogicalEnd)
 
   if (input.reverseSecond) {
     routes[1] = routes[1].reverse().map((entry) =>

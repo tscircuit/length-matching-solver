@@ -16,6 +16,7 @@ type PreparedPair = {
   first: ParsedTrace
   second: ParsedTrace
   reverseSecond: boolean
+  terminalFanout: boolean
   context: CandidateGeometryContext
   attempts: Array<{ edgeGap: number; side: 1 | -1; input: CoupledPathSearchInput }>
 }
@@ -117,6 +118,7 @@ export class DifferentialPairRoutingSession {
       edgeGap: attempt.edgeGap,
       side: attempt.side,
       layerCount: this.input.layerCount,
+      terminalFanout: prepared.terminalFanout,
     })
     if (
       !validateCandidateGeometry(
@@ -190,6 +192,16 @@ export class DifferentialPairRoutingSession {
     const terminalDelta = { x: firstStart.x - secondStart.x, y: firstStart.y - secondStart.y }
     const preferredSide: 1 | -1 =
       terminalDelta.x * normal.x + terminalDelta.y * normal.y >= 0 ? 1 : -1
+    const hasInlineTerminalPair = (firstPoint: typeof firstStart, secondPoint: typeof secondStart): boolean => {
+      const deltaX = firstPoint.x - secondPoint.x
+      const deltaY = firstPoint.y - secondPoint.y
+      const separation = Math.hypot(deltaX, deltaY)
+      return separation > 1e-8 &&
+        Math.abs(deltaX * normal.x + deltaY * normal.y) / separation < 0.5
+    }
+    const terminalFanout =
+      hasInlineTerminalPair(firstStart, secondStart) &&
+      hasInlineTerminalPair(firstEnd, secondEnd)
     const context: CandidateGeometryContext = {
       immutableTraces: this.input.traces.filter(
         (_, index) => index !== firstMatches[0]!.index && index !== secondMatches[0]!.index,
@@ -217,6 +229,7 @@ export class DifferentialPairRoutingSession {
           secondViaDiameter: second.transitions[0]?.via_diameter ?? second.width,
           centerlineSpacing,
           side,
+          terminalFanout,
         })
         return {
           edgeGap,
@@ -236,7 +249,7 @@ export class DifferentialPairRoutingSession {
         }
       })
     })
-    return { first, second, reverseSecond, context, attempts }
+    return { first, second, reverseSecond, terminalFanout, context, attempts }
   }
 
   private complete(): void {

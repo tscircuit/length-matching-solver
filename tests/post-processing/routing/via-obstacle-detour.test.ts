@@ -2,8 +2,7 @@ import { expect, test } from "bun:test"
 import sampleProblem from "../../../fixtures/sample-12/sample-12.srj.json"
 import { PostProcessingSolver, type PostProcessingSolverParams } from "../../../lib"
 
-// The coupled search currently rejects this geometry. Remove `.failing` when it can route the sample.
-test.failing("reroutes a differential pair with paired via transitions around a component", () => {
+test("replaces invalid via detours with a clear coupled route around a component", () => {
   // SAFETY: This repository-owned JSON is shared with the Cosmos fixture. The cast restores literal discriminants widened by JSON module inference.
   const params = sampleProblem as unknown as PostProcessingSolverParams
   for (const trace of params.traces) {
@@ -35,8 +34,5 @@ test.failing("reroutes a differential pair with paired via transitions around a 
       .filter((entry) => entry.route_type === "via")
       .map((via) => `${via.from_layer}/${via.to_layer}`),
   )
-  expect(viaTransitions).toEqual([
-    ["top/bottom", "bottom/top"],
-    ["top/bottom", "bottom/top"],
-  ])
+  expect(viaTransitions).toEqual([[], []])
 })

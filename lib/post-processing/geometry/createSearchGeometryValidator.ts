@@ -35,6 +35,7 @@ export const createSearchGeometryValidator = (input: {
   secondViaDiameter: number
   centerlineSpacing: number
   side: 1 | -1
+  terminalFanout?: boolean
 }): SearchGeometryValidator => {
   const immutableSegments: CopperSegment[] = []
   const immutableVias: CopperVia[] = []
@@ -80,18 +81,30 @@ export const createSearchGeometryValidator = (input: {
         : isEndTerminal
           ? "end"
           : null
+    const firstStart = isStartTerminal && input.terminalFanout
+      ? input.firstStartTerminal
+      : { x: start.x + normal.x, y: start.y + normal.y }
+    const firstEnd = isEndTerminal && input.terminalFanout
+      ? input.firstEndTerminal
+      : { x: end.x + normal.x, y: end.y + normal.y }
+    const secondStart = isStartTerminal && input.terminalFanout
+      ? input.secondStartTerminal
+      : { x: start.x - normal.x, y: start.y - normal.y }
+    const secondEnd = isEndTerminal && input.terminalFanout
+      ? input.secondEndTerminal
+      : { x: end.x - normal.x, y: end.y - normal.y }
     return [
       {
-        start: { x: start.x + normal.x, y: start.y + normal.y },
-        end: { x: end.x + normal.x, y: end.y + normal.y },
+        start: firstStart,
+        end: firstEnd,
         layer: start.layer,
         width: input.firstWidth,
         connectionName: input.firstConnectionName,
         terminal,
       },
       {
-        start: { x: start.x - normal.x, y: start.y - normal.y },
-        end: { x: end.x - normal.x, y: end.y - normal.y },
+        start: secondStart,
+        end: secondEnd,
         layer: start.layer,
         width: input.secondWidth,
         connectionName: input.secondConnectionName,
