@@ -38,7 +38,7 @@ export const buildRouteGraphics = (input: {
         radius: route.viaDiameter / 2,
         fill: input.theme.via.fill,
         stroke: input.theme.via.stroke,
-        layer: `z${routeLayers.join(",")}`,
+        layer: `z${(via.zLayers ?? routeLayers).join(",")}`,
       })
   }
 }

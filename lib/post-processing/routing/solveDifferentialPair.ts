@@ -4,7 +4,7 @@ import {
 } from "./DifferentialPairRoutingSession"
 import type { PairSolveResult } from "../model/internal-types"
 
-/** Route and finally length-match one declared pair as an atomic bundle. */
+/** Route one declared pair as an atomic coupled bundle. */
 export const solveDifferentialPair = (
   input: DifferentialPairRoutingInput,
 ): PairSolveResult => {

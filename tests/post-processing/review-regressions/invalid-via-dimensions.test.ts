@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { PostProcessingSolver, type SimplifiedPcbTrace } from "../../../lib"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
-test("retains pairs containing non-positive or non-finite via dimensions", () => {
+test("fails fast on non-positive or non-finite via dimensions", () => {
   for (const [field, value] of [
     ["via_diameter", 0],
     ["via_diameter", Number.NaN],
@@ -31,9 +31,9 @@ test("retains pairs containing non-positive or non-finite via dimensions", () =>
     })
     const traces = [makeTrace("P", 0.5), makeTrace("N", -0.5)]
     const solver = new PostProcessingSolver(createPostProcessingTestParams({ traces }))
-    solver.solve()
-    const output = solver.getOutput()
-    expect(output.errors).toHaveLength(1)
-    expect(output.traces).toEqual(traces)
+    expect(() => solver.solve()).toThrow(
+      /unsupported or invalid routed geometry/,
+    )
+    expect(solver.failed).toBe(true)
   }
 })

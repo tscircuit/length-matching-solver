@@ -70,6 +70,30 @@ export const isCandidateGeometryValid = (input: {
     )
   )
     return false
+  const pointToSegmentDistance = (
+    point: { x: number; y: number },
+    start: RoutePoint,
+    end: RoutePoint,
+  ): number => {
+    const dx = end.x - start.x
+    const dy = end.y - start.y
+    const lengthSquared = dx * dx + dy * dy
+    const progress =
+      lengthSquared === 0
+        ? 0
+        : Math.max(
+            0,
+            Math.min(
+              1,
+              ((point.x - start.x) * dx + (point.y - start.y) * dy) /
+                lengthSquared,
+            ),
+          )
+    return Math.hypot(
+      point.x - (start.x + progress * dx),
+      point.y - (start.y + progress * dy),
+    )
+  }
   const connectionName = getLogicalConnectionName(input.route)
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
   for (let index = 0; index < input.meanderPoints.length - 1; index++) {
@@ -85,7 +109,24 @@ export const isCandidateGeometryValid = (input: {
         return false
     }
     for (const otherRoute of input.routedRoutes) {
-      if (getLogicalConnectionName(otherRoute) === connectionName) continue
+      const sameConnection =
+        getLogicalConnectionName(otherRoute) === connectionName
+      for (const via of otherRoute.vias) {
+        if (via.zLayers && !via.zLayers.includes(start.z)) continue
+        const touchesSegmentEndpoint =
+          Math.hypot(via.x - start.x, via.y - start.y) <= 1e-8 ||
+          Math.hypot(via.x - end.x, via.y - end.y) <= 1e-8
+        const requiredDistance =
+          input.route.traceThickness / 2 +
+          otherRoute.viaDiameter / 2 +
+          input.obstacleMargin
+        if (
+          !(sameConnection && touchesSegmentEndpoint) &&
+          pointToSegmentDistance(via, start, end) < requiredDistance
+        )
+          return false
+      }
+      if (sameConnection) continue
       for (
         let otherIndex = 0;
         otherIndex < otherRoute.route.length - 1;

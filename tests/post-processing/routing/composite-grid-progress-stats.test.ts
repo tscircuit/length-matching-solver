@@ -19,11 +19,12 @@ test("reports monotonic progress and cumulative composite-search statistics", ()
     const progress = solver.computeProgress()
     expect(progress).toBeGreaterThanOrEqual(previousProgress)
     previousProgress = progress
-    const explored = typeof solver.stats.exploredNodeCount === "number"
-      ? solver.stats.exploredNodeCount
+    const stageStats = solver.differentialPairReroutingSolver?.stats
+    const explored = typeof stageStats?.exploredNodeCount === "number"
+      ? stageStats.exploredNodeCount
       : 0
-    const gridNodes = typeof solver.stats.gridNodeCount === "number"
-      ? solver.stats.gridNodeCount
+    const gridNodes = typeof stageStats?.gridNodeCount === "number"
+      ? stageStats.gridNodeCount
       : 0
     maximumExplored = Math.max(maximumExplored, explored)
     observedGridNodeCount = Math.max(observedGridNodeCount, gridNodes)

@@ -13,7 +13,7 @@ export type HighDensityRoute = {
   traceThickness: number
   viaDiameter: number
   route: RoutePoint[]
-  vias: Array<{ x: number; y: number }>
+  vias: Array<{ x: number; y: number; zLayers?: number[] }>
   regionId?: string
 }
 

@@ -18,8 +18,9 @@ test("honors a custom composite grid while preserving exact deterministic endpoi
     let gridNodeCount = 0
     while (!solver.solved) {
       solver.step()
-      if (typeof solver.stats.gridNodeCount === "number")
-        gridNodeCount = Math.max(gridNodeCount, solver.stats.gridNodeCount)
+      const stageStats = solver.differentialPairReroutingSolver?.stats
+      if (typeof stageStats?.gridNodeCount === "number")
+        gridNodeCount = Math.max(gridNodeCount, stageStats.gridNodeCount)
     }
     return { output: solver.getOutput(), gridNodeCount }
   }

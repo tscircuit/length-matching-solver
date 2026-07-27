@@ -3,7 +3,6 @@ import type { PostProcessingGridConfig } from "../types"
 import { createSearchGeometryValidator } from "../geometry/createSearchGeometryValidator"
 import { validateCandidateGeometry, type CandidateGeometryContext } from "../geometry/validateCandidateGeometry"
 import { getSimplifiedTraceLength } from "../length-matching/getSimplifiedTraceLength"
-import { matchDifferentialPairLengths } from "../length-matching/matchDifferentialPairLengths"
 import type { PairCandidate, PairSolveResult, ParsedTrace } from "../model/internal-types"
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
@@ -119,13 +118,15 @@ export class DifferentialPairRoutingSession {
       side: attempt.side,
       layerCount: this.input.layerCount,
     })
-    if (!validateCandidateGeometry(candidate.firstParsed, candidate.secondParsed, prepared.context)) return
-    const matched = matchDifferentialPairLengths({
-      candidate,
-      pair: this.input.pair,
-      context: prepared.context,
-    })
-    if (matched) this.candidates.push(matched)
+    if (
+      !validateCandidateGeometry(
+        candidate.firstParsed,
+        candidate.secondParsed,
+        prepared.context,
+      )
+    )
+      return
+    this.candidates.push(candidate)
   }
 
   private prepare(): PreparedPair | null {
@@ -143,7 +144,9 @@ export class DifferentialPairRoutingSession {
       .map((trace, index) => ({ trace, index }))
       .filter(({ trace }) => trace.connection_name === this.input.pair.connectionNames[1])
     if (firstMatches.length !== 1 || secondMatches.length !== 1)
-      return retained("must resolve each connection_name to exactly one non-branching trace")
+      throw new Error(
+        `PostProcessingSolver: differential pair ${this.pairName} must resolve each connection_name to exactly one non-branching trace`,
+      )
     if (firstMatches[0]!.index === secondMatches[0]!.index)
       throw new Error(`PostProcessingSolver: pair ${this.pairName} resolved both members to one trace`)
 
@@ -153,8 +156,8 @@ export class DifferentialPairRoutingSession {
       first = parseSimplifiedPcbTrace(firstMatches[0]!.trace, this.input.layerCount)
       second = parseSimplifiedPcbTrace(secondMatches[0]!.trace, this.input.layerCount)
     } catch (error) {
-      return retained(
-        `has unsupported or invalid routed geometry: ${error instanceof Error ? error.message : String(error)}`,
+      throw new Error(
+        `PostProcessingSolver: differential pair ${this.pairName} has unsupported or invalid routed geometry: ${error instanceof Error ? error.message : String(error)}`,
       )
     }
     const firstStart = first.points[0]!
@@ -241,7 +244,7 @@ export class DifferentialPairRoutingSession {
       this.result = {
         status: "retained",
         error: new Error(
-          `PostProcessingSolver: differential pair ${this.pairName} could not be improved without violating bounds, copper clearance, coupled vias, or length tolerance ${this.input.pair.lengthTolerance}`,
+          `PostProcessingSolver: differential pair ${this.pairName} could not be improved without violating bounds, copper clearance, or coupled-via constraints`,
         ),
       }
       return

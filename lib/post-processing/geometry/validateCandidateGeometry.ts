@@ -267,6 +267,24 @@ const hasSelfCollision = (parsed: ParsedTrace): boolean => {
     for (let secondIndex = firstIndex + 2; secondIndex < parsed.segments.length; secondIndex++) {
       const secondSegment = parsed.segments[secondIndex]!
       if (firstSegment.layer !== secondSegment.layer) continue
+      const interveningLength = parsed.segments
+        .slice(firstIndex + 1, secondIndex)
+        .reduce(
+          (total, segment) =>
+            total +
+            Math.hypot(
+              segment.end.x - segment.start.x,
+              segment.end.y - segment.start.y,
+            ),
+          0,
+        )
+      // Nearby tessellated curve segments belong to one continuous copper turn;
+      // only test portions separated by enough centerline travel to be nonlocal.
+      if (
+        interveningLength <=
+        firstSegment.width + secondSegment.width + EPSILON
+      )
+        continue
       if (
         getMinimumSegmentDistance(
           firstSegment.start,
