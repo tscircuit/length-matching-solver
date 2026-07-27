@@ -10,6 +10,7 @@ export const createPostProcessingVisualization = (input: {
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
   activeConnectionNames: [string, string] | null
+  previewPath: Array<{ x: number; y: number; layer: string }> | null
 }): GraphicsObject => {
   const graphics: GraphicsObject = { lines: [], points: [], rects: [], circles: [] }
   graphics.rects!.push({
@@ -34,9 +35,22 @@ export const createPostProcessingVisualization = (input: {
       layer: `z${indexes.join(",")}`,
     })
   }
+  for (let index = 0; index < (input.previewPath?.length ?? 0) - 1; index++) {
+    const start = input.previewPath![index]!
+    const end = input.previewPath![index + 1]!
+    if (start.layer !== end.layer) continue
+    const z = getLayerIndex(start.layer, input.layerCount)
+    graphics.lines!.push({
+      points: [start, end],
+      strokeColor: "#16a34a",
+      strokeWidth: 0.08,
+      strokeDash: [0.18, 0.12],
+      layer: `z${z}`,
+    })
+  }
   for (const trace of input.traces) {
-    const active = input.activeConnectionNames?.includes(trace.connection_name) === true
-    const color = active ? "#f59e0b" : "#2563eb"
+    if (input.activeConnectionNames?.includes(trace.connection_name)) continue
+    const color = "#2563eb"
     let current: { x: number; y: number; layer: string; width: number } | null = null
     for (const entry of trace.route) {
       if (entry.route_type === "wire") {
@@ -57,7 +71,7 @@ export const createPostProcessingVisualization = (input: {
         graphics.circles!.push({
           center: entry,
           radius: (entry.via_diameter ?? current?.width ?? 0.2) / 2,
-          fill: active ? "rgba(245, 158, 11, 0.55)" : "rgba(37, 99, 235, 0.45)",
+          fill: "rgba(37, 99, 235, 0.45)",
           stroke: color,
           layer: `z${layers.join(",")}`,
         })

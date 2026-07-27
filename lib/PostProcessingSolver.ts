@@ -1,7 +1,7 @@
 import { BaseSolver } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
 import { cloneSimplifiedPcbTraces } from "./post-processing/model/cloneSimplifiedPcbTraces"
-import { solveDifferentialPair } from "./post-processing/routing/solveDifferentialPair"
+import { DifferentialPairRoutingSession } from "./post-processing/routing/DifferentialPairRoutingSession"
 import type {
   PostProcessingSolverOutput,
   PostProcessingSolverParams,
@@ -15,12 +15,13 @@ export class PostProcessingSolver extends BaseSolver {
   private readonly errors: Error[] = []
   private nextPairIndex = 0
   private activeConnectionNames: [string, string] | null = null
+  private activeSession: DifferentialPairRoutingSession | null = null
 
   constructor(private readonly params: PostProcessingSolverParams) {
     super()
     validatePostProcessingParams(params)
     this.outputTraces = cloneSimplifiedPcbTraces(params.traces)
-    this.MAX_ITERATIONS = Math.max(1, params.differentialPairs.length)
+    this.MAX_ITERATIONS = Math.max(1, params.differentialPairs.length * 750_020)
   }
 
   override getSolverName(): string {
@@ -40,13 +41,22 @@ export class PostProcessingSolver extends BaseSolver {
       return
     }
     this.activeConnectionNames = pair.connectionNames
-    const result = solveDifferentialPair({
-      pair,
-      traces: this.outputTraces,
-      obstacles: this.params.obstacles,
-      bounds: this.params.bounds,
-      layerCount: this.params.layerCount,
-    })
+    if (!this.activeSession) {
+      this.activeSession = new DifferentialPairRoutingSession({
+        pair,
+        traces: this.outputTraces,
+        obstacles: this.params.obstacles,
+        bounds: this.params.bounds,
+        layerCount: this.params.layerCount,
+      })
+      this.stats = this.activeSession.getStats()
+      return
+    }
+    this.activeSession.step()
+    this.stats = this.activeSession.getStats()
+    if (!this.activeSession.isComplete()) return
+    const result = this.activeSession.getResult()
+    this.activeSession = null
     if (result.status === "retained") {
       this.errors.push(result.error)
     } else {
@@ -99,7 +109,9 @@ export class PostProcessingSolver extends BaseSolver {
   computeProgress(): number {
     if (this.solved) return 1
     if (this.params.differentialPairs.length === 0) return 0
-    return this.nextPairIndex / this.params.differentialPairs.length
+    return (
+      this.nextPairIndex + (this.activeSession?.getProgress() ?? 0)
+    ) / this.params.differentialPairs.length
   }
 
   override visualize(): GraphicsObject {
@@ -109,6 +121,7 @@ export class PostProcessingSolver extends BaseSolver {
       bounds: this.params.bounds,
       layerCount: this.params.layerCount,
       activeConnectionNames: this.activeConnectionNames,
+      previewPath: this.activeSession?.getPreviewPath() ?? null,
     })
   }
 }
