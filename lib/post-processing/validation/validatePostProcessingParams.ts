@@ -1,3 +1,4 @@
+import { resolvePostProcessingGridConfig } from "../routing/resolvePostProcessingGridConfig"
 import type { PostProcessingSolverParams } from "../types"
 
 /** Validate run-wide inputs; pair-specific infeasibility is handled during stepping. */
@@ -17,6 +18,12 @@ export const validatePostProcessingParams = (
     minY >= maxY
   )
     throw new Error("PostProcessingSolver: bounds must have finite positive extents")
+  for (const defaultInnerGridStep of [0.25, 0.5])
+    resolvePostProcessingGridConfig({
+      config: params.routingGrid,
+      bounds: params.bounds,
+      defaultInnerGridStep,
+    })
   const declaredConnections = new Set<string>()
   for (const pair of params.differentialPairs) {
     if (

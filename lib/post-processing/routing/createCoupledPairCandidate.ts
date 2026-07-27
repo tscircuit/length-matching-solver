@@ -33,20 +33,35 @@ export const createCoupledPairCandidate = (input: {
     const point = input.path[index]!
     const previous = getSpatialNeighbor(index, -1)
     const next = getSpatialNeighbor(index, 1)
-    const isTransitionStation =
-      (input.path[index - 1] !== undefined && samePoint(input.path[index - 1]!, point)) ||
-      (input.path[index + 1] !== undefined && samePoint(input.path[index + 1]!, point))
-    const from = isTransitionStation && previous ? previous : previous ?? point
-    const to = isTransitionStation && previous ? point : next ?? point
-    const dx = to.x - from.x
-    const dy = to.y - from.y
-    const length = Math.hypot(dx, dy)
-    if (length <= 1e-10)
-      throw new Error("PostProcessingSolver: cannot offset a zero-length spine")
-    return {
-      x: (-dy / length) * input.side * input.centerlineSpacing / 2,
-      y: (dx / length) * input.side * input.centerlineSpacing / 2,
+    const createNormal = (from: Point, to: Point): Point => {
+      const dx = to.x - from.x
+      const dy = to.y - from.y
+      const length = Math.hypot(dx, dy)
+      if (length <= 1e-10)
+        throw new Error("PostProcessingSolver: cannot offset a zero-length spine")
+      return { x: -dy / length, y: dx / length }
     }
+    const halfSpacing = input.side * input.centerlineSpacing / 2
+    if (!previous || !next) {
+      const normal = createNormal(previous ?? point, next ?? point)
+      return { x: normal.x * halfSpacing, y: normal.y * halfSpacing }
+    }
+    const incomingNormal = createNormal(previous, point)
+    const outgoingNormal = createNormal(point, next)
+    const bisector = {
+      x: incomingNormal.x + outgoingNormal.x,
+      y: incomingNormal.y + outgoingNormal.y,
+    }
+    const bisectorLength = Math.hypot(bisector.x, bisector.y)
+    if (bisectorLength <= 1e-10)
+      throw new Error("PostProcessingSolver: cannot offset a reversing spine corner")
+    const unitBisector = {
+      x: bisector.x / bisectorLength,
+      y: bisector.y / bisectorLength,
+    }
+    const projection = unitBisector.x * incomingNormal.x + unitBisector.y * incomingNormal.y
+    const miterLength = halfSpacing / projection
+    return { x: unitBisector.x * miterLength, y: unitBisector.y * miterLength }
   }
   const firstStart = input.first.points[0]!
   const firstEnd = input.first.points.at(-1)!

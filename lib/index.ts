@@ -5,6 +5,7 @@ export {
 } from "./length-matching-solver"
 export {
   PostProcessingSolver,
+  type PostProcessingGridConfig,
   type PostProcessingSolverOutput,
   type PostProcessingSolverParams,
 } from "./PostProcessingSolver"

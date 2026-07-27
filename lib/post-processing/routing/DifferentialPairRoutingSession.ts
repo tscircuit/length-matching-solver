@@ -1,4 +1,5 @@
 import type { DifferentialPair, SimplifiedPcbTrace } from "../../types"
+import type { PostProcessingGridConfig } from "../types"
 import { createSearchGeometryValidator } from "../geometry/createSearchGeometryValidator"
 import { validateCandidateGeometry, type CandidateGeometryContext } from "../geometry/validateCandidateGeometry"
 import { getSimplifiedTraceLength } from "../length-matching/getSimplifiedTraceLength"
@@ -7,6 +8,7 @@ import type { PairCandidate, PairSolveResult, ParsedTrace } from "../model/inter
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
+import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
 import type { CoupledPathPoint, CoupledPathSearchInput } from "./types"
 
 const EDGE_GAP_SAMPLES = [0.75, 0.5, 1, 0.25, 1.25]
@@ -25,6 +27,7 @@ export type DifferentialPairRoutingInput = {
   obstacles: CandidateGeometryContext["obstacles"]
   bounds: CandidateGeometryContext["bounds"]
   layerCount: number
+  routingGrid?: PostProcessingGridConfig
 }
 
 /** Incrementally explores and scores coupled route candidates for one differential pair. */
@@ -35,6 +38,8 @@ export class DifferentialPairRoutingSession {
   private result: PairSolveResult | null = null
   private search: IncrementalCoupledPathSearch | null = null
   private nextAttempt = 0
+  private exploredNodeCount = 0
+  private allocatedSearchStateCount = 0
 
   constructor(private readonly input: DifferentialPairRoutingInput) {
     this.pairName = input.pair.connectionNames.join("/")
@@ -58,7 +63,12 @@ export class DifferentialPairRoutingSession {
   getProgress(): number {
     if (this.result) return 1
     const attemptCount = this.prepared?.attempts.length ?? 1
-    return Math.min(0.99, (this.nextAttempt + (this.search ? 0.5 : 0)) / attemptCount)
+    const attemptProgress = this.search?.getProgress() ?? 0
+    return Math.min(0.99, (this.nextAttempt + attemptProgress) / attemptCount)
+  }
+
+  getAllocatedSearchStateCount(): number {
+    return this.allocatedSearchStateCount
   }
 
   getStats(): Record<string, number | string> {
@@ -67,7 +77,8 @@ export class DifferentialPairRoutingSession {
       pair: this.pairName,
       attemptIndex: this.nextAttempt,
       attemptCount: this.prepared?.attempts.length ?? 0,
-      exploredNodeCount: this.search?.getExploredCount() ?? 0,
+      exploredNodeCount: this.exploredNodeCount + (this.search?.getExploredCount() ?? 0),
+      gridNodeCount: this.search?.getGridNodeCount() ?? 0,
       acceptedCandidateCount: this.candidates.length,
     }
   }
@@ -84,11 +95,13 @@ export class DifferentialPairRoutingSession {
         return
       }
       this.search = new IncrementalCoupledPathSearch(attempt.input)
+      this.allocatedSearchStateCount += this.search.getSearchStateLimit()
       return
     }
     this.search.step()
     if (!this.search.isComplete()) return
     const path = this.search.getPath()
+    this.exploredNodeCount += this.search.getExploredCount()
     const attempt = prepared.attempts[this.nextAttempt]
     if (!attempt)
       throw new Error(`PostProcessingSolver: differential pair ${this.pairName} lost its active attempt`)
@@ -210,7 +223,11 @@ export class DifferentialPairRoutingSession {
             end,
             bounds: this.input.bounds,
             layerCount: this.input.layerCount,
-            gridStep: Math.max(0.25, Math.min(0.5, centerlineSpacing / 2)),
+            grid: resolvePostProcessingGridConfig({
+              config: this.input.routingGrid,
+              bounds: this.input.bounds,
+              defaultInnerGridStep: Math.max(0.25, Math.min(0.5, centerlineSpacing / 2)),
+            }),
             ...validator,
           },
         }

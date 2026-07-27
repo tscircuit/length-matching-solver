@@ -16,6 +16,7 @@ export class PostProcessingSolver extends BaseSolver {
   private nextPairIndex = 0
   private activeConnectionNames: [string, string] | null = null
   private activeSession: DifferentialPairRoutingSession | null = null
+  private allocatedActiveSearchStateCount = 0
 
   constructor(private readonly params: PostProcessingSolverParams) {
     super()
@@ -48,15 +49,22 @@ export class PostProcessingSolver extends BaseSolver {
         obstacles: this.params.obstacles,
         bounds: this.params.bounds,
         layerCount: this.params.layerCount,
+        routingGrid: this.params.routingGrid,
       })
       this.stats = this.activeSession.getStats()
       return
     }
     this.activeSession.step()
+    const allocatedSearchStateCount = this.activeSession.getAllocatedSearchStateCount()
+    if (allocatedSearchStateCount > this.allocatedActiveSearchStateCount) {
+      this.MAX_ITERATIONS += allocatedSearchStateCount - this.allocatedActiveSearchStateCount
+      this.allocatedActiveSearchStateCount = allocatedSearchStateCount
+    }
     this.stats = this.activeSession.getStats()
     if (!this.activeSession.isComplete()) return
     const result = this.activeSession.getResult()
     this.activeSession = null
+    this.allocatedActiveSearchStateCount = 0
     if (result.status === "retained") {
       this.errors.push(result.error)
     } else {
@@ -127,6 +135,7 @@ export class PostProcessingSolver extends BaseSolver {
 }
 
 export type {
+  PostProcessingGridConfig,
   PostProcessingSolverOutput,
   PostProcessingSolverParams,
 } from "./post-processing/types"
