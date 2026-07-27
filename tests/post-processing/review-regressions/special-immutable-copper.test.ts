@@ -34,18 +34,30 @@ test("models jumper pads and advances special immutable-copper geometry", () => 
     (segment) => segment.start.x === 1 && segment.end.x === 3,
   )
   expect(jumper?.width).toBe(1.8)
-  expect(copper.segments.some(
-    (segment) => segment.start.x === 3 && segment.end.x === 4,
-  )).toBe(true)
-  expect(copper.segments.some(
-    (segment) => segment.start.x === 1 && segment.end.x === 4,
-  )).toBe(false)
-  expect(copper.segments.filter(
-    (segment) => segment.start.x === 4 && segment.end.x === 5,
-  ).map((segment) => segment.layer).sort()).toEqual(["bottom", "top"])
-  expect(copper.segments.some(
-    (segment) => segment.start.x === 5 && segment.end.x === 6 && segment.layer === "bottom",
-  )).toBe(true)
+  expect(
+    copper.segments.some(
+      (segment) => segment.start.x === 3 && segment.end.x === 4,
+    ),
+  ).toBe(true)
+  expect(
+    copper.segments.some(
+      (segment) => segment.start.x === 1 && segment.end.x === 4,
+    ),
+  ).toBe(false)
+  expect(
+    copper.segments
+      .filter((segment) => segment.start.x === 4 && segment.end.x === 5)
+      .map((segment) => segment.layer)
+      .sort(),
+  ).toEqual(["bottom", "top"])
+  expect(
+    copper.segments.some(
+      (segment) =>
+        segment.start.x === 5 &&
+        segment.end.x === 6 &&
+        segment.layer === "bottom",
+    ),
+  ).toBe(true)
 
   const discontinuous: SimplifiedPcbTrace = {
     ...trace,

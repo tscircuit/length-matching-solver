@@ -23,6 +23,8 @@ export const getMinimumPairEdgeGap = (
     }
   }
   if (!Number.isFinite(minimumGap))
-    throw new Error("PostProcessingSolver: paired traces have no common-layer wire geometry")
+    throw new Error(
+      "PostProcessingSolver: paired traces have no common-layer wire geometry",
+    )
   return minimumGap
 }

@@ -73,8 +73,7 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
         result.candidate.second,
       ]) {
         const index = this.outputTraces.findIndex(
-          (trace) =>
-            trace.connection_name === replacement.connection_name,
+          (trace) => trace.connection_name === replacement.connection_name,
         )
         if (index < 0)
           throw new Error(
@@ -131,8 +130,9 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
     if (this.solved) return 1
     if (this.params.differentialPairs.length === 0) return 0
     return (
-      this.nextPairIndex + (this.activeSession?.getProgress() ?? 0)
-    ) / this.params.differentialPairs.length
+      (this.nextPairIndex + (this.activeSession?.getProgress() ?? 0)) /
+      this.params.differentialPairs.length
+    )
   }
 
   override visualize(): GraphicsObject {

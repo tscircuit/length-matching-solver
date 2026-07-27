@@ -4,11 +4,14 @@ import { createPostProcessingTestParams } from "../createPostProcessingTestParam
 
 test("rejects a connection declared in more than one differential pair", () => {
   const params = createPostProcessingTestParams()
-  expect(() => new PostProcessingSolver({
-    ...params,
-    differentialPairs: [
-      { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
-      { connectionNames: ["N", "OTHER"], lengthTolerance: 0.01 },
-    ],
-  })).toThrow(/connection "N" belongs to multiple differential pairs/)
+  expect(
+    () =>
+      new PostProcessingSolver({
+        ...params,
+        differentialPairs: [
+          { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
+          { connectionNames: ["N", "OTHER"], lengthTolerance: 0.01 },
+        ],
+      }),
+  ).toThrow(/connection "N" belongs to multiple differential pairs/)
 })

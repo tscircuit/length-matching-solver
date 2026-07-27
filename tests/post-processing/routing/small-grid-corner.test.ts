@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test"
 import { findCoupledPath } from "../../../lib/post-processing/routing/findCoupledPath"
 
-
 test("preserves searched corners at the minimum supported inner-grid scale", () => {
   const start = { x: 0.0004, y: 0.0004, layer: "top" }
   const end = { x: 0.0016, y: 0.0016, layer: "top" }

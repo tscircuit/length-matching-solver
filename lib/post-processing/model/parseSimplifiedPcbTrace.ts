@@ -12,7 +12,11 @@ export const parseSimplifiedPcbTrace = (
 ): ParsedTrace => {
   if (trace.route.length === 0)
     throw new Error(`trace "${trace.connection_name}" has an empty route`)
-  if (trace.route.some((entry) => entry.route_type !== "wire" && entry.route_type !== "via"))
+  if (
+    trace.route.some(
+      (entry) => entry.route_type !== "wire" && entry.route_type !== "via",
+    )
+  )
     throw new Error(
       `trace "${trace.connection_name}" contains unsupported jumper or through-obstacle geometry`,
     )
@@ -23,7 +27,9 @@ export const parseSimplifiedPcbTrace = (
   const firstWire = trace.route[firstWireIndex]
   const lastWire = trace.route.findLast((entry) => entry.route_type === "wire")
   if (firstWire?.route_type !== "wire" || !lastWire)
-    throw new Error(`trace "${trace.connection_name}" must contain a wire point`)
+    throw new Error(
+      `trace "${trace.connection_name}" must contain a wire point`,
+    )
 
   const points: PathPoint[] = []
   const segments: CopperSegment[] = []
@@ -50,7 +56,9 @@ export const parseSimplifiedPcbTrace = (
     }
     const leadingVia = trace.route[0]!
     if (leadingVia.route_type !== "via")
-      throw new Error(`trace "${trace.connection_name}" has an invalid leading entry`)
+      throw new Error(
+        `trace "${trace.connection_name}" has an invalid leading entry`,
+      )
     current = {
       x: leadingVia.x,
       y: leadingVia.y,
@@ -73,13 +81,20 @@ export const parseSimplifiedPcbTrace = (
           `trace "${trace.connection_name}" has an invalid wire point`,
         )
       maximumWidth = Math.max(maximumWidth, entry.width)
-      const next = { x: entry.x, y: entry.y, layer: entry.layer, width: entry.width }
+      const next = {
+        x: entry.x,
+        y: entry.y,
+        layer: entry.layer,
+        width: entry.width,
+      }
       if (current) {
         if (current.layer !== next.layer)
           throw new Error(
             `trace "${trace.connection_name}" changes layers without a via`,
           )
-        if (Math.hypot(current.x - next.x, current.y - next.y) > POSITION_EPSILON)
+        if (
+          Math.hypot(current.x - next.x, current.y - next.y) > POSITION_EPSILON
+        )
           segments.push({
             start: current,
             end: next,
@@ -117,11 +132,12 @@ export const parseSimplifiedPcbTrace = (
           entry.via_hole_diameter >= viaDiameter))
     )
       throw new Error(`trace "${trace.connection_name}" has an invalid via`)
-    const fromLayer: string | null = current.layer === entry.from_layer
-      ? entry.from_layer
-      : current.layer === entry.to_layer
-        ? entry.to_layer
-        : null
+    const fromLayer: string | null =
+      current.layer === entry.from_layer
+        ? entry.from_layer
+        : current.layer === entry.to_layer
+          ? entry.to_layer
+          : null
     if (!fromLayer)
       throw new Error(
         `trace "${trace.connection_name}" has a discontinuous via transition`,
@@ -158,7 +174,8 @@ export const parseSimplifiedPcbTrace = (
       `trace "${trace.connection_name}" does not contain a routable path`,
     )
   segments[0]!.terminal = segments.length === 1 ? "both" : "start"
-  segments[segments.length - 1]!.terminal = segments.length === 1 ? "both" : "end"
+  segments[segments.length - 1]!.terminal =
+    segments.length === 1 ? "both" : "end"
   if (trace.route.at(-1)?.route_type === "via" && vias.length > 0)
     vias.at(-1)!.terminal = "end"
   return {

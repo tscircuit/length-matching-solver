@@ -31,7 +31,11 @@ test("deterministically searches a fine interior joined to a coarse outer perime
       !edgeCrossesBlockedInterior(start, end),
     isViaValid: (): boolean => false,
   }
-  const solve = (): { path: CoupledPathPoint[] | null; explored: number; nodes: number } => {
+  const solve = (): {
+    path: CoupledPathPoint[] | null
+    explored: number
+    nodes: number
+  } => {
     const search = new IncrementalCoupledPathSearch(input)
     while (!search.isComplete()) search.step()
     return {
@@ -46,7 +50,11 @@ test("deterministically searches a fine interior joined to a coarse outer perime
   expect(first).toEqual(second)
   expect(first.path?.[0]).toEqual(input.start)
   expect(first.path?.at(-1)).toEqual(input.end)
-  expect(first.path?.some((point) => point.x > 2 && point.x < 18 && point.y > 2 && point.y < 8)).toBe(true)
+  expect(
+    first.path?.some(
+      (point) => point.x > 2 && point.x < 18 && point.y > 2 && point.y < 8,
+    ),
+  ).toBe(true)
   expect(first.path?.some((point) => point.y <= 2 || point.y >= 8)).toBe(true)
   expect(first.nodes).toBeLessThan(800)
   expect(first.explored).toBeGreaterThan(1)

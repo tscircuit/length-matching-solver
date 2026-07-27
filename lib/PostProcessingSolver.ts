@@ -46,9 +46,10 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
       "fortyFiveDegreeSimplificationSolver",
       FortyFiveDegreeSimplificationSolver,
       (pipeline: PostProcessingSolver) => {
-        const rerouted = pipeline.getStageOutput<DifferentialPairReroutingOutput>(
-          "differentialPairReroutingSolver",
-        )
+        const rerouted =
+          pipeline.getStageOutput<DifferentialPairReroutingOutput>(
+            "differentialPairReroutingSolver",
+          )
         if (!rerouted)
           throw new Error(
             "PostProcessingSolver: rerouting stage completed without output",
@@ -131,8 +132,10 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     validatePostProcessingParams(params)
     const reroutingIterationLimit =
       getDifferentialPairReroutingIterationLimit(params)
-    const simplificationIterationLimit =
-      Math.max(1, params.differentialPairs.length + 1)
+    const simplificationIterationLimit = Math.max(
+      1,
+      params.differentialPairs.length + 1,
+    )
     const lengthMatchingIterationLimit = 100_000
     const pipelineLifecycleIterations = 10
     const pipelineIterationLimit =

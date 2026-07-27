@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { PostProcessingSolver, type PostProcessingGridConfig } from "../../../lib"
+import {
+  PostProcessingSolver,
+  type PostProcessingGridConfig,
+} from "../../../lib"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
 test("rejects invalid optional composite routing-grid configuration", () => {
@@ -11,7 +14,10 @@ test("rejects invalid optional composite routing-grid configuration", () => {
     { outerPerimeterWidth: 5 },
   ]
   for (const routingGrid of invalidConfigurations)
-    expect(() => new PostProcessingSolver(
-      createPostProcessingTestParams({ routingGrid }),
-    )).toThrow(/PostProcessingSolver: routingGrid/)
+    expect(
+      () =>
+        new PostProcessingSolver(
+          createPostProcessingTestParams({ routingGrid }),
+        ),
+    ).toThrow(/PostProcessingSolver: routingGrid/)
 })

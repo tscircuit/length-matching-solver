@@ -42,9 +42,7 @@ test("binds retained and special traces as collision-only immutable copper", () 
     result: {
       traces,
       errors: [new Error("retained")],
-      reroutedPairs: [
-        { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
-      ],
+      reroutedPairs: [{ connectionNames: ["P", "N"], lengthTolerance: 0.01 }],
     },
     params: {
       traces,
@@ -71,8 +69,7 @@ test("binds retained and special traces as collision-only immutable copper", () 
   expect(
     binding.solverParams.hdRoutes.some(
       (route) =>
-        route.rootConnectionName === "SPECIAL" &&
-        route.traceThickness === 1.8,
+        route.rootConnectionName === "SPECIAL" && route.traceThickness === 1.8,
     ),
   ).toBe(true)
   expect(binding.solverParams.obstacleMargin).toBe(1.8)

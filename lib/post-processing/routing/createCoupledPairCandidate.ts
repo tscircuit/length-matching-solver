@@ -22,9 +22,18 @@ export const createCoupledPairCandidate = (input: {
   const samePoint = (left: Point, right: Point): boolean =>
     Math.hypot(left.x - right.x, left.y - right.y) <= 1e-8
   if (input.path.length < 2)
-    throw new Error("PostProcessingSolver: coupled path has fewer than two stations")
-  const getSpatialNeighbor = (index: number, direction: -1 | 1): CoupledPathPoint | null => {
-    for (let cursor = index + direction; cursor >= 0 && cursor < input.path.length; cursor += direction) {
+    throw new Error(
+      "PostProcessingSolver: coupled path has fewer than two stations",
+    )
+  const getSpatialNeighbor = (
+    index: number,
+    direction: -1 | 1,
+  ): CoupledPathPoint | null => {
+    for (
+      let cursor = index + direction;
+      cursor >= 0 && cursor < input.path.length;
+      cursor += direction
+    ) {
       const candidate = input.path[cursor]!
       if (!samePoint(candidate, input.path[index]!)) return candidate
     }
@@ -39,10 +48,12 @@ export const createCoupledPairCandidate = (input: {
       const dy = to.y - from.y
       const length = Math.hypot(dx, dy)
       if (length <= 1e-10)
-        throw new Error("PostProcessingSolver: cannot offset a zero-length spine")
+        throw new Error(
+          "PostProcessingSolver: cannot offset a zero-length spine",
+        )
       return { x: -dy / length, y: dx / length }
     }
-    const halfSpacing = input.side * input.centerlineSpacing / 2
+    const halfSpacing = (input.side * input.centerlineSpacing) / 2
     if (!previous || !next) {
       const normal = createNormal(previous ?? point, next ?? point)
       return { x: normal.x * halfSpacing, y: normal.y * halfSpacing }
@@ -51,10 +62,7 @@ export const createCoupledPairCandidate = (input: {
       return createNormal(previous, point)
     if (input.terminalFanout && index === input.path.length - 2)
       return createNormal(point, next)
-    if (
-      input.terminalFanout &&
-      input.path[index + 1]?.layer !== point.layer
-    )
+    if (input.terminalFanout && input.path[index + 1]?.layer !== point.layer)
       return createNormal(previous, point)
     const incomingNormal = createNormal(previous, point)
     const outgoingNormal = createNormal(point, next)
@@ -64,12 +72,15 @@ export const createCoupledPairCandidate = (input: {
     }
     const bisectorLength = Math.hypot(bisector.x, bisector.y)
     if (bisectorLength <= 1e-10)
-      throw new Error("PostProcessingSolver: cannot offset a reversing spine corner")
+      throw new Error(
+        "PostProcessingSolver: cannot offset a reversing spine corner",
+      )
     const unitBisector = {
       x: bisector.x / bisectorLength,
       y: bisector.y / bisectorLength,
     }
-    const projection = unitBisector.x * incomingNormal.x + unitBisector.y * incomingNormal.y
+    const projection =
+      unitBisector.x * incomingNormal.x + unitBisector.y * incomingNormal.y
     const miterLength = halfSpacing / projection
     return { x: unitBisector.x * miterLength, y: unitBisector.y * miterLength }
   }
@@ -81,9 +92,28 @@ export const createCoupledPairCandidate = (input: {
   const secondLogicalEnd = input.reverseSecond
     ? input.second.points[0]!
     : input.second.points.at(-1)!
-  const routes: [SimplifiedPcbTraceRoutePoint[], SimplifiedPcbTraceRoutePoint[]] = [
-    [{ route_type: "wire", x: firstStart.x, y: firstStart.y, width: firstStart.width, layer: firstStart.layer }],
-    [{ route_type: "wire", x: secondLogicalStart.x, y: secondLogicalStart.y, width: secondLogicalStart.width, layer: secondLogicalStart.layer }],
+  const routes: [
+    SimplifiedPcbTraceRoutePoint[],
+    SimplifiedPcbTraceRoutePoint[],
+  ] = [
+    [
+      {
+        route_type: "wire",
+        x: firstStart.x,
+        y: firstStart.y,
+        width: firstStart.width,
+        layer: firstStart.layer,
+      },
+    ],
+    [
+      {
+        route_type: "wire",
+        x: secondLogicalStart.x,
+        y: secondLogicalStart.y,
+        width: secondLogicalStart.width,
+        layer: secondLogicalStart.layer,
+      },
+    ],
   ]
   const viaTemplates = [input.first.transitions[0], input.second.transitions[0]]
   let viaPairCount = 0
@@ -114,12 +144,19 @@ export const createCoupledPairCandidate = (input: {
       const previous = input.path[index - 1]
       if (previous && previous.layer !== station.layer) {
         if (!samePoint(previous, station))
-          throw new Error("PostProcessingSolver: a coupled layer transition moved in the plane")
-        const lastWire = [...route].reverse().find(
-          (entry): entry is SimplifiedPcbTraceWireRoutePoint => entry.route_type === "wire",
-        )
+          throw new Error(
+            "PostProcessingSolver: a coupled layer transition moved in the plane",
+          )
+        const lastWire = [...route]
+          .reverse()
+          .find(
+            (entry): entry is SimplifiedPcbTraceWireRoutePoint =>
+              entry.route_type === "wire",
+          )
         if (!lastWire)
-          throw new Error("PostProcessingSolver: generated via has no preceding wire")
+          throw new Error(
+            "PostProcessingSolver: generated via has no preceding wire",
+          )
         const template = viaTemplates[lane]
         route.push({
           route_type: "via",
@@ -127,7 +164,8 @@ export const createCoupledPairCandidate = (input: {
           y: lastWire.y,
           from_layer: previous.layer,
           to_layer: station.layer,
-          via_diameter: template?.via_diameter ??
+          via_diameter:
+            template?.via_diameter ??
             (lane === 0 ? input.first.width : input.second.width),
           ...(template?.via_hole_diameter !== undefined
             ? { via_hole_diameter: template.via_hole_diameter }
@@ -164,7 +202,9 @@ export const createCoupledPairCandidate = (input: {
   ): void => {
     const last = route.at(-1)
     if (!last || last.route_type !== "wire")
-      throw new Error("PostProcessingSolver: terminal fanout has no preceding wire")
+      throw new Error(
+        "PostProcessingSolver: terminal fanout has no preceding wire",
+      )
     if (input.terminalFanout && last.x !== endpoint.x && last.y !== endpoint.y)
       route.push({
         route_type: "wire",
@@ -185,15 +225,21 @@ export const createCoupledPairCandidate = (input: {
   appendTerminal(routes[1], secondLogicalEnd)
 
   if (input.reverseSecond) {
-    routes[1] = routes[1].reverse().map((entry) =>
-      entry.route_type === "via"
-        ? { ...entry, from_layer: entry.to_layer, to_layer: entry.from_layer }
-        : entry,
-    )
+    routes[1] = routes[1]
+      .reverse()
+      .map((entry) =>
+        entry.route_type === "via"
+          ? { ...entry, from_layer: entry.to_layer, to_layer: entry.from_layer }
+          : entry,
+      )
   }
-  const applyEndpointMetadata = (route: SimplifiedPcbTraceRoutePoint[], parsed: ParsedTrace): void => {
+  const applyEndpointMetadata = (
+    route: SimplifiedPcbTraceRoutePoint[],
+    parsed: ParsedTrace,
+  ): void => {
     const wires = route.filter(
-      (entry): entry is SimplifiedPcbTraceWireRoutePoint => entry.route_type === "wire",
+      (entry): entry is SimplifiedPcbTraceWireRoutePoint =>
+        entry.route_type === "wire",
     )
     for (const wire of wires) {
       delete wire.start_pcb_port_id
@@ -205,7 +251,10 @@ export const createCoupledPairCandidate = (input: {
   applyEndpointMetadata(routes[0], input.first)
   applyEndpointMetadata(routes[1], input.second)
   const first: SimplifiedPcbTrace = { ...input.first.source, route: routes[0] }
-  const second: SimplifiedPcbTrace = { ...input.second.source, route: routes[1] }
+  const second: SimplifiedPcbTrace = {
+    ...input.second.source,
+    route: routes[1],
+  }
   const firstParsed = parseSimplifiedPcbTrace(first, input.layerCount)
   const secondParsed = parseSimplifiedPcbTrace(second, input.layerCount)
   return {

@@ -3,7 +3,10 @@ import type { GraphicsObject } from "graphics-debug"
 import type { LengthMatchingSolverOutput } from "../../length-matching/types"
 import type { LengthMatchingBinding } from "../binding/createLengthMatchingBinding"
 import { reconstructSimplifiedPcbTraces } from "../binding/reconstructSimplifiedPcbTraces"
-import type { PostProcessingSolverOutput, PostProcessingSolverParams } from "../types"
+import type {
+  PostProcessingSolverOutput,
+  PostProcessingSolverParams,
+} from "../types"
 import { createPostProcessingVisualization } from "../visualization/createPostProcessingVisualization"
 import type { FortyFiveDegreeSimplificationOutput } from "./FortyFiveDegreeSimplificationSolver"
 

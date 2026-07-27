@@ -1,5 +1,8 @@
 import { GenericSolverDebugger } from "@tscircuit/solver-utils/react"
-import { PostProcessingSolver, type PostProcessingSolverParams } from "../../lib"
+import {
+  PostProcessingSolver,
+  type PostProcessingSolverParams,
+} from "../../lib"
 import sampleProblem from "./sample-13.srj.json"
 
 export default function GridCrossingFixture(): React.JSX.Element {

@@ -7,8 +7,7 @@ export const getDifferentialPairReroutingIterationLimit = (
   const maximumGridNodeCount = 250_000
   const maximumDirectedEdgeCount = maximumGridNodeCount * 24 + 192
   const searchAttemptCountPerPair = 10
-  const searchStateLimit =
-    maximumDirectedEdgeCount * params.layerCount + 1
+  const searchStateLimit = maximumDirectedEdgeCount * params.layerCount + 1
   const limit =
     params.differentialPairs.length *
     (750_020 + searchAttemptCountPerPair * searchStateLimit)

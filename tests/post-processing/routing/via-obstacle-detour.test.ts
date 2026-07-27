@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test"
 import sampleProblem from "../../../fixtures/sample-12/sample-12.srj.json"
-import { PostProcessingSolver, type PostProcessingSolverParams } from "../../../lib"
+import {
+  PostProcessingSolver,
+  type PostProcessingSolverParams,
+} from "../../../lib"
 
 test("replaces invalid via detours with a clear coupled route around a component", () => {
   // SAFETY: This repository-owned JSON is shared with the Cosmos fixture. The cast restores literal discriminants widened by JSON module inference.
@@ -14,7 +17,9 @@ test("replaces invalid via detours with a clear coupled route around a component
       expect(incoming?.route_type).toBe("wire")
       expect(outgoing?.route_type).toBe("wire")
       if (incoming?.route_type !== "wire" || outgoing?.route_type !== "wire")
-        throw new Error(`Expected ${trace.connection_name} via to be between wires`)
+        throw new Error(
+          `Expected ${trace.connection_name} via to be between wires`,
+        )
       expect(incoming).toMatchObject({
         x: via.x,
         y: via.y,

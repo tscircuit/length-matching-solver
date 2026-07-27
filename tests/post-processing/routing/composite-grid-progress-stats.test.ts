@@ -3,13 +3,15 @@ import { PostProcessingSolver } from "../../../lib"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
 test("reports monotonic progress and cumulative composite-search statistics", () => {
-  const solver = new PostProcessingSolver(createPostProcessingTestParams({
-    routingGrid: {
-      innerGridStep: 0.3,
-      outerGridStep: 1.2,
-      outerPerimeterWidth: 1.2,
-    },
-  }))
+  const solver = new PostProcessingSolver(
+    createPostProcessingTestParams({
+      routingGrid: {
+        innerGridStep: 0.3,
+        outerGridStep: 1.2,
+        outerPerimeterWidth: 1.2,
+      },
+    }),
+  )
   let previousProgress = 0
   let maximumExplored = 0
   let observedGridNodeCount = 0
@@ -20,12 +22,14 @@ test("reports monotonic progress and cumulative composite-search statistics", ()
     expect(progress).toBeGreaterThanOrEqual(previousProgress)
     previousProgress = progress
     const stageStats = solver.differentialPairReroutingSolver?.stats
-    const explored = typeof stageStats?.exploredNodeCount === "number"
-      ? stageStats.exploredNodeCount
-      : 0
-    const gridNodes = typeof stageStats?.gridNodeCount === "number"
-      ? stageStats.gridNodeCount
-      : 0
+    const explored =
+      typeof stageStats?.exploredNodeCount === "number"
+        ? stageStats.exploredNodeCount
+        : 0
+    const gridNodes =
+      typeof stageStats?.gridNodeCount === "number"
+        ? stageStats.gridNodeCount
+        : 0
     maximumExplored = Math.max(maximumExplored, explored)
     observedGridNodeCount = Math.max(observedGridNodeCount, gridNodes)
   }

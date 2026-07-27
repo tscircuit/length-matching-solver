@@ -1,8 +1,4 @@
-import type {
-  DifferentialPair,
-  Obstacle,
-  SimplifiedPcbTraces,
-} from "../types"
+import type { DifferentialPair, Obstacle, SimplifiedPcbTraces } from "../types"
 
 export type PostProcessingGridConfig = {
   /** Fine grid step used throughout the board interior, in board units. */

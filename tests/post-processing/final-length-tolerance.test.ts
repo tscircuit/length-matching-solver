@@ -4,11 +4,18 @@ import { createPostProcessingTestParams } from "./createPostProcessingTestParams
 
 const measure = (trace: SimplifiedPcbTrace): number => {
   let total = 0
-  let previous: Extract<SimplifiedPcbTrace["route"][number], { route_type: "wire" }> | null = null
+  let previous: Extract<
+    SimplifiedPcbTrace["route"][number],
+    { route_type: "wire" }
+  > | null = null
   for (const entry of trace.route) {
-    if (entry.route_type === "via") { previous = null; continue }
+    if (entry.route_type === "via") {
+      previous = null
+      continue
+    }
     if (entry.route_type !== "wire") continue
-    if (previous && previous.layer === entry.layer) total += Math.hypot(entry.x - previous.x, entry.y - previous.y)
+    if (previous && previous.layer === entry.layer)
+      total += Math.hypot(entry.x - previous.x, entry.y - previous.y)
     previous = entry
   }
   return total
@@ -24,5 +31,7 @@ test("applies final geometry-checked matching within declared length tolerance",
   solver.solve()
   const output = solver.getOutput()
   expect(output.errors).toHaveLength(0)
-  expect(Math.abs(measure(output.traces[0]!) - measure(output.traces[1]!))).toBeLessThanOrEqual(0.010001)
+  expect(
+    Math.abs(measure(output.traces[0]!) - measure(output.traces[1]!)),
+  ).toBeLessThanOrEqual(0.010001)
 })

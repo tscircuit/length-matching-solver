@@ -24,12 +24,15 @@ test("maintains lane offsets through composite-grid and via-adjacent miters", ()
         via_diameter: 0.5,
       })
     route.push({ route_type: "wire", ...end, width: 0.2 })
-    return parseSimplifiedPcbTrace({
-      type: "pcb_trace",
-      pcb_trace_id: id,
-      connection_name: name,
-      route,
-    }, 2)
+    return parseSimplifiedPcbTrace(
+      {
+        type: "pcb_trace",
+        pcb_trace_id: id,
+        connection_name: name,
+        route,
+      },
+      2,
+    )
   }
   const offsetEndpoint = (
     path: CoupledPathPoint[],
@@ -42,8 +45,8 @@ test("maintains lane offsets through composite-grid and via-adjacent miters", ()
     const dy = atStart ? neighbor.y - point.y : point.y - neighbor.y
     const length = Math.hypot(dx, dy)
     return {
-      x: point.x - polarity * dy / length,
-      y: point.y + polarity * dx / length,
+      x: point.x - (polarity * dy) / length,
+      y: point.y + (polarity * dx) / length,
       layer: point.layer,
     }
   }
@@ -119,16 +122,26 @@ test("maintains lane offsets through composite-grid and via-adjacent miters", ()
       side: 1,
       layerCount: 2,
     })
-    const firstWires = candidate.first.route.filter((entry) => entry.route_type === "wire")
-    const secondWires = candidate.second.route.filter((entry) => entry.route_type === "wire")
+    const firstWires = candidate.first.route.filter(
+      (entry) => entry.route_type === "wire",
+    )
+    const secondWires = candidate.second.route.filter(
+      (entry) => entry.route_type === "wire",
+    )
     const firstCorner = firstWires[geometryCase.firstCornerWireIndex]!
     const secondCorner = secondWires[geometryCase.firstCornerWireIndex]!
     const station = geometryCase.path[1]!
     const previous = geometryCase.path[0]!
     const next = geometryCase.path.at(-1)!
-    const incomingLength = Math.hypot(station.x - previous.x, station.y - previous.y)
+    const incomingLength = Math.hypot(
+      station.x - previous.x,
+      station.y - previous.y,
+    )
     const outgoingLength = Math.hypot(next.x - station.x, next.y - station.y)
-    const offset = { x: firstCorner.x - station.x, y: firstCorner.y - station.y }
+    const offset = {
+      x: firstCorner.x - station.x,
+      y: firstCorner.y - station.y,
+    }
     const incomingNormal = {
       x: -(station.y - previous.y) / incomingLength,
       y: (station.x - previous.x) / incomingLength,
@@ -146,13 +159,29 @@ test("maintains lane offsets through composite-grid and via-adjacent miters", ()
       Math.abs(offset.x * outgoingNormal.x + offset.y * outgoingNormal.y),
       geometryCase.name,
     ).toBeCloseTo(1, 10)
-    expect((firstCorner.x + secondCorner.x) / 2, geometryCase.name).toBeCloseTo(station.x, 10)
-    expect((firstCorner.y + secondCorner.y) / 2, geometryCase.name).toBeCloseTo(station.y, 10)
-    if (geometryCase.firstCornerWireIndex !== geometryCase.secondCornerWireIndex) {
+    expect((firstCorner.x + secondCorner.x) / 2, geometryCase.name).toBeCloseTo(
+      station.x,
+      10,
+    )
+    expect((firstCorner.y + secondCorner.y) / 2, geometryCase.name).toBeCloseTo(
+      station.y,
+      10,
+    )
+    if (
+      geometryCase.firstCornerWireIndex !== geometryCase.secondCornerWireIndex
+    ) {
       const firstAfterVia = firstWires[geometryCase.secondCornerWireIndex]!
       const secondAfterVia = secondWires[geometryCase.secondCornerWireIndex]!
-      expect(firstAfterVia).toMatchObject({ x: firstCorner.x, y: firstCorner.y, layer: "bottom" })
-      expect(secondAfterVia).toMatchObject({ x: secondCorner.x, y: secondCorner.y, layer: "bottom" })
+      expect(firstAfterVia).toMatchObject({
+        x: firstCorner.x,
+        y: firstCorner.y,
+        layer: "bottom",
+      })
+      expect(secondAfterVia).toMatchObject({
+        x: secondCorner.x,
+        y: secondCorner.y,
+        layer: "bottom",
+      })
     }
   }
 })

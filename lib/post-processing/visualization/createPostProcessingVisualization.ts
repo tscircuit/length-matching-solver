@@ -12,9 +12,17 @@ export const createPostProcessingVisualization = (input: {
   activeConnectionNames: [string, string] | null
   previewPath: Array<{ x: number; y: number; layer: string }> | null
 }): GraphicsObject => {
-  const graphics: GraphicsObject = { lines: [], points: [], rects: [], circles: [] }
+  const graphics: GraphicsObject = {
+    lines: [],
+    points: [],
+    rects: [],
+    circles: [],
+  }
   graphics.rects!.push({
-    center: { x: (input.bounds.minX + input.bounds.maxX) / 2, y: (input.bounds.minY + input.bounds.maxY) / 2 },
+    center: {
+      x: (input.bounds.minX + input.bounds.maxX) / 2,
+      y: (input.bounds.minY + input.bounds.maxY) / 2,
+    },
     width: input.bounds.maxX - input.bounds.minX,
     height: input.bounds.maxY - input.bounds.minY,
     fill: "rgba(30, 70, 120, 0.04)",
@@ -22,9 +30,11 @@ export const createPostProcessingVisualization = (input: {
     layer: `z${Array.from({ length: input.layerCount }, (_, index) => index).join(",")}`,
   })
   for (const obstacle of input.obstacles) {
-    const indexes = obstacle.zLayers ?? obstacle.layers
-      .map((layer) => getLayerIndex(layer, input.layerCount))
-      .filter((index) => index >= 0)
+    const indexes =
+      obstacle.zLayers ??
+      obstacle.layers
+        .map((layer) => getLayerIndex(layer, input.layerCount))
+        .filter((index) => index >= 0)
     graphics.rects!.push({
       center: obstacle.center,
       width: obstacle.width,
@@ -51,7 +61,8 @@ export const createPostProcessingVisualization = (input: {
   for (const trace of input.traces) {
     if (input.activeConnectionNames?.includes(trace.connection_name)) continue
     const color = "#2563eb"
-    let current: { x: number; y: number; layer: string; width: number } | null = null
+    let current: { x: number; y: number; layer: string; width: number } | null =
+      null
     for (const entry of trace.route) {
       if (entry.route_type === "wire") {
         if (current && current.layer === entry.layer) {
@@ -66,8 +77,11 @@ export const createPostProcessingVisualization = (input: {
         }
         current = entry
       } else if (entry.route_type === "via") {
-        const layers = getTransitionLayers(entry.from_layer, entry.to_layer, input.layerCount)
-          .map((layer) => getLayerIndex(layer, input.layerCount))
+        const layers = getTransitionLayers(
+          entry.from_layer,
+          entry.to_layer,
+          input.layerCount,
+        ).map((layer) => getLayerIndex(layer, input.layerCount))
         graphics.circles!.push({
           center: entry,
           radius: (entry.via_diameter ?? current?.width ?? 0.2) / 2,

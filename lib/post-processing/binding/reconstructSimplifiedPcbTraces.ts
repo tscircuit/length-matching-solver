@@ -93,18 +93,13 @@ export const reconstructSimplifiedPcbTraces = (input: {
         throw new Error(
           `PostProcessingSolver: matched connection "${hdRoute.connectionName}" added an unbound via`,
         )
-      if (
-        Math.hypot(template.x - point.x, template.y - point.y) > 1e-8
-      )
+      if (Math.hypot(template.x - point.x, template.y - point.y) > 1e-8)
         throw new Error(
           `PostProcessingSolver: matched connection "${hdRoute.connectionName}" moved a preserved via`,
         )
       const fromLayer = getLayerName(previous.z, input.params.layerCount)
       const toLayer = getLayerName(point.z, input.params.layerCount)
-      const templateLayers = new Set([
-        template.from_layer,
-        template.to_layer,
-      ])
+      const templateLayers = new Set([template.from_layer, template.to_layer])
       if (!templateLayers.has(fromLayer) || !templateLayers.has(toLayer))
         throw new Error(
           `PostProcessingSolver: matched connection "${hdRoute.connectionName}" changed a preserved via span`,
@@ -124,10 +119,8 @@ export const reconstructSimplifiedPcbTraces = (input: {
       delete wire.start_pcb_port_id
       delete wire.end_pcb_port_id
     }
-    if (binding.startPortId)
-      wires[0]!.start_pcb_port_id = binding.startPortId
-    if (binding.endPortId)
-      wires.at(-1)!.end_pcb_port_id = binding.endPortId
+    if (binding.startPortId) wires[0]!.start_pcb_port_id = binding.startPortId
+    if (binding.endPortId) wires.at(-1)!.end_pcb_port_id = binding.endPortId
     traces[binding.traceIndex] = { ...source, route: rebuilt }
   }
 

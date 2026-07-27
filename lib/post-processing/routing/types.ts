@@ -14,10 +14,7 @@ export type CoupledPathSearchInput = {
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
   grid: CompositeGridConfig
-  isEdgeValid: (
-    start: CoupledPathPoint,
-    end: CoupledPathPoint,
-  ) => boolean
+  isEdgeValid: (start: CoupledPathPoint, end: CoupledPathPoint) => boolean
   isViaValid: (
     point: CoupledPathPoint,
     toLayer: string,

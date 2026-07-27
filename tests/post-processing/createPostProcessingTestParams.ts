@@ -1,7 +1,4 @@
-import type {
-  PostProcessingSolverParams,
-  SimplifiedPcbTrace,
-} from "../../lib"
+import type { PostProcessingSolverParams, SimplifiedPcbTrace } from "../../lib"
 
 export const createPostProcessingTestParams = (
   overrides: Partial<PostProcessingSolverParams> = {},

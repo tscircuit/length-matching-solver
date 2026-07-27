@@ -12,9 +12,9 @@ test("honors a custom composite grid while preserving exact deterministic endpoi
     outerPerimeterWidth: 1.23456789,
   }
   const solve = (routingGrid?: PostProcessingGridConfig) => {
-    const solver = new PostProcessingSolver(createPostProcessingTestParams(
-      routingGrid ? { routingGrid } : {},
-    ))
+    const solver = new PostProcessingSolver(
+      createPostProcessingTestParams(routingGrid ? { routingGrid } : {}),
+    )
     let gridNodeCount = 0
     while (!solver.solved) {
       solver.step()
@@ -32,8 +32,24 @@ test("honors a custom composite grid while preserving exact deterministic endpoi
   expect(first.output.traces).toEqual(second.output.traces)
   expect(first.gridNodeCount).toBe(second.gridNodeCount)
   expect(first.gridNodeCount).not.toBe(defaultGrid.gridNodeCount)
-  expect(first.output.traces[0]?.route[0]).toMatchObject({ x: 0, y: 2, layer: "top" })
-  expect(first.output.traces[0]?.route.at(-1)).toMatchObject({ x: 10, y: 2, layer: "top" })
-  expect(first.output.traces[1]?.route[0]).toMatchObject({ x: 0, y: -2, layer: "top" })
-  expect(first.output.traces[1]?.route.at(-1)).toMatchObject({ x: 10, y: -2, layer: "top" })
+  expect(first.output.traces[0]?.route[0]).toMatchObject({
+    x: 0,
+    y: 2,
+    layer: "top",
+  })
+  expect(first.output.traces[0]?.route.at(-1)).toMatchObject({
+    x: 10,
+    y: 2,
+    layer: "top",
+  })
+  expect(first.output.traces[1]?.route[0]).toMatchObject({
+    x: 0,
+    y: -2,
+    layer: "top",
+  })
+  expect(first.output.traces[1]?.route.at(-1)).toMatchObject({
+    x: 10,
+    y: -2,
+    layer: "top",
+  })
 })

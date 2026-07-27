@@ -4,7 +4,16 @@ import { createPostProcessingTestParams } from "./createPostProcessingTestParams
 
 test("retains both original traces and returns one generic Error when infeasible", () => {
   const params = createPostProcessingTestParams({
-    obstacles: [{ type: "rect", layers: ["top", "bottom"], center: { x: 5, y: 0 }, width: 8, height: 9, connectedTo: [] }],
+    obstacles: [
+      {
+        type: "rect",
+        layers: ["top", "bottom"],
+        center: { x: 5, y: 0 },
+        width: 8,
+        height: 9,
+        connectedTo: [],
+      },
+    ],
   })
   const original = structuredClone(params.traces)
   const solver = new PostProcessingSolver(params)

@@ -52,9 +52,7 @@ test("simplifies farthest same-layer spans while preserving vias and endpoint me
   const solver = new FortyFiveDegreeSimplificationSolver({
     traces,
     errors: [],
-    reroutedPairs: [
-      { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
-    ],
+    reroutedPairs: [{ connectionNames: ["P", "N"], lengthTolerance: 0.01 }],
     obstacles: [],
     bounds: { minX: -1, maxX: 9, minY: 0, maxY: 7 },
     layerCount: 2,
@@ -75,7 +73,9 @@ test("simplifies farthest same-layer spans while preserving vias and endpoint me
     expect(wires.at(-1)?.end_pcb_port_id).toBe(`${trace.connection_name}_end`)
     expect(
       wires.some(
-        (wire) => wire.x === 5 && wire.y === 3 + (trace.connection_name === "P" ? 0 : -1),
+        (wire) =>
+          wire.x === 5 &&
+          wire.y === 3 + (trace.connection_name === "P" ? 0 : -1),
       ),
     ).toBe(true)
     for (let index = 0; index < wires.length - 1; index++) {

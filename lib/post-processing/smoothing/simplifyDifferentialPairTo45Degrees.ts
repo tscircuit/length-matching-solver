@@ -166,13 +166,11 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
       maximumInteriorPairSeparation + EPSILON
     )
       return false
-    const minimumInteriorPairEdgeGap =
-      getMinimumInteriorPairEdgeGap(traces)
+    const minimumInteriorPairEdgeGap = getMinimumInteriorPairEdgeGap(traces)
     return (
       initialMinimumInteriorPairEdgeGap === null ||
       minimumInteriorPairEdgeGap === null ||
-      minimumInteriorPairEdgeGap >=
-        initialMinimumInteriorPairEdgeGap - EPSILON
+      minimumInteriorPairEdgeGap >= initialMinimumInteriorPairEdgeGap - EPSILON
     )
   }
 
@@ -241,7 +239,8 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
       .filter(
         (option, optionIndex, options) =>
           options.findIndex(
-            (other) => JSON.stringify(other.points) === JSON.stringify(option.points),
+            (other) =>
+              JSON.stringify(other.points) === JSON.stringify(option.points),
           ) === optionIndex,
       )
       .sort(
@@ -254,7 +253,11 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
 
   const createSpans = (trace: SimplifiedPcbTrace): Span[] => {
     const spans: Span[] = []
-    for (let startIndex = 0; startIndex < trace.route.length - 1; startIndex++) {
+    for (
+      let startIndex = 0;
+      startIndex < trace.route.length - 1;
+      startIndex++
+    ) {
       const start = trace.route[startIndex]
       if (start?.route_type !== "wire") continue
       for (
@@ -273,7 +276,8 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
         const middle = trace.route.slice(startIndex + 1, endIndex)
         if (
           middle.some(
-            (entry) => entry.route_type !== "wire" || entry.layer !== start.layer,
+            (entry) =>
+              entry.route_type !== "wire" || entry.layer !== start.layer,
           )
         )
           continue
@@ -300,9 +304,7 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
     const start = trace.route[
       span.startIndex
     ] as SimplifiedPcbTraceWireRoutePoint
-    const end = trace.route[
-      span.endIndex
-    ] as SimplifiedPcbTraceWireRoutePoint
+    const end = trace.route[span.endIndex] as SimplifiedPcbTraceWireRoutePoint
     const width = Math.max(start.width, end.width)
     const intermediateWires: SimplifiedPcbTraceWireRoutePoint[] = option.points
       .slice(1, -1)
@@ -344,13 +346,12 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
             const next = originalSpan[index + 1]!
             const dx = Math.abs(next.x - point.x)
             const dy = Math.abs(next.y - point.y)
-            return dx <= EPSILON || dy <= EPSILON || Math.abs(dx - dy) <= EPSILON
+            return (
+              dx <= EPSILON || dy <= EPSILON || Math.abs(dx - dy) <= EPSILON
+            )
           })
         for (const option of createPathOptions(start, end)) {
-          if (
-            option.points.length >= originalSpan.length &&
-            originalIs45Degree
-          )
+          if (option.points.length >= originalSpan.length && originalIs45Degree)
             continue
           const replacement = createReplacement(trace, span, option)
           const candidate = [...output]
@@ -411,7 +412,8 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
     input.layerCount,
   )
   const finalLengthDifference = Math.abs(
-    getSimplifiedTraceLength(finalFirst) - getSimplifiedTraceLength(finalSecond),
+    getSimplifiedTraceLength(finalFirst) -
+      getSimplifiedTraceLength(finalSecond),
   )
   // Commit smoothing atomically only when it preserves the pair's differential
   // length; otherwise the regular matcher would have to undo smoothing quality.

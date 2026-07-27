@@ -6,9 +6,10 @@ import {
 } from "../../../lib"
 
 const getPreviewSignature = (solver: PostProcessingSolver): string | null => {
-  const previewLines = solver.visualize().lines?.filter(
-    (line) => line.strokeColor === "#16a34a",
-  ) ?? []
+  const previewLines =
+    solver
+      .visualize()
+      .lines?.filter((line) => line.strokeColor === "#16a34a") ?? []
   return previewLines.length > 0 ? JSON.stringify(previewLines) : null
 }
 

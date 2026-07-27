@@ -32,7 +32,9 @@ export class IncrementalCoupledPathSearch {
     this.startLayer = getLayerIndex(input.start.layer, input.layerCount)
     this.endLayer = getLayerIndex(input.end.layer, input.layerCount)
     this.grid = new CompositeRoutingGrid(input)
-    this.maxSearchStates = this.grid.getSearchStateCountUpperBound(input.layerCount)
+    this.maxSearchStates = this.grid.getSearchStateCountUpperBound(
+      input.layerCount,
+    )
     if (this.startLayer < 0 || this.endLayer < 0) {
       this.queue = []
       this.status = "exhausted"
@@ -81,20 +83,31 @@ export class IncrementalCoupledPathSearch {
 
   step(): void {
     if (this.status !== "searching") return
-    this.queue.sort((left, right) =>
-      left.estimate - right.estimate || left.cost - right.cost ||
-      left.point.x - right.point.x || left.point.y - right.point.y ||
-      (left.point.layer < right.point.layer ? -1 : left.point.layer > right.point.layer ? 1 : 0) ||
-      left.sequence - right.sequence,
+    this.queue.sort(
+      (left, right) =>
+        left.estimate - right.estimate ||
+        left.cost - right.cost ||
+        left.point.x - right.point.x ||
+        left.point.y - right.point.y ||
+        (left.point.layer < right.point.layer
+          ? -1
+          : left.point.layer > right.point.layer
+            ? 1
+            : 0) ||
+        left.sequence - right.sequence,
     )
     const current = this.queue.shift()
     if (!current) {
       this.status = "exhausted"
       return
     }
-    const currentBestCost = this.bestCosts.get(this.keyFor(current.point, current.direction))
+    const currentBestCost = this.bestCosts.get(
+      this.keyFor(current.point, current.direction),
+    )
     if (currentBestCost === undefined)
-      throw new Error("PostProcessingSolver: coupled path queue contains an untracked state")
+      throw new Error(
+        "PostProcessingSolver: coupled path queue contains an untracked state",
+      )
     if (current.cost > currentBestCost + 1e-10) {
       if (this.queue.length === 0) this.status = "exhausted"
       return
@@ -118,13 +131,21 @@ export class IncrementalCoupledPathSearch {
   }
 
   private isEnd(point: CoupledPathPoint): boolean {
-    return point.layer === this.input.end.layer &&
-      point.x === this.input.end.x && point.y === this.input.end.y
+    return (
+      point.layer === this.input.end.layer &&
+      point.x === this.input.end.x &&
+      point.y === this.input.end.y
+    )
   }
 
   private estimate(point: CoupledPathPoint): number {
-    return Math.hypot(point.x - this.input.end.x, point.y - this.input.end.y) +
-      Math.abs(getLayerIndex(point.layer, this.input.layerCount) - this.endLayer) * 3
+    return (
+      Math.hypot(point.x - this.input.end.x, point.y - this.input.end.y) +
+      Math.abs(
+        getLayerIndex(point.layer, this.input.layerCount) - this.endLayer,
+      ) *
+        3
+    )
   }
 
   private keyFor(point: CoupledPathPoint, direction: Direction | null): string {
@@ -133,12 +154,17 @@ export class IncrementalCoupledPathSearch {
     return `${x}:${y}:${point.layer}:${direction?.key ?? "start"}`
   }
 
-  private createDirection(start: CoupledPathPoint, end: CoupledPathPoint): Direction {
+  private createDirection(
+    start: CoupledPathPoint,
+    end: CoupledPathPoint,
+  ): Direction {
     const dx = end.x - start.x
     const dy = end.y - start.y
     const length = Math.hypot(dx, dy)
     if (length <= 1e-10)
-      throw new Error("PostProcessingSolver: composite grid produced a zero-length planar edge")
+      throw new Error(
+        "PostProcessingSolver: composite grid produced a zero-length planar edge",
+      )
     const x = dx / length
     const y = dy / length
     return { x, y, key: `${x.toFixed(6)}:${y.toFixed(6)}` }
@@ -162,10 +188,13 @@ export class IncrementalCoupledPathSearch {
       const incoming = { x: point.x - previous.x, y: point.y - previous.y }
       const outgoing = { x: next.x - point.x, y: next.y - point.y }
       const crossProduct = incoming.x * outgoing.y - incoming.y * outgoing.x
-      const lengthProduct = Math.hypot(incoming.x, incoming.y) *
-        Math.hypot(outgoing.x, outgoing.y)
-      return Math.abs(crossProduct) > lengthProduct * 1e-10 ||
-        point.layer !== previous.layer || point.layer !== next.layer
+      const lengthProduct =
+        Math.hypot(incoming.x, incoming.y) * Math.hypot(outgoing.x, outgoing.y)
+      return (
+        Math.abs(crossProduct) > lengthProduct * 1e-10 ||
+        point.layer !== previous.layer ||
+        point.layer !== next.layer
+      )
     })
   }
 
@@ -173,11 +202,17 @@ export class IncrementalCoupledPathSearch {
     for (const next of this.grid.getPlanarNeighbors(current.point)) {
       if (!this.input.isEdgeValid(current.point, next)) continue
       const direction = this.createDirection(current.point, next)
-      const bendCost = current.direction === null || current.direction.key === direction.key ? 0 : 0.18
-      const cost = current.cost +
-        Math.hypot(next.x - current.point.x, next.y - current.point.y) + bendCost
+      const bendCost =
+        current.direction === null || current.direction.key === direction.key
+          ? 0
+          : 0.18
+      const cost =
+        current.cost +
+        Math.hypot(next.x - current.point.x, next.y - current.point.y) +
+        bendCost
       const key = this.keyFor(next, direction)
-      if ((this.bestCosts.get(key) ?? Number.POSITIVE_INFINITY) <= cost) continue
+      if ((this.bestCosts.get(key) ?? Number.POSITIVE_INFINITY) <= cost)
+        continue
       this.bestCosts.set(key, cost)
       this.queue.push({
         point: next,
@@ -192,15 +227,21 @@ export class IncrementalCoupledPathSearch {
 
   private enqueueViaNeighbors(current: SearchNode): void {
     if (!current.direction) return
-    const currentLayer = getLayerIndex(current.point.layer, this.input.layerCount)
+    const currentLayer = getLayerIndex(
+      current.point.layer,
+      this.input.layerCount,
+    )
     for (const nextLayerIndex of [currentLayer - 1, currentLayer + 1]) {
-      if (nextLayerIndex < 0 || nextLayerIndex >= this.input.layerCount) continue
+      if (nextLayerIndex < 0 || nextLayerIndex >= this.input.layerCount)
+        continue
       const nextLayer = getLayerName(nextLayerIndex, this.input.layerCount)
-      if (!this.input.isViaValid(current.point, nextLayer, current.direction)) continue
+      if (!this.input.isViaValid(current.point, nextLayer, current.direction))
+        continue
       const next = { ...current.point, layer: nextLayer }
       const cost = current.cost + 4
       const key = this.keyFor(next, current.direction)
-      if ((this.bestCosts.get(key) ?? Number.POSITIVE_INFINITY) <= cost) continue
+      if ((this.bestCosts.get(key) ?? Number.POSITIVE_INFINITY) <= cost)
+        continue
       this.bestCosts.set(key, cost)
       this.queue.push({
         point: next,

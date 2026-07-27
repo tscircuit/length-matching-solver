@@ -41,7 +41,11 @@ export const createLengthMatchingBinding = (input: {
   const traceBindings: LengthMatchingTraceBinding[] = []
   const convertedTargetNames = new Set<string>()
 
-  for (let traceIndex = 0; traceIndex < input.result.traces.length; traceIndex++) {
+  for (
+    let traceIndex = 0;
+    traceIndex < input.result.traces.length;
+    traceIndex++
+  ) {
     const trace = input.result.traces[traceIndex]!
     if (!targetConnectionNames.has(trace.connection_name)) continue
     const onlyWireAndVia = trace.route.every(

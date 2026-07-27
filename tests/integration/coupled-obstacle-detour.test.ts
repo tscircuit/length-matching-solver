@@ -27,7 +27,8 @@ test("reroutes an oppositely-detoured pair together around a component", () => {
   const output = solver.getOutput()
   expect(output.errors).toHaveLength(0)
   const [positive, negative] = output.traces
-  if (!positive || !negative) throw new Error("Expected both differential-pair traces")
+  if (!positive || !negative)
+    throw new Error("Expected both differential-pair traces")
 
   const positiveY = getWireYAtX(positive, 5)
   const negativeY = getWireYAtX(negative, 5)
