@@ -3,6 +3,11 @@ export {
   type LengthMatchingSolverOutput,
   type LengthMatchingSolverParams,
 } from "./length-matching-solver"
+export {
+  PostProcessingSolver,
+  type PostProcessingSolverOutput,
+  type PostProcessingSolverParams,
+} from "./PostProcessingSolver"
 export type {
   ConnectionPoint,
   DifferentialPair,
@@ -10,4 +15,11 @@ export type {
   Obstacle,
   RoutePoint,
   SimpleRouteConnection,
+  SimplifiedPcbTrace,
+  SimplifiedPcbTraceJumperRoutePoint,
+  SimplifiedPcbTraceRoutePoint,
+  SimplifiedPcbTraces,
+  SimplifiedPcbTraceThroughObstacleRoutePoint,
+  SimplifiedPcbTraceViaRoutePoint,
+  SimplifiedPcbTraceWireRoutePoint,
 } from "./types"

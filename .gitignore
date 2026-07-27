@@ -5,3 +5,4 @@ cosmos-export/
 *.diff.png
 *.received.svg
 .vercel
+.pi/extensions/emdash-hook.ts
