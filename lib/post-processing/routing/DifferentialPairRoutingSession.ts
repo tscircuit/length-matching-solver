@@ -295,7 +295,9 @@ export class DifferentialPairRoutingSession {
           const perpendicular =
             (terminal.x - start.x) * normal.x +
             (terminal.y - start.y) * normal.y
-          return parallel + Math.abs(perpendicular - offset) / tangentOfMaximumTurn
+          return (
+            parallel + Math.abs(perpendicular - offset) / tangentOfMaximumTurn
+          )
         }),
       )
       return {
