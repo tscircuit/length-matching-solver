@@ -205,7 +205,43 @@ export const createCoupledPairCandidate = (input: {
       throw new Error(
         "PostProcessingSolver: terminal fanout has no preceding wire",
       )
-    if (input.terminalFanout && last.x !== endpoint.x && last.y !== endpoint.y)
+    const preceding = route.at(-2)
+    let terminalMitered = false
+    if (
+      preceding?.route_type === "wire" &&
+      preceding.layer === last.layer &&
+      last.layer === endpoint.layer
+    ) {
+      const incoming = { x: last.x - preceding.x, y: last.y - preceding.y }
+      const outgoing = { x: endpoint.x - last.x, y: endpoint.y - last.y }
+      const incomingLength = Math.hypot(incoming.x, incoming.y)
+      const outgoingLength = Math.hypot(outgoing.x, outgoing.y)
+      const isOrthogonalCorner =
+        incomingLength > 1e-8 &&
+        outgoingLength > 1e-8 &&
+        Math.abs(incoming.x * outgoing.x + incoming.y * outgoing.y) <= 1e-8
+      if (isOrthogonalCorner) {
+        // Move the corner back by its orthogonal leg for a 45-degree pad entry.
+        const miter = {
+          x: last.x - (incoming.x / incomingLength) * outgoingLength,
+          y: last.y - (incoming.y / incomingLength) * outgoingLength,
+        }
+        const remainingIncomingLength =
+          (miter.x - preceding.x) * (incoming.x / incomingLength) +
+          (miter.y - preceding.y) * (incoming.y / incomingLength)
+        if (remainingIncomingLength > 1e-8) {
+          last.x = miter.x
+          last.y = miter.y
+          terminalMitered = true
+        }
+      }
+    }
+    if (
+      input.terminalFanout &&
+      !terminalMitered &&
+      last.x !== endpoint.x &&
+      last.y !== endpoint.y
+    )
       route.push({
         route_type: "wire",
         x: endpoint.x,
