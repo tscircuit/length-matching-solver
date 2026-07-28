@@ -14,6 +14,7 @@ export const getMeanderQualityScore = (
     | "segmentLength"
     | "heightProfile"
     | "toothPitch"
+    | "centerlineDistanceCost"
   >,
 ): number => {
   const activeToothIndexes = input.predictedToothDepths.flatMap(
@@ -63,14 +64,17 @@ export const getMeanderQualityScore = (
   )
   const bendPenalty = 2 * (nonZeroDepths.length - 1)
   const detourPenalty = 7 * Math.min(1, input.addedLength / input.segmentLength)
-  const score = Math.max(
-    0,
+  const unboundedScore =
     100 -
-      aspectRatioPenalty -
-      densityPenalty -
-      variationPenalty -
-      bendPenalty -
-      detourPenalty,
-  )
+    aspectRatioPenalty -
+    densityPenalty -
+    variationPenalty -
+    bendPenalty -
+    detourPenalty -
+    input.centerlineDistanceCost * 100
+  const score =
+    input.centerlineDistanceCost > 0
+      ? unboundedScore
+      : Math.max(0, unboundedScore)
   return Math.round(score * 1_000_000) / 1_000_000
 }

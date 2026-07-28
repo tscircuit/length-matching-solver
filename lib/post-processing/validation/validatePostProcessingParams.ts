@@ -44,6 +44,25 @@ export const validatePostProcessingParams = (
       throw new Error(
         "PostProcessingSolver: differential pair declaration is invalid",
       )
+    for (const distance of [
+      pair.minimumCenterlineDistance,
+      pair.maximumCenterlineDistance,
+    ])
+      if (
+        distance !== undefined &&
+        (!Number.isFinite(distance) || distance <= 0)
+      )
+        throw new Error(
+          "PostProcessingSolver: differential pair centerline distances must be positive finite numbers",
+        )
+    if (
+      pair.minimumCenterlineDistance !== undefined &&
+      pair.maximumCenterlineDistance !== undefined &&
+      pair.minimumCenterlineDistance > pair.maximumCenterlineDistance
+    )
+      throw new Error(
+        "PostProcessingSolver: differential pair minimumCenterlineDistance cannot exceed maximumCenterlineDistance",
+      )
     for (const connectionName of pair.connectionNames) {
       if (declaredConnections.has(connectionName))
         throw new Error(

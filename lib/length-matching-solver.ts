@@ -18,6 +18,7 @@ import type {
 import {
   createMeanderCandidates,
   evaluateMeanderCandidate,
+  getMeanderCenterlineDistanceCost,
 } from "./length-matching/meander-candidate"
 import {
   getMeanderPlanQualityScore,
@@ -237,6 +238,21 @@ export class LengthMatchingSolver extends BaseSolver {
           layerCount: config.layerCount,
           obstacleMargin: config.obstacleMargin,
         }),
+      getCenterlineDistanceCost:
+        activePair.pair.minimumCenterlineDistance === undefined &&
+        activePair.pair.maximumCenterlineDistance === undefined
+          ? undefined
+          : (meanderPoints) =>
+              getMeanderCenterlineDistanceCost({
+                meanderPoints,
+                pairedRoutes: activePair.longerRouteIndexes.map(
+                  (routeIndex) => this.matchedHdRoutes[routeIndex]!,
+                ),
+                minimumCenterlineDistance:
+                  activePair.pair.minimumCenterlineDistance,
+                maximumCenterlineDistance:
+                  activePair.pair.maximumCenterlineDistance,
+              }),
     })
     this.candidatesTried++
     if (this.currentAttempt.invalidReason === "below-minimum-height")

@@ -19,6 +19,7 @@ export const evaluateMeanderCandidate = (input: {
   targetAddedLength: number
   lengthTolerance: number
   isGeometryValid: (meanderPoints: RoutePoint[]) => boolean
+  getCenterlineDistanceCost?: (meanderPoints: RoutePoint[]) => number
 }): RegressionAttempt => {
   const getToothHeightWeights = (profile: {
     toothCount: number
@@ -201,6 +202,13 @@ export const evaluateMeanderCandidate = (input: {
     route: input.route,
     toothDepths: predictedToothDepths,
   })
+  const centerlineDistanceCost = input.getCenterlineDistanceCost
+    ? input.getCenterlineDistanceCost(meanderPoints)
+    : 0
+  if (!Number.isFinite(centerlineDistanceCost) || centerlineDistanceCost < 0)
+    throw new Error(
+      "LengthMatchingSolver: meander centerline distance cost must be a non-negative finite number",
+    )
   const scaleIsValid =
     Number.isFinite(predictedScaleFactor) &&
     predictedScaleFactor > 0 &&
@@ -241,6 +249,7 @@ export const evaluateMeanderCandidate = (input: {
       { ...input.route.route[input.candidate.segmentIndex + 1]! },
     ],
     meanderPoints,
+    centerlineDistanceCost,
     qualityScore: 0,
     ...outcome,
   }

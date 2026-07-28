@@ -43,6 +43,7 @@ export type RegressionAttempt = SegmentCandidate &
     resultingError: number
     testedSegment: [RoutePoint, RoutePoint]
     meanderPoints: RoutePoint[]
+    centerlineDistanceCost: number
     qualityScore: number
   }
 

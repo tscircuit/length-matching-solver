@@ -15,6 +15,22 @@ export const validatePair = (
       "LengthMatchingSolver: differential pair lengthTolerance must be a non-negative finite number",
     )
   }
+  for (const distance of [
+    pair.minimumCenterlineDistance,
+    pair.maximumCenterlineDistance,
+  ])
+    if (distance !== undefined && (!Number.isFinite(distance) || distance <= 0))
+      throw new Error(
+        "LengthMatchingSolver: differential pair centerline distances must be positive finite numbers",
+      )
+  if (
+    pair.minimumCenterlineDistance !== undefined &&
+    pair.maximumCenterlineDistance !== undefined &&
+    pair.minimumCenterlineDistance > pair.maximumCenterlineDistance
+  )
+    throw new Error(
+      "LengthMatchingSolver: differential pair minimumCenterlineDistance cannot exceed maximumCenterlineDistance",
+    )
   const connectionsByName = new Map(
     originalConnections.map((connection) => [connection.name, connection]),
   )

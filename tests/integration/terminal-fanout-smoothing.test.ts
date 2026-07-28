@@ -72,8 +72,25 @@ test("keeps port-selector differential-pair terminal joins at 125 degrees", () =
     (trace) => trace.connection_name === "source_trace_0",
   )
   if (!testPointTrace) throw new Error("Expected the TP1 source trace")
+  const lowerTrunk = testPointTrace.route[1]
+  const lowerTrunkEnd = testPointTrace.route[2]
+  if (lowerTrunk?.route_type !== "wire" || lowerTrunkEnd?.route_type !== "wire")
+    throw new Error("Expected the TP1 lower trunk wire")
   expect(
     testPointTrace.route.filter((entry) => entry.route_type === "wire"),
   ).toHaveLength(4)
+  const matchedTrace = output.traces.find(
+    (trace) => trace.connection_name === "source_trace_1",
+  )
+  if (!matchedTrace) throw new Error("Expected the matching source trace")
+  const centerlineDistances = matchedTrace.route.flatMap((entry) =>
+    entry.route_type === "wire" &&
+    entry.x >= lowerTrunk.x &&
+    entry.x <= lowerTrunkEnd.x
+      ? [Math.abs(entry.y - lowerTrunk.y)]
+      : [],
+  )
+  expect(Math.min(...centerlineDistances)).toBeGreaterThanOrEqual(0.6)
+  expect(Math.max(...centerlineDistances)).toBeLessThanOrEqual(1.600001)
   expect(solver.finalVisualize()).toMatchGraphicsSvg(import.meta.path)
 })

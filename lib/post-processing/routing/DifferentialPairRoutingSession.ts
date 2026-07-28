@@ -13,11 +13,13 @@ import type {
 } from "../model/internal-types"
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
+import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
 import type { CoupledPathPoint, CoupledPathSearchInput } from "./types"
 
 const EDGE_GAP_SAMPLES = [0.75, 0.5, 1, 0.25, 1.25]
+const CENTERLINE_DISTANCE_PENALTY_PER_MM = 100
 
 type PreparedPair = {
   first: ParsedTrace
@@ -315,8 +317,16 @@ export class DifferentialPairRoutingSession {
       bounds: this.input.bounds,
       layerCount: this.input.layerCount,
     }
-    const attempts = EDGE_GAP_SAMPLES.flatMap((edgeGap) => {
-      const centerlineSpacing = edgeGap + first.width / 2 + second.width / 2
+    const centerlineDistanceSamples = getCenterlineDistanceSamples({
+      minimumCenterlineDistance: this.input.pair.minimumCenterlineDistance,
+      maximumCenterlineDistance: this.input.pair.maximumCenterlineDistance,
+      minimumPhysicalDistance: first.width / 2 + second.width / 2,
+      legacyCenterlineDistances: EDGE_GAP_SAMPLES.map(
+        (edgeGap) => edgeGap + first.width / 2 + second.width / 2,
+      ),
+    })
+    const attempts = centerlineDistanceSamples.flatMap((centerlineSpacing) => {
+      const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
       return ([preferredSide, preferredSide === 1 ? -1 : 1] as const).map(
         (side) => {
           const forwardEgressStart = createForwardEgressSearchStart(
@@ -385,11 +395,27 @@ export class DifferentialPairRoutingSession {
   }
 
   private score(candidate: PairCandidate): number {
-    const spacingPenalty =
-      candidate.edgeGap < 0.5
-        ? (0.5 - candidate.edgeGap) * 100
+    const hasCenterlineDistancePreference =
+      this.input.pair.minimumCenterlineDistance !== undefined ||
+      this.input.pair.maximumCenterlineDistance !== undefined
+    const spacingPenalty = hasCenterlineDistancePreference
+      ? Math.max(
+          0,
+          (this.input.pair.minimumCenterlineDistance ??
+            Number.NEGATIVE_INFINITY) - candidate.centerlineDistance,
+        ) *
+          CENTERLINE_DISTANCE_PENALTY_PER_MM +
+        Math.max(
+          0,
+          candidate.centerlineDistance -
+            (this.input.pair.maximumCenterlineDistance ??
+              Number.POSITIVE_INFINITY),
+        ) *
+          CENTERLINE_DISTANCE_PENALTY_PER_MM
+      : candidate.edgeGap < 0.5
+        ? (0.5 - candidate.edgeGap) * CENTERLINE_DISTANCE_PENALTY_PER_MM
         : candidate.edgeGap > 1
-          ? (candidate.edgeGap - 1) * 100
+          ? (candidate.edgeGap - 1) * CENTERLINE_DISTANCE_PENALTY_PER_MM
           : 0
     return (
       spacingPenalty +

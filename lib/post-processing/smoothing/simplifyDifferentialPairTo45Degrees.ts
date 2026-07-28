@@ -154,6 +154,7 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
   const initialMinimumInteriorPairEdgeGap =
     getMinimumInteriorPairEdgeGap(output)
   const preferredMaximumCenterSpacing =
+    input.pair.maximumCenterlineDistance ??
     1 + initialFirst.width / 2 + initialSecond.width / 2
   const maximumInteriorPairSeparation = Math.min(
     getMaximumInteriorPairSeparation(output),

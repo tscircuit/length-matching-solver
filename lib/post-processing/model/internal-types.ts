@@ -43,6 +43,7 @@ export type PairCandidate = {
   firstParsed: ParsedTrace
   secondParsed: ParsedTrace
   edgeGap: number
+  centerlineDistance: number
   bendCount: number
   viaPairCount: number
 }
