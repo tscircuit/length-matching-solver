@@ -6,22 +6,54 @@ import {
   type SimplifiedPcbTrace,
 } from "../../lib"
 
-const getFirstTerminalInteriorAngle = (trace: SimplifiedPcbTrace): number => {
+const getTerminalInteriorAngles = (
+  trace: SimplifiedPcbTrace,
+): [number, number] => {
   const wires = trace.route.filter((entry) => entry.route_type === "wire")
-  const [terminal, corner, trunk] = wires
-  if (!terminal || !corner || !trunk)
+  const [startTerminal, startCorner, startTrunk] = wires
+  const [endTrunk, endCorner, endTerminal] = wires.slice(-3)
+  if (
+    !startTerminal ||
+    !startCorner ||
+    !startTrunk ||
+    !endTrunk ||
+    !endCorner ||
+    !endTerminal
+  )
     throw new Error(`Expected three wire stations for ${trace.connection_name}`)
-  const incoming = { x: terminal.x - corner.x, y: terminal.y - corner.y }
-  const outgoing = { x: trunk.x - corner.x, y: trunk.y - corner.y }
-  return (
+  const startIncoming = {
+    x: startTerminal.x - startCorner.x,
+    y: startTerminal.y - startCorner.y,
+  }
+  const startOutgoing = {
+    x: startTrunk.x - startCorner.x,
+    y: startTrunk.y - startCorner.y,
+  }
+  const endIncoming = {
+    x: endTerminal.x - endCorner.x,
+    y: endTerminal.y - endCorner.y,
+  }
+  const endOutgoing = {
+    x: endTrunk.x - endCorner.x,
+    y: endTrunk.y - endCorner.y,
+  }
+  return [
     (Math.acos(
-      (incoming.x * outgoing.x + incoming.y * outgoing.y) /
-        (Math.hypot(incoming.x, incoming.y) *
-          Math.hypot(outgoing.x, outgoing.y)),
+      (startIncoming.x * startOutgoing.x +
+        startIncoming.y * startOutgoing.y) /
+        (Math.hypot(startIncoming.x, startIncoming.y) *
+          Math.hypot(startOutgoing.x, startOutgoing.y)),
     ) *
       180) /
-    Math.PI
-  )
+      Math.PI,
+    (Math.acos(
+      (endIncoming.x * endOutgoing.x + endIncoming.y * endOutgoing.y) /
+        (Math.hypot(endIncoming.x, endIncoming.y) *
+          Math.hypot(endOutgoing.x, endOutgoing.y)),
+    ) *
+      180) /
+      Math.PI,
+  ]
 }
 
 test("keeps port-selector differential-pair terminal joins at 125 degrees", () => {
@@ -32,8 +64,11 @@ test("keeps port-selector differential-pair terminal joins at 125 degrees", () =
 
   const output = solver.getOutput()
   expect(output.errors).toHaveLength(0)
-  for (const trace of output.traces)
-    expect(getFirstTerminalInteriorAngle(trace)).toBeGreaterThanOrEqual(125)
+  for (const trace of output.traces) {
+    const [startAngle, endAngle] = getTerminalInteriorAngles(trace)
+    expect(startAngle).toBeGreaterThanOrEqual(125)
+    expect(endAngle).toBeGreaterThanOrEqual(135)
+  }
   const testPointTrace = output.traces.find(
     (trace) => trace.connection_name === "source_trace_0",
   )
