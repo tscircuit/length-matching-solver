@@ -3,8 +3,17 @@ import { getMinimumPairEdgeGap } from "../../../lib/post-processing/geometry/get
 import { solveDifferentialPair } from "../../../lib/post-processing/routing/solveDifferentialPair"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
-test("records spacing quality from final length-matched geometry", () => {
-  const params = createPostProcessingTestParams()
+test("prefers a requested centerline-distance range when rerouting a pair", () => {
+  const params = createPostProcessingTestParams({
+    differentialPairs: [
+      {
+        connectionNames: ["P", "N"],
+        lengthTolerance: 0.01,
+        minimumCenterlineDistance: 0.6,
+        maximumCenterlineDistance: 1.6,
+      },
+    ],
+  })
   const traces = structuredClone(params.traces)
   const last = traces[1]!.route.at(-1)!
   if (last.route_type !== "wire") throw new Error("Expected endpoint wire")
@@ -18,6 +27,8 @@ test("records spacing quality from final length-matched geometry", () => {
   })
   expect(result.status).toBe("accepted")
   if (result.status !== "accepted") throw result.error
+  expect(result.candidate.centerlineDistance).toBeGreaterThanOrEqual(0.6)
+  expect(result.candidate.centerlineDistance).toBeLessThanOrEqual(1.6)
   expect(result.candidate.edgeGap).toBeCloseTo(
     getMinimumPairEdgeGap(
       result.candidate.firstParsed,

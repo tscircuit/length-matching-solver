@@ -11,6 +11,12 @@ the required added length over more baseline distance. Retain compact
 minimum-clearance candidates because obstacles can make relaxed geometry
 infeasible.
 
+When a differential pair supplies `minimumCenterlineDistance` or
+`maximumCenterlineDistance`, candidate ranking also applies a soft,
+length-weighted cost for the meander's closest same-layer centerline distance
+to the paired route. This is a preference rather than a clearance rule, so
+constrained geometry can still be matched.
+
 For every segment and tooth count, `createMeanderCandidates()` evaluates three
 deterministic pitches:
 
@@ -53,8 +59,11 @@ Primary references:
 
 ## Score
 
-`getMeanderQualityScore()` returns a preference from 0 to 100. Higher is better.
-For non-zero tooth depths, it subtracts these empirical penalties:
+`getMeanderQualityScore()` returns a preference from 0 to 100 when no
+centerline preference is set. Higher is better. An enabled centerline cost can
+lower the score below zero so candidates outside the requested range retain a
+deterministic ordering. For non-zero tooth depths, it subtracts these empirical
+penalties:
 
 | Term | Formula | Purpose |
 | --- | --- | --- |
@@ -63,6 +72,7 @@ For non-zero tooth depths, it subtracts these empirical penalties:
 | Profile deviation | Up to 10 points for deviation from the intended tapered or uniform envelope | Avoid clearance-capped or otherwise irregular lobes. |
 | Bend burden | 2 points per additional active tooth | Keep a non-zero cost for every reversal. |
 | Detour | Up to 7 points from added length relative to segment length | Prefer smaller corrections when other geometry is equal. |
+| Centerline range | `100 *` length-weighted distance outside the optional pair range | Favor meanders that remain near the paired route. |
 
 The weights are deterministic ranking preferences, not extracted electrical
 parameters. Do not expose the result as impedance, inductance, EMI, or delay.
@@ -75,7 +85,8 @@ without making fragmentation free.
 ## Ownership
 
 - `lib/length-matching/meander-candidate.ts`: minimum pitch, relaxed pitch
-  enumeration, depth fitting, and candidate evaluation.
+  enumeration, depth fitting, candidate evaluation, and optional paired-route
+  centerline-distance cost.
 - `lib/length-matching/meander-quality.ts`: geometry score and empirical
   weights.
 - `lib/length-matching/meander-geometry.ts`: rounded physical route geometry.

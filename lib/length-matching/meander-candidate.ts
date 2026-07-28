@@ -1,4 +1,5 @@
 export { createMeanderCandidates } from "./candidate/createMeanderCandidates"
 export { evaluateMeanderCandidate } from "./candidate/evaluateMeanderCandidate"
 export { evaluateMinimumMeanderCandidate } from "./candidate/evaluateMinimumMeanderCandidate"
+export { getMeanderCenterlineDistanceCost } from "./candidate/getMeanderCenterlineDistanceCost"
 export { replaceSegmentWithMeander } from "./candidate/replaceSegmentWithMeander"

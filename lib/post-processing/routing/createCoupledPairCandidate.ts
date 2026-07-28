@@ -299,6 +299,7 @@ export const createCoupledPairCandidate = (input: {
     firstParsed,
     secondParsed,
     edgeGap: input.edgeGap,
+    centerlineDistance: input.centerlineSpacing,
     bendCount: Math.max(0, input.path.length - viaPairCount - 2),
     viaPairCount,
   }

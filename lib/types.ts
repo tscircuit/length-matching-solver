@@ -46,6 +46,10 @@ export type SimpleRouteConnection = {
 export type DifferentialPair = {
   connectionNames: [string, string]
   lengthTolerance: number
+  /** Soft lower center-to-center spacing preference during rerouting and meander ranking. */
+  minimumCenterlineDistance?: number
+  /** Soft upper center-to-center spacing preference during rerouting and meander ranking. */
+  maximumCenterlineDistance?: number
 }
 
 export type SimplifiedPcbTraceWireRoutePoint = {
