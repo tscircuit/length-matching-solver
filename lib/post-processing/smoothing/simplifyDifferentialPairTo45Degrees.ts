@@ -265,12 +265,9 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
         endIndex >= startIndex + 1;
         endIndex--
       ) {
-        if (startIndex === 0 && endIndex > 1) continue
-        if (
-          endIndex === trace.route.length - 1 &&
-          startIndex < trace.route.length - 2
-        )
-          continue
+        // Terminal geometry sets the copper's pad egress. Replacing a
+        // terminal-adjacent span can create a short orthogonal spike there.
+        if (startIndex === 0 || endIndex === trace.route.length - 1) continue
         const end = trace.route[endIndex]
         if (end?.route_type !== "wire" || end.layer !== start.layer) continue
         const middle = trace.route.slice(startIndex + 1, endIndex)
