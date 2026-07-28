@@ -41,4 +41,5 @@ test("keeps port-selector differential-pair terminal joins at 125 degrees", () =
   expect(
     testPointTrace.route.filter((entry) => entry.route_type === "wire"),
   ).toHaveLength(4)
+  expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
 })
