@@ -39,8 +39,7 @@ const getTerminalInteriorAngles = (
   }
   return [
     (Math.acos(
-      (startIncoming.x * startOutgoing.x +
-        startIncoming.y * startOutgoing.y) /
+      (startIncoming.x * startOutgoing.x + startIncoming.y * startOutgoing.y) /
         (Math.hypot(startIncoming.x, startIncoming.y) *
           Math.hypot(startOutgoing.x, startOutgoing.y)),
     ) *
