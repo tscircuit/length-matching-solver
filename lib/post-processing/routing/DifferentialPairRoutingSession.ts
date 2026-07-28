@@ -267,6 +267,43 @@ export class DifferentialPairRoutingSession {
     const terminalFanout =
       hasInlineTerminalPair(firstStart, secondStart) &&
       hasInlineTerminalPair(firstEnd, secondEnd)
+    const spineDirection = { x: normal.y, y: -normal.x }
+    const terminalStartRequiresForwardEgress = [firstStart, secondStart].some(
+      (terminal) =>
+        (terminal.x - start.x) * spineDirection.x +
+          (terminal.y - start.y) * spineDirection.y >
+        1e-8,
+    )
+    const createForwardEgressSearchStart = (
+      centerlineSpacing: number,
+      side: 1 | -1,
+    ): CoupledPathPoint => {
+      if (!terminalStartRequiresForwardEgress || terminalFanout) return start
+      const direction = spineDirection
+      const terminalStations = [
+        { terminal: firstStart, offset: (side * centerlineSpacing) / 2 },
+        { terminal: secondStart, offset: (-side * centerlineSpacing) / 2 },
+      ]
+      // A 125-degree interior corner permits at most a 55-degree change in
+      // travel direction between a terminal egress and the common spine.
+      const tangentOfMaximumTurn = Math.tan((55 * Math.PI) / 180)
+      const forwardDistance = Math.max(
+        ...terminalStations.map(({ terminal, offset }) => {
+          const parallel =
+            (terminal.x - start.x) * direction.x +
+            (terminal.y - start.y) * direction.y
+          const perpendicular =
+            (terminal.x - start.x) * normal.x +
+            (terminal.y - start.y) * normal.y
+          return parallel + Math.abs(perpendicular - offset) / tangentOfMaximumTurn
+        }),
+      )
+      return {
+        x: start.x + direction.x * forwardDistance,
+        y: start.y + direction.y * forwardDistance,
+        layer: start.layer,
+      }
+    }
     const context: CandidateGeometryContext = {
       immutableTraces: this.input.traces.filter(
         (_, index) =>
@@ -280,9 +317,13 @@ export class DifferentialPairRoutingSession {
       const centerlineSpacing = edgeGap + first.width / 2 + second.width / 2
       return ([preferredSide, preferredSide === 1 ? -1 : 1] as const).map(
         (side) => {
+          const forwardEgressStart = createForwardEgressSearchStart(
+            centerlineSpacing,
+            side,
+          )
           const validator = createSearchGeometryValidator({
             ...context,
-            start,
+            start: forwardEgressStart,
             end,
             firstConnectionName: first.source.connection_name,
             secondConnectionName: second.source.connection_name,
@@ -303,7 +344,7 @@ export class DifferentialPairRoutingSession {
             edgeGap,
             side,
             input: {
-              start,
+              start: forwardEgressStart,
               end,
               bounds: this.input.bounds,
               layerCount: this.input.layerCount,

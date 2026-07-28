@@ -24,7 +24,7 @@ const getFirstTerminalInteriorAngle = (trace: SimplifiedPcbTrace): number => {
   )
 }
 
-test("preserves smooth terminal fanout joins from the port-selector differential pair", () => {
+test("keeps port-selector differential-pair terminal joins at 125 degrees", () => {
   const solver = new PostProcessingSolver(
     sampleProblem as unknown as PostProcessingSolverParams,
   )
@@ -32,6 +32,8 @@ test("preserves smooth terminal fanout joins from the port-selector differential
 
   const output = solver.getOutput()
   expect(output.errors).toHaveLength(0)
+  for (const trace of output.traces)
+    expect(getFirstTerminalInteriorAngle(trace)).toBeGreaterThanOrEqual(125)
   const testPointTrace = output.traces.find(
     (trace) => trace.connection_name === "source_trace_0",
   )
@@ -39,7 +41,4 @@ test("preserves smooth terminal fanout joins from the port-selector differential
   expect(
     testPointTrace.route.filter((entry) => entry.route_type === "wire"),
   ).toHaveLength(4)
-  expect(getFirstTerminalInteriorAngle(testPointTrace)).toBeGreaterThanOrEqual(
-    125,
-  )
 })
