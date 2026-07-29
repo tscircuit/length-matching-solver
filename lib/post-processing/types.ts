@@ -20,6 +20,7 @@ export type PostProcessingSolverParams = {
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
+  allowViaInPad?: boolean
   routingGrid?: PostProcessingGridConfig
 }
 
@@ -31,6 +32,7 @@ export type PostProcessingSolverOutput = {
 export type InternalPostProcessingParams = {
   simpleRouteJson: {
     layerCount: number
+    allowViaInPad?: boolean
     obstacles: Obstacle[]
     bounds: { minX: number; maxX: number; minY: number; maxY: number }
     differentialPairs: DifferentialPair[]

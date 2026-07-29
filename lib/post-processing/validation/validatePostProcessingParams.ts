@@ -21,6 +21,11 @@ export function validatePostProcessingParams(
     throw new Error(
       "PostProcessingSolver: layerCount must be a positive integer",
     )
+  if (
+    params.allowViaInPad !== undefined &&
+    typeof params.allowViaInPad !== "boolean"
+  )
+    throw new Error("PostProcessingSolver: allowViaInPad must be a boolean")
 
   for (const obstacle of params.obstacles) {
     if (
@@ -125,14 +130,20 @@ export function validatePostProcessingParams(
           `PostProcessingSolver: HD route "${route.connectionName}" has an invalid route point`,
         )
       if (!next || next.z === point.z) {
-        if (point.toNextSegmentType === "through_obstacle")
+        if (
+          options.validateHdRouteGeometry &&
+          point.toNextSegmentType === "through_obstacle"
+        )
           throw new Error(
             `PostProcessingSolver: HD route "${route.connectionName}" has a through-obstacle marker without a layer transition`,
           )
         continue
       }
       if (point.toNextSegmentType === "through_obstacle") continue
-      if (Math.hypot(point.x - next.x, point.y - next.y) > 1e-8)
+      if (
+        options.validateHdRouteGeometry &&
+        Math.hypot(point.x - next.x, point.y - next.y) > 1e-8
+      )
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" moves in-plane while changing layers`,
         )
@@ -154,7 +165,10 @@ export function validatePostProcessingParams(
       }
       const matchingViaIndex = matchingViaIndexes[0]!
       const matchingVia = route.vias[matchingViaIndex]!
-      if (matchingVia.zLayers !== undefined) {
+      if (
+        options.validateHdRouteGeometry &&
+        matchingVia.zLayers !== undefined
+      ) {
         const expectedLayers = Array.from(
           { length: Math.abs(next.z - point.z) + 1 },
           (_, index) => Math.min(point.z, next.z) + index,

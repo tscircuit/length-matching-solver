@@ -160,6 +160,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
       obstacles: simpleRouteJson.obstacles,
       bounds: simpleRouteJson.bounds,
       layerCount: simpleRouteJson.layerCount,
+      allowViaInPad: simpleRouteJson.allowViaInPad ?? false,
     })
     if (!valid)
       throw new Error(

@@ -204,6 +204,9 @@ export const createPostProcessingModel = (
         obstacles,
         bounds: structuredClone(params.bounds),
         layerCount: params.layerCount,
+        ...(params.allowViaInPad !== undefined
+          ? { allowViaInPad: params.allowViaInPad }
+          : {}),
       },
       ...(params.routingGrid
         ? { routingGrid: structuredClone(params.routingGrid) }
