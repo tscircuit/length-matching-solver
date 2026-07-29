@@ -19,10 +19,7 @@ export class DifferentialPairRoutingError extends Error {
       `PostProcessingSolver: differential pair ${input.connectionNames.join("/")} ${input.message}`,
     )
     this.name = "DifferentialPairRoutingError"
-    this.connectionNames = [
-      input.connectionNames[0],
-      input.connectionNames[1],
-    ]
+    this.connectionNames = [input.connectionNames[0], input.connectionNames[1]]
     this.reason = input.reason
   }
 }

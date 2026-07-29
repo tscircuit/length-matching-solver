@@ -55,14 +55,10 @@ test("processes declared pairs sequentially while retaining all route identities
             firstStart.z !== secondStart.z
           )
             continue
-          const firstWidth =
-            firstStart.traceThickness ?? earlier.traceThickness
-          const secondWidth =
-            secondStart.traceThickness ?? later.traceThickness
+          const firstWidth = firstStart.traceThickness ?? earlier.traceThickness
+          const secondWidth = secondStart.traceThickness ?? later.traceThickness
           const required =
-            firstWidth / 2 +
-            secondWidth / 2 +
-            Math.max(firstWidth, secondWidth)
+            firstWidth / 2 + secondWidth / 2 + Math.max(firstWidth, secondWidth)
           expect(
             getMinimumSegmentDistance(
               firstStart,

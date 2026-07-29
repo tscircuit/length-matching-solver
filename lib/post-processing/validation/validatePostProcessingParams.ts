@@ -15,7 +15,9 @@ export function validatePostProcessingParams(
   if (!Array.isArray(params.obstacles))
     throw new Error("PostProcessingSolver: obstacles must be an array")
   if (!Number.isInteger(params.layerCount) || params.layerCount < 1)
-    throw new Error("PostProcessingSolver: layerCount must be a positive integer")
+    throw new Error(
+      "PostProcessingSolver: layerCount must be a positive integer",
+    )
 
   for (const obstacle of params.obstacles) {
     if (
@@ -101,8 +103,7 @@ export function validatePostProcessingParams(
         point.z < 0 ||
         point.z >= params.layerCount ||
         (point.traceThickness !== undefined &&
-          (!Number.isFinite(point.traceThickness) ||
-            point.traceThickness <= 0))
+          (!Number.isFinite(point.traceThickness) || point.traceThickness <= 0))
       )
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" has an invalid route point`,
@@ -182,8 +183,7 @@ export function validatePostProcessingParams(
         (via.zLayers !== undefined &&
           (!Array.isArray(via.zLayers) ||
             via.zLayers.some(
-              (z) =>
-                !Number.isInteger(z) || z < 0 || z >= params.layerCount,
+              (z) => !Number.isInteger(z) || z < 0 || z >= params.layerCount,
             )))
       )
         throw new Error(
@@ -198,10 +198,7 @@ export function validatePostProcessingParams(
           `PostProcessingSolver: HD route "${route.connectionName}" uses one physical via for multiple route transitions`,
         )
     }
-    if (
-      route.vias.length > 0 &&
-      route.viaDiameter <= 0
-    )
+    if (route.vias.length > 0 && route.viaDiameter <= 0)
       throw new Error(
         `PostProcessingSolver: HD route "${route.connectionName}" has a non-positive via diameter`,
       )

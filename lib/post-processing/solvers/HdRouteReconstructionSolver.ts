@@ -97,8 +97,7 @@ export class HdRouteReconstructionSolver extends BaseSolver {
 
   override visualize(): GraphicsObject {
     const traces = this.visualizationTraces ?? this.input.simplified.traces
-    const { obstacles, bounds, layerCount } =
-      this.input.params.simpleRouteJson
+    const { obstacles, bounds, layerCount } = this.input.params.simpleRouteJson
     return createPostProcessingVisualization({
       traces,
       obstacles,

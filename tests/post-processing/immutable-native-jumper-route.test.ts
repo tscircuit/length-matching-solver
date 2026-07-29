@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { PostProcessingSolver, type PostProcessingSolverParams } from "../../lib"
+import {
+  PostProcessingSolver,
+  type PostProcessingSolverParams,
+} from "../../lib"
 
 test("preserves an immutable native jumper route without modeling its bridge as wire", () => {
   const params: PostProcessingSolverParams = {

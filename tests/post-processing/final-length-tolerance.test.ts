@@ -7,8 +7,7 @@ const measure = (hdRoute: HighDensityRoute): number => {
   for (let index = 0; index < hdRoute.route.length - 1; index++) {
     const start = hdRoute.route[index]!
     const end = hdRoute.route[index + 1]!
-    if (start.z === end.z)
-      total += Math.hypot(end.x - start.x, end.y - start.y)
+    if (start.z === end.z) total += Math.hypot(end.x - start.x, end.y - start.y)
   }
   return total
 }

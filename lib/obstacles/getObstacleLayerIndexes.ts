@@ -14,8 +14,7 @@ export const getObstacleLayerIndexes = (
       !Array.isArray(numericLayers) ||
       numericLayers.length === 0 ||
       numericLayers.some(
-        (index) =>
-          !Number.isInteger(index) || index < 0 || index >= layerCount,
+        (index) => !Number.isInteger(index) || index < 0 || index >= layerCount,
       )
     )
       throw new Error("Obstacle has invalid z-layer indexes")

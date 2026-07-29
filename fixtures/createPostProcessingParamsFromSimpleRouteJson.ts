@@ -30,9 +30,16 @@ export const createPostProcessingParamsFromSimpleRouteJson = (
   const hdRoutes = simpleRouteJson.traces.map((trace): HighDensityRoute => {
     const first = trace.route[0]
     if (!first || first.route_type !== "wire")
-      throw new Error(`Fixture trace ${trace.connection_name} must start with wire`)
+      throw new Error(
+        `Fixture trace ${trace.connection_name} must start with wire`,
+      )
     const route: HighDensityRoute["route"] = [
-      { x: first.x, y: first.y, z: getZ(first.layer), traceThickness: first.width },
+      {
+        x: first.x,
+        y: first.y,
+        z: getZ(first.layer),
+        traceThickness: first.width,
+      },
     ]
     const vias: HighDensityRoute["vias"] = []
     let currentLayer = first.layer
@@ -61,7 +68,9 @@ export const createPostProcessingParamsFromSimpleRouteJson = (
             ? entry.from_layer
             : null
       if (!nextLayer)
-        throw new Error(`Fixture trace ${trace.connection_name} has invalid via`)
+        throw new Error(
+          `Fixture trace ${trace.connection_name} has invalid via`,
+        )
       const current = route.at(-1)!
       if (Math.hypot(current.x - entry.x, current.y - entry.y) > 1e-8)
         route.push({

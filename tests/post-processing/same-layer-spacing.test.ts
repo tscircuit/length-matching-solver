@@ -14,8 +14,7 @@ test("improves a far-apart same-layer pair toward preferred edge spacing", () =>
     firstInterior.x - secondInterior.x,
     firstInterior.y - secondInterior.y,
   )
-  const firstWidth =
-    firstInterior.traceThickness ?? hdRoutes[0]!.traceThickness
+  const firstWidth = firstInterior.traceThickness ?? hdRoutes[0]!.traceThickness
   const secondWidth =
     secondInterior.traceThickness ?? hdRoutes[1]!.traceThickness
   const edgeGap = centerDistance - (firstWidth + secondWidth) / 2

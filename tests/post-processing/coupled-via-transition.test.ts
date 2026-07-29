@@ -3,10 +3,7 @@ import { PostProcessingSolver, type HighDensityRoute } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
 test("emits corresponding transitions and equal via counts for both members", () => {
-  const makeRoute = (
-    connectionName: string,
-    y: number,
-  ): HighDensityRoute => ({
+  const makeRoute = (connectionName: string, y: number): HighDensityRoute => ({
     connectionName,
     traceThickness: 0.2,
     viaDiameter: 0.5,

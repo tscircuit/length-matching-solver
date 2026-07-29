@@ -3,10 +3,7 @@ import type {
   SimplifiedPcbTraceRoutePoint,
 } from "../../types"
 import { getLayerName } from "../geometry/getLayerName"
-import type {
-  PostProcessingModel,
-  PostProcessingSolverParams,
-} from "../types"
+import type { PostProcessingModel, PostProcessingSolverParams } from "../types"
 
 /** Adapt native HD routes to the private simplified-copper routing model. */
 export const createPostProcessingModel = (
@@ -33,23 +30,26 @@ export const createPostProcessingModel = (
         number,
         { endIndex: number; jumperIndex: number }
       >()
-      for (let jumperIndex = 0; jumperIndex < (hdRoute.jumpers?.length ?? 0); jumperIndex++) {
+      for (
+        let jumperIndex = 0;
+        jumperIndex < (hdRoute.jumpers?.length ?? 0);
+        jumperIndex++
+      ) {
         const jumper = hdRoute.jumpers![jumperIndex]!
         const startIndexes = hdRoute.route
           .map((point, index) => ({ point, index }))
           .filter(
             ({ point }) =>
-              Math.hypot(
-                point.x - jumper.start.x,
-                point.y - jumper.start.y,
-              ) <= 1e-8,
+              Math.hypot(point.x - jumper.start.x, point.y - jumper.start.y) <=
+              1e-8,
           )
           .map(({ index }) => index)
         const endIndexes = hdRoute.route
           .map((point, index) => ({ point, index }))
           .filter(
             ({ point }) =>
-              Math.hypot(point.x - jumper.end.x, point.y - jumper.end.y) <= 1e-8,
+              Math.hypot(point.x - jumper.end.x, point.y - jumper.end.y) <=
+              1e-8,
           )
           .map(({ index }) => index)
         const forward = startIndexes.flatMap((startIndex) =>
@@ -93,7 +93,11 @@ export const createPostProcessingModel = (
           width: first.traceThickness ?? hdRoute.traceThickness,
           layer: getLayerName(first.z, params.layerCount),
         })
-        for (let pointIndex = 0; pointIndex < hdRoute.route.length - 1; pointIndex++) {
+        for (
+          let pointIndex = 0;
+          pointIndex < hdRoute.route.length - 1;
+          pointIndex++
+        ) {
           const point = hdRoute.route[pointIndex]!
           const jumperSpan = jumperByStartIndex.get(pointIndex)
           if (jumperSpan) {
@@ -157,8 +161,7 @@ export const createPostProcessingModel = (
         const endPortId =
           hdRoute.endPcbPortId ?? hdRoute.route.at(-1)?.pcb_port_id
         if (startPortId && wires[0]) wires[0].start_pcb_port_id = startPortId
-        if (endPortId && wires.at(-1))
-          wires.at(-1)!.end_pcb_port_id = endPortId
+        if (endPortId && wires.at(-1)) wires.at(-1)!.end_pcb_port_id = endPortId
       }
       return {
         type: "pcb_trace",
@@ -170,7 +173,11 @@ export const createPostProcessingModel = (
     },
   )
   const obstacles = structuredClone(params.obstacles)
-  for (let hdRouteIndex = 0; hdRouteIndex < params.hdRoutes.length; hdRouteIndex++) {
+  for (
+    let hdRouteIndex = 0;
+    hdRouteIndex < params.hdRoutes.length;
+    hdRouteIndex++
+  ) {
     const hdRoute = params.hdRoutes[hdRouteIndex]!
     const aliases = new Set(
       [
