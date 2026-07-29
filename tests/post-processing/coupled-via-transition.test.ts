@@ -1,49 +1,62 @@
 import { expect, test } from "bun:test"
-import { PostProcessingSolver, type SimplifiedPcbTrace } from "../../lib"
+import { PostProcessingSolver, type HighDensityRoute } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
 test("emits corresponding transitions and equal via counts for both members", () => {
-  const makeTrace = (
-    id: string,
-    name: string,
+  const makeRoute = (
+    connectionName: string,
     y: number,
-  ): SimplifiedPcbTrace => ({
-    type: "pcb_trace",
-    pcb_trace_id: id,
-    connection_name: name,
+  ): HighDensityRoute => ({
+    connectionName,
+    traceThickness: 0.2,
+    viaDiameter: 0.5,
     route: [
-      { route_type: "wire", x: 0, y, width: 0.2, layer: "top" },
-      {
-        route_type: "via",
-        x: 5,
-        y,
-        from_layer: "top",
-        to_layer: "bottom",
-        via_diameter: 0.5,
-        via_hole_diameter: 0.25,
-      },
-      { route_type: "wire", x: 10, y, width: 0.2, layer: "bottom" },
+      { x: 0, y, z: 0 },
+      { x: 5, y, z: 0 },
+      { x: 5, y, z: 1 },
+      { x: 10, y, z: 1 },
     ],
+    vias: [{ x: 5, y, zLayers: [0, 1] }],
   })
-  const solver = new PostProcessingSolver(
-    createPostProcessingTestParams({
-      simpleRouteJson: {
-        traces: [makeTrace("p", "P", 0.5), makeTrace("n", "N", -0.5)],
-      },
+  const { simpleRouteJson: _fixture, ...params } =
+    createPostProcessingTestParams()
+  const solver = new PostProcessingSolver({
+    ...params,
+    hdRoutes: [makeRoute("P", 0.5), makeRoute("N", -0.5)],
+  })
+  solver.solve()
+  const { hdRoutes } = solver.getOutput()
+  const transitions = hdRoutes.map((hdRoute) =>
+    hdRoute.route.flatMap((point, index) => {
+      const next = hdRoute.route[index + 1]
+      return next && next.z !== point.z ? [`${point.z}/${next.z}`] : []
     }),
   )
-  solver.solve()
-  const output = solver.getOutput()
-  const vias = output.simpleRouteJson.traces.map((trace) =>
-    trace.route.filter((entry) => entry.route_type === "via"),
-  )
+  const vias = hdRoutes.map((hdRoute) => hdRoute.vias)
+
   expect(vias[0]!.length).toBeGreaterThan(0)
   expect(vias[0]!.length).toBe(vias[1]!.length)
-  expect(vias[0]!.map((via) => `${via.from_layer}/${via.to_layer}`)).toEqual(
-    vias[1]!.map((via) => `${via.from_layer}/${via.to_layer}`),
-  )
-  expect(vias.flat().every((via) => via.via_diameter === 0.5)).toBe(true)
-  expect(vias.flat().every((via) => via.via_hole_diameter === 0.25)).toBe(true)
+  expect(transitions[0]).toEqual(transitions[1])
+  expect(hdRoutes.every((hdRoute) => hdRoute.viaDiameter === 0.5)).toBe(true)
+  for (let routeIndex = 0; routeIndex < hdRoutes.length; routeIndex++) {
+    expect(vias[routeIndex]).toHaveLength(transitions[routeIndex]!.length)
+    for (const via of vias[routeIndex]!) {
+      expect(via.zLayers).toEqual([0, 1])
+      expect(
+        hdRoutes[routeIndex]!.route.some((point, pointIndex, route) => {
+          const next = route[pointIndex + 1]
+          return (
+            next !== undefined &&
+            next.z !== point.z &&
+            point.x === via.x &&
+            point.y === via.y &&
+            next.x === via.x &&
+            next.y === via.y
+          )
+        }),
+      ).toBe(true)
+    }
+  }
   for (let index = 0; index < vias[0]!.length; index++) {
     expect(
       Math.hypot(

@@ -3,12 +3,12 @@ import type { GraphicsObject } from "graphics-debug"
 import type { DifferentialPair, SimplifiedPcbTraces } from "../../types"
 import { cloneSimplifiedPcbTraces } from "../model/cloneSimplifiedPcbTraces"
 import { simplifyDifferentialPairTo45Degrees } from "../smoothing/simplifyDifferentialPairTo45Degrees"
-import type { SimpleRouteJson } from "../types"
+import type { InternalPostProcessingParams } from "../types"
 import { createPostProcessingVisualization } from "../visualization/createPostProcessingVisualization"
 import type { DifferentialPairReroutingOutput } from "./DifferentialPairReroutingSolver"
 
 export type FortyFiveDegreeSimplificationInput = Pick<
-  SimpleRouteJson,
+  InternalPostProcessingParams["simpleRouteJson"],
   "obstacles" | "bounds" | "layerCount"
 > &
   DifferentialPairReroutingOutput

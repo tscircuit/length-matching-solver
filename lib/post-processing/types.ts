@@ -1,8 +1,7 @@
 import type {
   DifferentialPair,
+  HighDensityRoute,
   Obstacle,
-  SimplifiedPcbTrace,
-  SimplifiedPcbTraceRoutePoint,
   SimplifiedPcbTraces,
 } from "../types"
 
@@ -15,45 +14,39 @@ export type PostProcessingGridConfig = {
   outerPerimeterWidth?: number
 }
 
-export type SimpleRouteJson = {
-  layerCount: number
+export type PostProcessingSolverParams = {
+  hdRoutes: HighDensityRoute[]
+  differentialPairs: DifferentialPair[]
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
-  differentialPairs?: DifferentialPair[]
-  traces?: SimplifiedPcbTraces
-}
-
-export type CompleteSimpleRouteJson<
-  TSimpleRouteJson extends SimpleRouteJson = SimpleRouteJson,
-> = TSimpleRouteJson & {
-  differentialPairs: DifferentialPair[]
-  traces: SimplifiedPcbTraces
-}
-
-type ReconstructedTrace<TTrace extends SimplifiedPcbTrace> = Omit<
-  TTrace,
-  "route"
-> & {
-  route: SimplifiedPcbTraceRoutePoint[]
-}
-
-export type PostProcessedSimpleRouteJson<
-  TSimpleRouteJson extends SimpleRouteJson,
-> = Omit<TSimpleRouteJson, "traces"> & {
-  traces: Array<
-    ReconstructedTrace<NonNullable<TSimpleRouteJson["traces"]>[number]>
-  >
-}
-
-export type PostProcessingSolverParams<
-  TSimpleRouteJson extends SimpleRouteJson = CompleteSimpleRouteJson,
-> = {
-  simpleRouteJson: TSimpleRouteJson
+  layerCount: number
   routingGrid?: PostProcessingGridConfig
 }
 
-export type PostProcessingSolverOutput<
-  TSimpleRouteJson extends SimpleRouteJson = CompleteSimpleRouteJson,
-> = {
-  simpleRouteJson: PostProcessedSimpleRouteJson<TSimpleRouteJson>
+export type PostProcessingSolverOutput = {
+  hdRoutes: HighDensityRoute[]
+}
+
+/** Private simplified-trace model used by the coupled-routing algorithms. */
+export type InternalPostProcessingParams = {
+  simpleRouteJson: {
+    layerCount: number
+    obstacles: Obstacle[]
+    bounds: { minX: number; maxX: number; minY: number; maxY: number }
+    differentialPairs: DifferentialPair[]
+    traces: SimplifiedPcbTraces
+  }
+  routingGrid?: PostProcessingGridConfig
+}
+
+export type PostProcessingRouteBinding = {
+  hdRouteIndex: number
+  traceIndex: number
+  internalConnectionName: string
+}
+
+export type PostProcessingModel = {
+  params: InternalPostProcessingParams
+  routeBindings: PostProcessingRouteBinding[]
+  sourceHdRoutes: HighDensityRoute[]
 }

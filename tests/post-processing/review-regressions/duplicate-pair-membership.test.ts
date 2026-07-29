@@ -3,18 +3,16 @@ import { PostProcessingSolver } from "../../../lib"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
 test("rejects a connection declared in more than one differential pair", () => {
-  const params = createPostProcessingTestParams()
+  const { simpleRouteJson: _fixture, ...params } =
+    createPostProcessingTestParams()
   expect(
     () =>
       new PostProcessingSolver({
         ...params,
-        simpleRouteJson: {
-          ...params.simpleRouteJson,
-          differentialPairs: [
-            { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
-            { connectionNames: ["N", "OTHER"], lengthTolerance: 0.01 },
-          ],
-        },
+        differentialPairs: [
+          { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
+          { connectionNames: ["N", "OTHER"], lengthTolerance: 0.01 },
+        ],
       }),
   ).toThrow(/connection "N" belongs to multiple differential pairs/)
 })

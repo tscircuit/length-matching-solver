@@ -1,14 +1,15 @@
 import { expect, test } from "bun:test"
 import sampleProblem from "../../../fixtures/sample-12/sample-12.srj.json"
+import { PostProcessingSolver } from "../../../lib"
 import {
-  type CompleteSimpleRouteJson,
-  PostProcessingSolver,
-} from "../../../lib"
+  createPostProcessingParamsFromSimpleRouteJson,
+  type PostProcessingSimpleRouteJsonFixture,
+} from "../../../fixtures/createPostProcessingParamsFromSimpleRouteJson"
 
 test("replaces invalid via detours with a clear coupled route around a component", () => {
   // SAFETY: This repository-owned JSON is shared with the Cosmos fixture. The cast restores literal discriminants widened by JSON module inference.
   const simpleRouteJson =
-    sampleProblem as unknown as CompleteSimpleRouteJson
+    sampleProblem as unknown as PostProcessingSimpleRouteJsonFixture
   for (const trace of simpleRouteJson.traces) {
     for (let index = 1; index < trace.route.length - 1; index++) {
       const via = trace.route[index]
@@ -29,15 +30,15 @@ test("replaces invalid via detours with a clear coupled route around a component
       expect(outgoing.layer).toBe(via.to_layer)
     }
   }
-  const solver = new PostProcessingSolver({ simpleRouteJson })
+  const solver = new PostProcessingSolver(
+    createPostProcessingParamsFromSimpleRouteJson(simpleRouteJson),
+  )
 
   solver.solve()
 
-  const output = solver.getOutput()
-  const viaTransitions = output.simpleRouteJson.traces.map((trace) =>
-    trace.route
-      .filter((entry) => entry.route_type === "via")
-      .map((via) => `${via.from_layer}/${via.to_layer}`),
-  )
-  expect(viaTransitions).toEqual([[], []])
+  const { hdRoutes } = solver.getOutput()
+  expect(hdRoutes.map((hdRoute) => hdRoute.vias)).toEqual([[], []])
+  expect(
+    hdRoutes.map((hdRoute) => new Set(hdRoute.route.map((point) => point.z))),
+  ).toEqual([new Set([0]), new Set([0])])
 })

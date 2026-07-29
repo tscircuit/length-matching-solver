@@ -1,38 +1,33 @@
 import { expect, test } from "bun:test"
 import sampleProblem from "../../fixtures/sample-13/sample-13.srj.json"
+import { PostProcessingSolver } from "../../lib"
 import {
-  type CompleteSimpleRouteJson,
-  PostProcessingSolver,
-} from "../../lib"
+  createPostProcessingParamsFromSimpleRouteJson,
+  type PostProcessingSimpleRouteJsonFixture,
+} from "../../fixtures/createPostProcessingParamsFromSimpleRouteJson"
 
 test("grid crossing post-processing input crosses the blocker on bottom", () => {
-  const simpleRouteJson =
-    sampleProblem as unknown as CompleteSimpleRouteJson
-  const solver = new PostProcessingSolver({ simpleRouteJson })
+  const params = createPostProcessingParamsFromSimpleRouteJson(
+    sampleProblem as unknown as PostProcessingSimpleRouteJsonFixture,
+  )
+  const solver = new PostProcessingSolver(params)
 
   solver.solve()
 
   const output = solver.getOutput()
   expect(solver.solved).toBe(true)
-  expect(
-    output.simpleRouteJson.traces.map((trace) => trace.connection_name),
-  ).toEqual([
+  expect(output.hdRoutes.map((route) => route.connectionName)).toEqual([
     "grid_upper",
     "grid_lower",
     "grid_vertical",
   ])
-  const reroutedPair = output.simpleRouteJson.traces.slice(0, 2)
-  expect(
-    reroutedPair.map(
-      (trace) =>
-        trace.route.filter((entry) => entry.route_type === "via").length,
-    ),
-  ).toEqual([2, 2])
+  const reroutedPair = output.hdRoutes.slice(0, 2)
+  expect(reroutedPair.map((route) => route.vias.length)).toEqual([2, 2])
   expect(
     reroutedPair
-      .flatMap((trace) => trace.route)
-      .some((entry) => entry.route_type === "wire" && entry.layer === "bottom"),
+      .flatMap((route) => route.route)
+      .some((point) => point.z === params.layerCount - 1),
   ).toBe(true)
-  expect(output.simpleRouteJson.traces[2]).toEqual(simpleRouteJson.traces[2])
+  expect(output.hdRoutes[2]).toEqual(params.hdRoutes[2])
   expect(solver.visualize()).toBeTruthy()
 })

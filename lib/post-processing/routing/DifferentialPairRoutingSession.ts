@@ -346,9 +346,9 @@ export class DifferentialPairRoutingSession {
             secondEndTerminal: secondEnd,
             firstWidth: first.width,
             secondWidth: second.width,
-            firstViaDiameter: first.transitions[0]?.via_diameter ?? first.width,
+            firstViaDiameter: first.transitions[0]?.via_diameter ?? first.viaDiameter,
             secondViaDiameter:
-              second.transitions[0]?.via_diameter ?? second.width,
+              second.transitions[0]?.via_diameter ?? second.viaDiameter,
             centerlineSpacing,
             side,
             terminalFanout,

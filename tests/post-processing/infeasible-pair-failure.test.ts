@@ -2,44 +2,40 @@ import { expect, test } from "bun:test"
 import {
   DifferentialPairRoutingError,
   PostProcessingSolver,
-  type SimplifiedPcbTrace,
+  type HighDensityRoute,
 } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
 test("throws a pair-specific error and stops before processing the next pair", () => {
-  const params = createPostProcessingTestParams()
-  const laterTraces = params.simpleRouteJson.traces.map(
-    (trace): SimplifiedPcbTrace => ({
-      ...trace,
-      pcb_trace_id: `${trace.pcb_trace_id}_later`,
-      connection_name: `${trace.connection_name}_LATER`,
-      route: trace.route.map((entry) =>
-        entry.route_type === "wire" ? { ...entry, y: entry.y + 10 } : entry,
-      ),
+  const { simpleRouteJson: _fixture, ...params } =
+    createPostProcessingTestParams()
+  const laterRoutes = params.hdRoutes.map(
+    (hdRoute): HighDensityRoute => ({
+      ...structuredClone(hdRoute),
+      connectionName: `${hdRoute.connectionName}_LATER`,
+      route: hdRoute.route.map((point) => ({ ...point, y: point.y + 10 })),
     }),
   )
   const solver = new PostProcessingSolver({
-    simpleRouteJson: {
-      ...params.simpleRouteJson,
-      traces: [...params.simpleRouteJson.traces, ...laterTraces],
-      differentialPairs: [
-        { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
-        {
-          connectionNames: ["P_LATER", "N_LATER"],
-          lengthTolerance: 0.01,
-        },
-      ],
-      obstacles: [
-        {
-          type: "rect",
-          layers: ["top", "bottom"],
-          center: { x: 5, y: 0 },
-          width: 8,
-          height: 9,
-          connectedTo: [],
-        },
-      ],
-    },
+    ...params,
+    hdRoutes: [...params.hdRoutes, ...laterRoutes],
+    differentialPairs: [
+      { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
+      {
+        connectionNames: ["P_LATER", "N_LATER"],
+        lengthTolerance: 0.01,
+      },
+    ],
+    obstacles: [
+      {
+        type: "rect",
+        layers: ["top", "bottom"],
+        center: { x: 5, y: 0 },
+        width: 8,
+        height: 9,
+        connectedTo: [],
+      },
+    ],
   })
 
   let thrown: unknown
@@ -63,6 +59,6 @@ test("throws a pair-specific error and stops before processing the next pair", (
   expect(solver.differentialPairReroutingSolver?.stats.pair).toBe("P/N")
   expect(solver.fortyFiveDegreeSimplificationSolver).toBeUndefined()
   expect(solver.lengthMatchingSolver).toBeUndefined()
-  expect(solver.simplifiedTraceReconstructionSolver).toBeUndefined()
+  expect(solver.hdRouteReconstructionSolver).toBeUndefined()
   expect(() => solver.getOutput()).toThrow(/before the solver completed/)
 })

@@ -166,7 +166,9 @@ export const createCoupledPairCandidate = (input: {
           to_layer: station.layer,
           via_diameter:
             template?.via_diameter ??
-            (lane === 0 ? input.first.width : input.second.width),
+            (lane === 0
+              ? input.first.viaDiameter
+              : input.second.viaDiameter),
           ...(template?.via_hole_diameter !== undefined
             ? { via_hole_diameter: template.via_hole_diameter }
             : {}),

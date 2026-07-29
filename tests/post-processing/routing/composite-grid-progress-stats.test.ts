@@ -3,15 +3,15 @@ import { PostProcessingSolver } from "../../../lib"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
 test("reports monotonic progress and cumulative composite-search statistics", () => {
-  const solver = new PostProcessingSolver(
+  const { simpleRouteJson: _fixture, ...params } =
     createPostProcessingTestParams({
       routingGrid: {
         innerGridStep: 0.3,
         outerGridStep: 1.2,
         outerPerimeterWidth: 1.2,
       },
-    }),
-  )
+    })
+  const solver = new PostProcessingSolver(params)
   let previousProgress = 0
   let maximumExplored = 0
   let observedGridNodeCount = 0

@@ -3,7 +3,7 @@ import type { GraphicsObject } from "graphics-debug"
 import type { DifferentialPair, SimplifiedPcbTraces } from "../../types"
 import { cloneSimplifiedPcbTraces } from "../model/cloneSimplifiedPcbTraces"
 import { DifferentialPairRoutingSession } from "../routing/DifferentialPairRoutingSession"
-import type { PostProcessingSolverParams } from "../types"
+import type { InternalPostProcessingParams } from "../types"
 import { createPostProcessingVisualization } from "../visualization/createPostProcessingVisualization"
 
 export type DifferentialPairReroutingOutput = {
@@ -20,7 +20,7 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
   private activeSession: DifferentialPairRoutingSession | null = null
   private allocatedActiveSearchStateCount = 0
 
-  constructor(private readonly params: PostProcessingSolverParams) {
+  constructor(private readonly params: InternalPostProcessingParams) {
     super()
     this.outputTraces = cloneSimplifiedPcbTraces(params.simpleRouteJson.traces)
     this.MAX_ITERATIONS = Math.max(
@@ -106,7 +106,7 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
     }
   }
 
-  override getConstructorParams(): [PostProcessingSolverParams] {
+  override getConstructorParams(): [InternalPostProcessingParams] {
     return [this.params]
   }
 

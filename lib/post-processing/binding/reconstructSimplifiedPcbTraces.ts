@@ -9,7 +9,7 @@ import { getSimplifiedTraceLength } from "../length-matching/getSimplifiedTraceL
 import { validateCandidateGeometry } from "../geometry/validateCandidateGeometry"
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import type { FortyFiveDegreeSimplificationOutput } from "../solvers/FortyFiveDegreeSimplificationSolver"
-import type { PostProcessingSolverParams } from "../types"
+import type { InternalPostProcessingParams } from "../types"
 import type { LengthMatchingBinding } from "./createLengthMatchingBinding"
 
 /** Rebuild simplified traces and validate each complete length-matched pair. */
@@ -17,7 +17,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
   binding: LengthMatchingBinding
   result: LengthMatchingSolverOutput
   simplified: FortyFiveDegreeSimplificationOutput
-  params: PostProcessingSolverParams
+  params: InternalPostProcessingParams
 }): SimplifiedPcbTraces => {
   const { simpleRouteJson } = input.params
   if (

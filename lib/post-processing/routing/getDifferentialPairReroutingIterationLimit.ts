@@ -1,8 +1,8 @@
-import type { PostProcessingSolverParams } from "../types"
+import type { InternalPostProcessingParams } from "../types"
 
 /** Bound up to twenty grid searches per pair using the validated 250k-node limit. */
 export const getDifferentialPairReroutingIterationLimit = (
-  params: PostProcessingSolverParams,
+  params: InternalPostProcessingParams,
 ): number => {
   const maximumGridNodeCount = 250_000
   const maximumDirectedEdgeCount = maximumGridNodeCount * 24 + 192

@@ -1,18 +1,25 @@
 import type {
-  CompleteSimpleRouteJson,
   PostProcessingGridConfig,
   PostProcessingSolverParams,
   SimplifiedPcbTrace,
 } from "../../lib"
+import {
+  createPostProcessingParamsFromSimpleRouteJson,
+  type PostProcessingSimpleRouteJsonFixture,
+} from "../../fixtures/createPostProcessingParamsFromSimpleRouteJson"
 
 type PostProcessingTestParamsOverrides = {
-  simpleRouteJson?: Partial<CompleteSimpleRouteJson>
+  simpleRouteJson?: Partial<PostProcessingSimpleRouteJsonFixture>
   routingGrid?: PostProcessingGridConfig
+}
+
+export type PostProcessingTestParams = PostProcessingSolverParams & {
+  simpleRouteJson: PostProcessingSimpleRouteJsonFixture
 }
 
 export const createPostProcessingTestParams = (
   overrides: PostProcessingTestParamsOverrides = {},
-): PostProcessingSolverParams => {
+): PostProcessingTestParams => {
   const createTrace = (
     id: string,
     connectionName: string,
@@ -26,7 +33,7 @@ export const createPostProcessingTestParams = (
       { route_type: "wire", x: 10, y, width: 0.2, layer: "top" },
     ],
   })
-  const simpleRouteJson: CompleteSimpleRouteJson = {
+  const simpleRouteJson: PostProcessingSimpleRouteJsonFixture = {
     traces: [createTrace("trace_p", "P", 2), createTrace("trace_n", "N", -2)],
     differentialPairs: [{ connectionNames: ["P", "N"], lengthTolerance: 0.01 }],
     obstacles: [],
@@ -35,7 +42,10 @@ export const createPostProcessingTestParams = (
     ...overrides.simpleRouteJson,
   }
   return {
+    ...createPostProcessingParamsFromSimpleRouteJson(
+      simpleRouteJson,
+      overrides.routingGrid,
+    ),
     simpleRouteJson,
-    ...(overrides.routingGrid ? { routingGrid: overrides.routingGrid } : {}),
   }
 }

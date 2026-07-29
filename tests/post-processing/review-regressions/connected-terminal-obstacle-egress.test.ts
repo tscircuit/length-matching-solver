@@ -1,33 +1,31 @@
-import { expect, test } from "bun:test"
-import { PostProcessingSolver, type SimplifiedPcbTrace } from "../../../lib"
+import { test } from "bun:test"
+import { PostProcessingSolver, type HighDensityRoute } from "../../../lib"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
 test("routes out of obstacles connected to the active pair terminals", () => {
-  const makeTrace = (name: string, y: number): SimplifiedPcbTrace => ({
-    type: "pcb_trace",
-    pcb_trace_id: name,
-    connection_name: name,
+  const makeRoute = (connectionName: string, y: number): HighDensityRoute => ({
+    connectionName,
+    traceThickness: 0.2,
+    viaDiameter: 0.2,
     route: [
-      { route_type: "wire", x: 0, y, width: 0.2, layer: "top" },
-      { route_type: "wire", x: 10, y, width: 0.2, layer: "top" },
+      { x: 0, y, z: 0 },
+      { x: 10, y, z: 0 },
     ],
+    vias: [],
   })
-  const traces = [makeTrace("P", 0.475), makeTrace("N", -0.475)]
-  const obstacles = traces.flatMap((trace) => {
-    const y = trace.route[0]!.route_type === "wire" ? trace.route[0]!.y : 0
-    return [0, 10].map((x) => ({
+  const hdRoutes = [makeRoute("P", 0.475), makeRoute("N", -0.475)]
+  const obstacles = hdRoutes.flatMap((hdRoute) =>
+    [0, 10].map((x) => ({
       type: "rect" as const,
       layers: ["top"],
-      center: { x, y },
+      center: { x, y: hdRoute.route[0]!.y },
       width: 0.6,
       height: 0.6,
-      connectedTo: [trace.connection_name],
-    }))
-  })
-  const solver = new PostProcessingSolver(
-    createPostProcessingTestParams({
-      simpleRouteJson: { traces, obstacles },
-    }),
+      connectedTo: [hdRoute.connectionName],
+    })),
   )
+  const { simpleRouteJson: _fixture, ...params } =
+    createPostProcessingTestParams()
+  const solver = new PostProcessingSolver({ ...params, hdRoutes, obstacles })
   solver.solve()
 })

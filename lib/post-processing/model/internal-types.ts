@@ -33,6 +33,7 @@ export type ParsedTrace = {
   vias: CopperVia[]
   transitions: SimplifiedPcbTraceViaRoutePoint[]
   width: number
+  viaDiameter: number
   startPortId?: string
   endPortId?: string
 }

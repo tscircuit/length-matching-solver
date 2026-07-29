@@ -1,42 +1,27 @@
 import { expect, test } from "bun:test"
-import { PostProcessingSolver, type SimplifiedPcbTrace } from "../../lib"
+import { PostProcessingSolver, type HighDensityRoute } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
-const measure = (trace: SimplifiedPcbTrace): number => {
+const measure = (hdRoute: HighDensityRoute): number => {
   let total = 0
-  let previous: Extract<
-    SimplifiedPcbTrace["route"][number],
-    { route_type: "wire" }
-  > | null = null
-  for (const entry of trace.route) {
-    if (entry.route_type === "via") {
-      previous = null
-      continue
-    }
-    if (entry.route_type !== "wire") continue
-    if (previous && previous.layer === entry.layer)
-      total += Math.hypot(entry.x - previous.x, entry.y - previous.y)
-    previous = entry
+  for (let index = 0; index < hdRoute.route.length - 1; index++) {
+    const start = hdRoute.route[index]!
+    const end = hdRoute.route[index + 1]!
+    if (start.z === end.z)
+      total += Math.hypot(end.x - start.x, end.y - start.y)
   }
   return total
 }
 
 test("applies final geometry-checked matching within declared length tolerance", () => {
-  const params = createPostProcessingTestParams()
-  const traces = structuredClone(params.simpleRouteJson.traces)
-  const last = traces[1]!.route.at(-1)!
-  if (last.route_type !== "wire") throw new Error("Expected endpoint wire")
-  last.x = 9
-  const solver = new PostProcessingSolver({
-    ...params,
-    simpleRouteJson: { ...params.simpleRouteJson, traces },
-  })
+  const { simpleRouteJson: _fixture, ...params } =
+    createPostProcessingTestParams()
+  const hdRoutes = structuredClone(params.hdRoutes)
+  hdRoutes[1]!.route.at(-1)!.x = 9
+  const solver = new PostProcessingSolver({ ...params, hdRoutes })
   solver.solve()
   const output = solver.getOutput()
   expect(
-    Math.abs(
-      measure(output.simpleRouteJson.traces[0]!) -
-        measure(output.simpleRouteJson.traces[1]!),
-    ),
+    Math.abs(measure(output.hdRoutes[0]!) - measure(output.hdRoutes[1]!)),
   ).toBeLessThanOrEqual(0.010001)
 })

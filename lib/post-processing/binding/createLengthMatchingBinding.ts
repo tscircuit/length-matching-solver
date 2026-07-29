@@ -10,7 +10,7 @@ import { getTransitionLayers } from "../geometry/getTransitionLayers"
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createImmutableCollisionRoutes } from "./createImmutableCollisionRoutes"
 import type { FortyFiveDegreeSimplificationOutput } from "../solvers/FortyFiveDegreeSimplificationSolver"
-import type { PostProcessingSolverParams } from "../types"
+import type { InternalPostProcessingParams } from "../types"
 
 export type LengthMatchingTraceBinding = {
   traceIndex: number
@@ -31,7 +31,7 @@ export type LengthMatchingBinding = {
 /** Bind local simplified traces to the regular length-matching route model. */
 export const createLengthMatchingBinding = (input: {
   result: FortyFiveDegreeSimplificationOutput
-  params: PostProcessingSolverParams
+  params: InternalPostProcessingParams
 }): LengthMatchingBinding => {
   const { simpleRouteJson } = input.params
   const targetConnectionNames = new Set(
@@ -139,10 +139,7 @@ export const createLengthMatchingBinding = (input: {
     const maximumWidth = Math.max(
       ...route.map((point) => point.traceThickness ?? parsed.width),
     )
-    const maximumViaDiameter = Math.max(
-      maximumWidth,
-      ...viaTemplates.map((via) => via.via_diameter ?? maximumWidth),
-    )
+    const maximumViaDiameter = parsed.viaDiameter
     const matchedRouteIndex = hdRoutes.length
     hdRoutes.push({
       connectionName: trace.connection_name,

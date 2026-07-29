@@ -3,7 +3,9 @@ import { PostProcessingSolver } from "../../../lib"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
 test("finalizes summary state when the incrementally searched final pair completes", () => {
-  const solver = new PostProcessingSolver(createPostProcessingTestParams())
+  const { simpleRouteJson: _fixture, ...params } =
+    createPostProcessingTestParams()
+  const solver = new PostProcessingSolver(params)
   solver.solve()
   expect(solver.iterations).toBeGreaterThan(1)
   expect(solver.solved).toBe(true)
@@ -11,7 +13,7 @@ test("finalizes summary state when the incrementally searched final pair complet
     differentialPairReroutingSolver: { completed: true },
     fortyFiveDegreeSimplificationSolver: { completed: true },
     lengthMatchingSolver: { completed: true },
-    simplifiedTraceReconstructionSolver: { completed: true },
+    hdRouteReconstructionSolver: { completed: true },
   })
   expect(solver.stats).toEqual({
     phase: "complete",
