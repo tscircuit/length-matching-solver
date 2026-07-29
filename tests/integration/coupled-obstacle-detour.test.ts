@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import sampleProblem from "../../fixtures/sample-11/sample-11.srj.json"
 import {
   PostProcessingSolver,
-  type PostProcessingSolverParams,
+  type SimpleRouteJson,
   type SimplifiedPcbTrace,
 } from "../../lib"
 
@@ -20,13 +20,12 @@ const getWireYAtX = (trace: SimplifiedPcbTrace, x: number): number => {
 
 test("reroutes an oppositely-detoured pair together around a component", () => {
   // SAFETY: This repository-owned JSON is the shared browser fixture input. The cast restores literal discriminants widened by JSON module inference.
-  const params = sampleProblem as unknown as PostProcessingSolverParams
-  const solver = new PostProcessingSolver(params)
+  const simpleRouteJson = sampleProblem as unknown as SimpleRouteJson
+  const solver = new PostProcessingSolver({ simpleRouteJson })
   solver.solve()
 
   const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  const [positive, negative] = output.traces
+  const [positive, negative] = output.simpleRouteJson.traces
   if (!positive || !negative)
     throw new Error("Expected both differential-pair traces")
 

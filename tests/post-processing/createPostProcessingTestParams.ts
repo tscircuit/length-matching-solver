@@ -1,7 +1,17 @@
-import type { PostProcessingSolverParams, SimplifiedPcbTrace } from "../../lib"
+import type {
+  CompleteSimpleRouteJson,
+  PostProcessingGridConfig,
+  PostProcessingSolverParams,
+  SimplifiedPcbTrace,
+} from "../../lib"
+
+type PostProcessingTestParamsOverrides = {
+  simpleRouteJson?: Partial<CompleteSimpleRouteJson>
+  routingGrid?: PostProcessingGridConfig
+}
 
 export const createPostProcessingTestParams = (
-  overrides: Partial<PostProcessingSolverParams> = {},
+  overrides: PostProcessingTestParamsOverrides = {},
 ): PostProcessingSolverParams => {
   const createTrace = (
     id: string,
@@ -16,12 +26,16 @@ export const createPostProcessingTestParams = (
       { route_type: "wire", x: 10, y, width: 0.2, layer: "top" },
     ],
   })
-  return {
+  const simpleRouteJson: CompleteSimpleRouteJson = {
     traces: [createTrace("trace_p", "P", 2), createTrace("trace_n", "N", -2)],
     differentialPairs: [{ connectionNames: ["P", "N"], lengthTolerance: 0.01 }],
     obstacles: [],
     bounds: { minX: -2, maxX: 12, minY: -5, maxY: 5 },
     layerCount: 2,
-    ...overrides,
+    ...overrides.simpleRouteJson,
+  }
+  return {
+    simpleRouteJson,
+    ...(overrides.routingGrid ? { routingGrid: overrides.routingGrid } : {}),
   }
 }

@@ -5,7 +5,7 @@ import { createPostProcessingTestParams } from "./createPostProcessingTestParams
 
 test("processes declared pairs sequentially while retaining all trace identities", () => {
   const params = createPostProcessingTestParams()
-  const shifted = params.traces.map(
+  const shifted = params.simpleRouteJson.traces.map(
     (trace): SimplifiedPcbTrace => ({
       ...trace,
       pcb_trace_id: `${trace.pcb_trace_id}_2`,
@@ -17,25 +17,31 @@ test("processes declared pairs sequentially while retaining all trace identities
   )
   const solver = new PostProcessingSolver({
     ...params,
-    traces: [...params.traces, ...shifted],
-    differentialPairs: [
-      { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
-      { connectionNames: ["P2", "N2"], lengthTolerance: 0.01 },
-    ],
-    bounds: { minX: -2, maxX: 12, minY: -5, maxY: 12 },
+    simpleRouteJson: {
+      ...params.simpleRouteJson,
+      traces: [...params.simpleRouteJson.traces, ...shifted],
+      differentialPairs: [
+        { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
+        { connectionNames: ["P2", "N2"], lengthTolerance: 0.01 },
+      ],
+      bounds: { minX: -2, maxX: 12, minY: -5, maxY: 12 },
+    },
   })
   solver.solve()
   const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  expect(output.traces.map((trace) => trace.connection_name)).toEqual([
+  expect(
+    output.simpleRouteJson.traces.map((trace) => trace.connection_name),
+  ).toEqual([
     "P",
     "N",
     "P2",
     "N2",
   ])
-  expect(output.traces.every((trace) => trace.route.length > 2)).toBe(true)
-  for (const earlier of output.traces.slice(0, 2)) {
-    for (const later of output.traces.slice(2)) {
+  expect(
+    output.simpleRouteJson.traces.every((trace) => trace.route.length > 2),
+  ).toBe(true)
+  for (const earlier of output.simpleRouteJson.traces.slice(0, 2)) {
+    for (const later of output.simpleRouteJson.traces.slice(2)) {
       for (
         let firstIndex = 0;
         firstIndex < earlier.route.length - 1;

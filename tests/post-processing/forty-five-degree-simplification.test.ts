@@ -51,7 +51,6 @@ test("simplifies farthest same-layer spans while preserving vias and endpoint me
   const traces = [createTrace("P", 0), createTrace("N", -1)]
   const solver = new FortyFiveDegreeSimplificationSolver({
     traces,
-    errors: [],
     reroutedPairs: [{ connectionNames: ["P", "N"], lengthTolerance: 0.01 }],
     obstacles: [],
     bounds: { minX: -1, maxX: 9, minY: 0, maxY: 7 },

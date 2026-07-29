@@ -8,10 +8,13 @@ test("rejects a connection declared in more than one differential pair", () => {
     () =>
       new PostProcessingSolver({
         ...params,
-        differentialPairs: [
-          { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
-          { connectionNames: ["N", "OTHER"], lengthTolerance: 0.01 },
-        ],
+        simpleRouteJson: {
+          ...params.simpleRouteJson,
+          differentialPairs: [
+            { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
+            { connectionNames: ["N", "OTHER"], lengthTolerance: 0.01 },
+          ],
+        },
       }),
   ).toThrow(/connection "N" belongs to multiple differential pairs/)
 })

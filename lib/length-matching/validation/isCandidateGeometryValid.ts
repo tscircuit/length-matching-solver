@@ -1,4 +1,5 @@
 import { getMinimumSegmentDistance } from "../../route-geometry"
+import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import type { HighDensityRoute, Obstacle, RoutePoint } from "../../types"
 import { getLogicalConnectionName } from "../connection-routes"
 
@@ -12,19 +13,6 @@ export const isCandidateGeometryValid = (input: {
   layerCount: number
   obstacleMargin: number
 }): boolean => {
-  const isObstacleOnLayer = (
-    obstacle: Obstacle,
-    z: number,
-    layerCount: number,
-  ): boolean => {
-    if (obstacle.zLayers) return obstacle.zLayers.includes(z)
-    return obstacle.layers.some(
-      (layer) =>
-        (layer === "top" && z === 0) ||
-        (layer === "bottom" && z === layerCount - 1) ||
-        layer === `inner${z}`,
-    )
-  }
   const segmentTouchesInflatedObstacle = (
     start: RoutePoint,
     end: RoutePoint,
@@ -100,7 +88,10 @@ export const isCandidateGeometryValid = (input: {
     const start = input.meanderPoints[index]!
     const end = input.meanderPoints[index + 1]!
     for (const obstacle of input.obstacles) {
-      if (!isObstacleOnLayer(obstacle, start.z, input.layerCount)) continue
+      if (
+        !getObstacleLayerIndexes(obstacle, input.layerCount).includes(start.z)
+      )
+        continue
       const isTerminalLead =
         index === 0 || index === input.meanderPoints.length - 2
       if (obstacle.connectedTo.includes(connectionName) && isTerminalLead)

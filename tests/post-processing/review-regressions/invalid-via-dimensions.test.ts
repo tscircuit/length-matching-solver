@@ -31,7 +31,7 @@ test("fails fast on non-positive or non-finite via dimensions", () => {
     })
     const traces = [makeTrace("P", 0.5), makeTrace("N", -0.5)]
     const solver = new PostProcessingSolver(
-      createPostProcessingTestParams({ traces }),
+      createPostProcessingTestParams({ simpleRouteJson: { traces } }),
     )
     expect(() => solver.solve()).toThrow(
       /unsupported or invalid routed geometry/,

@@ -4,10 +4,15 @@ export {
   type LengthMatchingSolverParams,
 } from "./length-matching-solver"
 export {
+  DifferentialPairRoutingError,
   PostProcessingSolver,
+  type DifferentialPairRoutingFailureReason,
+  type CompleteSimpleRouteJson,
+  type PostProcessedSimpleRouteJson,
   type PostProcessingGridConfig,
   type PostProcessingSolverOutput,
   type PostProcessingSolverParams,
+  type SimpleRouteJson,
 } from "./PostProcessingSolver"
 export type {
   ConnectionPoint,

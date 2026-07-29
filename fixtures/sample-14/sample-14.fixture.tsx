@@ -1,14 +1,12 @@
 import { GenericSolverDebugger } from "@tscircuit/solver-utils/react"
-import {
-  PostProcessingSolver,
-  type PostProcessingSolverParams,
-} from "../../lib"
+import { PostProcessingSolver, type SimpleRouteJson } from "../../lib"
 import sampleProblem from "./sample-14.srj.json"
 
 export default function TerminalFanoutSmoothingFixture(): React.JSX.Element {
   const createSolver = (): PostProcessingSolver => {
-    const params = sampleProblem as unknown as PostProcessingSolverParams
-    return new PostProcessingSolver(params)
+    const { routingGrid, ...routeJson } = sampleProblem
+    const simpleRouteJson = routeJson as unknown as SimpleRouteJson
+    return new PostProcessingSolver({ simpleRouteJson, routingGrid })
   }
   return <GenericSolverDebugger createSolver={createSolver} />
 }

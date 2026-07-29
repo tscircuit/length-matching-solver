@@ -4,24 +4,35 @@ import type { LengthMatchingSolverOutput } from "../../length-matching/types"
 import type { LengthMatchingBinding } from "../binding/createLengthMatchingBinding"
 import { reconstructSimplifiedPcbTraces } from "../binding/reconstructSimplifiedPcbTraces"
 import type {
+  CompleteSimpleRouteJson,
+  PostProcessedSimpleRouteJson,
   PostProcessingSolverOutput,
   PostProcessingSolverParams,
+  SimpleRouteJson,
 } from "../types"
 import { createPostProcessingVisualization } from "../visualization/createPostProcessingVisualization"
 import type { FortyFiveDegreeSimplificationOutput } from "./FortyFiveDegreeSimplificationSolver"
 
-export type SimplifiedTraceReconstructionInput = {
+export type SimplifiedTraceReconstructionInput<
+  TSimpleRouteJson extends SimpleRouteJson = SimpleRouteJson,
+> = {
   binding: LengthMatchingBinding
   result: LengthMatchingSolverOutput
   simplified: FortyFiveDegreeSimplificationOutput
-  params: PostProcessingSolverParams
+  params: PostProcessingSolverParams<
+    CompleteSimpleRouteJson<TSimpleRouteJson>
+  >
 }
 
 /** Reconstructs and validates the final simplified-trace output. */
-export class SimplifiedTraceReconstructionSolver extends BaseSolver {
-  private output: PostProcessingSolverOutput | null = null
+export class SimplifiedTraceReconstructionSolver<
+  TSimpleRouteJson extends SimpleRouteJson = SimpleRouteJson,
+> extends BaseSolver {
+  private output: PostProcessingSolverOutput<TSimpleRouteJson> | null = null
 
-  constructor(private readonly input: SimplifiedTraceReconstructionInput) {
+  constructor(
+    private readonly input: SimplifiedTraceReconstructionInput<TSimpleRouteJson>,
+  ) {
     super()
   }
 
@@ -30,41 +41,43 @@ export class SimplifiedTraceReconstructionSolver extends BaseSolver {
   }
 
   override _step(): void {
-    this.output = {
+    const simpleRouteJson = {
+      ...structuredClone(this.input.params.simpleRouteJson),
       traces: reconstructSimplifiedPcbTraces(this.input),
-      errors: this.input.simplified.errors.map(
-        (error) => new Error(error.message),
-      ),
-    }
+    } as PostProcessedSimpleRouteJson<TSimpleRouteJson>
+    this.output = { simpleRouteJson }
     this.stats = {
       phase: "complete",
-      traceCount: this.output.traces.length,
-      retainedPairCount: this.output.errors.length,
+      traceCount: this.output.simpleRouteJson.traces.length,
     }
     this.solved = true
   }
 
-  override getConstructorParams(): [SimplifiedTraceReconstructionInput] {
+  override getConstructorParams(): [
+    SimplifiedTraceReconstructionInput<TSimpleRouteJson>,
+  ] {
     return [this.input]
   }
 
-  override getOutput(): PostProcessingSolverOutput {
+  override getOutput(): PostProcessingSolverOutput<TSimpleRouteJson> {
     if (!this.output || !this.solved)
       throw new Error(
         "SimplifiedTraceReconstructionSolver: getOutput() called before completion",
       )
     return {
-      traces: structuredClone(this.output.traces),
-      errors: this.output.errors.map((error) => new Error(error.message)),
+      simpleRouteJson: structuredClone(this.output.simpleRouteJson),
     }
   }
 
   override visualize(): GraphicsObject {
+    const { obstacles, bounds, layerCount } =
+      this.input.params.simpleRouteJson
     return createPostProcessingVisualization({
-      traces: this.output?.traces ?? this.input.simplified.traces,
-      obstacles: this.input.params.obstacles,
-      bounds: this.input.params.bounds,
-      layerCount: this.input.params.layerCount,
+      traces:
+        this.output?.simpleRouteJson.traces ?? this.input.simplified.traces,
+      obstacles,
+      bounds,
+      layerCount,
       activeConnectionNames: null,
       previewPath: null,
     })

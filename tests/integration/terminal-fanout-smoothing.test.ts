@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import sampleProblem from "../../fixtures/sample-14/sample-14.srj.json"
 import {
   PostProcessingSolver,
-  type PostProcessingSolverParams,
+  type SimpleRouteJson,
   type SimplifiedPcbTrace,
 } from "../../lib"
 
@@ -56,19 +56,20 @@ const getTerminalInteriorAngles = (
 }
 
 test("keeps port-selector differential-pair terminal joins at 125 degrees", () => {
-  const solver = new PostProcessingSolver(
-    sampleProblem as unknown as PostProcessingSolverParams,
-  )
+  const { routingGrid, ...routeJson } = sampleProblem
+  const solver = new PostProcessingSolver({
+    simpleRouteJson: routeJson as unknown as SimpleRouteJson,
+    routingGrid,
+  })
   solver.solve()
 
   const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  for (const trace of output.traces) {
+  for (const trace of output.simpleRouteJson.traces) {
     const [startAngle, endAngle] = getTerminalInteriorAngles(trace)
     expect(startAngle).toBeGreaterThanOrEqual(125)
     expect(endAngle).toBeGreaterThanOrEqual(135)
   }
-  const testPointTrace = output.traces.find(
+  const testPointTrace = output.simpleRouteJson.traces.find(
     (trace) => trace.connection_name === "source_trace_0",
   )
   if (!testPointTrace) throw new Error("Expected the TP1 source trace")
@@ -79,7 +80,7 @@ test("keeps port-selector differential-pair terminal joins at 125 degrees", () =
   expect(
     testPointTrace.route.filter((entry) => entry.route_type === "wire"),
   ).toHaveLength(4)
-  const matchedTrace = output.traces.find(
+  const matchedTrace = output.simpleRouteJson.traces.find(
     (trace) => trace.connection_name === "source_trace_1",
   )
   if (!matchedTrace) throw new Error("Expected the matching source trace")

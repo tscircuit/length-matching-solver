@@ -23,15 +23,20 @@ const measure = (trace: SimplifiedPcbTrace): number => {
 
 test("applies final geometry-checked matching within declared length tolerance", () => {
   const params = createPostProcessingTestParams()
-  const traces = structuredClone(params.traces)
+  const traces = structuredClone(params.simpleRouteJson.traces)
   const last = traces[1]!.route.at(-1)!
   if (last.route_type !== "wire") throw new Error("Expected endpoint wire")
   last.x = 9
-  const solver = new PostProcessingSolver({ ...params, traces })
+  const solver = new PostProcessingSolver({
+    ...params,
+    simpleRouteJson: { ...params.simpleRouteJson, traces },
+  })
   solver.solve()
   const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
   expect(
-    Math.abs(measure(output.traces[0]!) - measure(output.traces[1]!)),
+    Math.abs(
+      measure(output.simpleRouteJson.traces[0]!) -
+        measure(output.simpleRouteJson.traces[1]!),
+    ),
   ).toBeLessThanOrEqual(0.010001)
 })

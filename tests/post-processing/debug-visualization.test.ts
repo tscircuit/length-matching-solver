@@ -5,16 +5,18 @@ import { createPostProcessingTestParams } from "./createPostProcessingTestParams
 test("renders a non-empty post-processing debug view", () => {
   const solver = new PostProcessingSolver(
     createPostProcessingTestParams({
-      obstacles: [
-        {
-          type: "rect",
-          layers: ["top"],
-          center: { x: 5, y: 4 },
-          width: 1,
-          height: 0.5,
-          connectedTo: [],
-        },
-      ],
+      simpleRouteJson: {
+        obstacles: [
+          {
+            type: "rect",
+            layers: ["top"],
+            center: { x: 5, y: 4 },
+            width: 1,
+            height: 0.5,
+            connectedTo: [],
+          },
+        ],
+      },
     }),
   )
   let graphics = solver.visualize()

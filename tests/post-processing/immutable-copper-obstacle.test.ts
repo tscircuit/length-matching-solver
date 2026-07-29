@@ -16,24 +16,25 @@ test("detours with explicit clearance from immutable unrelated copper", () => {
   const params = createPostProcessingTestParams()
   const solver = new PostProcessingSolver(
     createPostProcessingTestParams({
-      traces: [...params.traces, blocker],
-      obstacles: [
-        {
-          type: "rect",
-          layers: ["top", "bottom"],
-          center: { x: 4, y: 0 },
-          width: 1.5,
-          height: 3,
-          connectedTo: [],
-        },
-      ],
+      simpleRouteJson: {
+        traces: [...params.simpleRouteJson.traces, blocker],
+        obstacles: [
+          {
+            type: "rect",
+            layers: ["top", "bottom"],
+            center: { x: 4, y: 0 },
+            width: 1.5,
+            height: 3,
+            connectedTo: [],
+          },
+        ],
+      },
     }),
   )
   solver.solve()
   const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  expect(output.traces[2]).toEqual(blocker)
-  for (const trace of output.traces.slice(0, 2)) {
+  expect(output.simpleRouteJson.traces[2]).toEqual(blocker)
+  for (const trace of output.simpleRouteJson.traces.slice(0, 2)) {
     for (let index = 0; index < trace.route.length - 1; index++) {
       const start = trace.route[index]
       const end = trace.route[index + 1]

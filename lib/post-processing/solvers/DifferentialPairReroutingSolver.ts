@@ -8,14 +8,12 @@ import { createPostProcessingVisualization } from "../visualization/createPostPr
 
 export type DifferentialPairReroutingOutput = {
   traces: SimplifiedPcbTraces
-  errors: Error[]
   reroutedPairs: DifferentialPair[]
 }
 
 /** Incrementally reroutes one declared differential pair at a time. */
 export class DifferentialPairReroutingSolver extends BaseSolver {
   private readonly outputTraces: SimplifiedPcbTraces
-  private readonly errors: Error[] = []
   private readonly reroutedPairs: DifferentialPair[] = []
   private nextPairIndex = 0
   private activeConnectionNames: [string, string] | null = null
@@ -24,8 +22,11 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
 
   constructor(private readonly params: PostProcessingSolverParams) {
     super()
-    this.outputTraces = cloneSimplifiedPcbTraces(params.traces)
-    this.MAX_ITERATIONS = Math.max(1, params.differentialPairs.length * 750_020)
+    this.outputTraces = cloneSimplifiedPcbTraces(params.simpleRouteJson.traces)
+    this.MAX_ITERATIONS = Math.max(
+      1,
+      params.simpleRouteJson.differentialPairs.length * 750_020,
+    )
   }
 
   override getSolverName(): string {
@@ -33,7 +34,8 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
   }
 
   override _step(): void {
-    const pair = this.params.differentialPairs[this.nextPairIndex]
+    const pair =
+      this.params.simpleRouteJson.differentialPairs[this.nextPairIndex]
     if (!pair) {
       this.finish()
       return
@@ -43,9 +45,9 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
       this.activeSession = new DifferentialPairRoutingSession({
         pair,
         traces: this.outputTraces,
-        obstacles: this.params.obstacles,
-        bounds: this.params.bounds,
-        layerCount: this.params.layerCount,
+        obstacles: this.params.simpleRouteJson.obstacles,
+        bounds: this.params.simpleRouteJson.bounds,
+        layerCount: this.params.simpleRouteJson.layerCount,
         routingGrid: this.params.routingGrid,
       })
       this.stats = this.activeSession.getStats()
@@ -65,35 +67,33 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
     const result = this.activeSession.getResult()
     this.activeSession = null
     this.allocatedActiveSearchStateCount = 0
-    if (result.status === "retained") {
-      this.errors.push(result.error)
-    } else {
-      for (const replacement of [
-        result.candidate.first,
-        result.candidate.second,
-      ]) {
-        const index = this.outputTraces.findIndex(
-          (trace) => trace.connection_name === replacement.connection_name,
+    for (const replacement of [
+      result.candidate.first,
+      result.candidate.second,
+    ]) {
+      const index = this.outputTraces.findIndex(
+        (trace) => trace.connection_name === replacement.connection_name,
+      )
+      if (index < 0)
+        throw new Error(
+          `DifferentialPairReroutingSolver: accepted replacement for unknown connection "${replacement.connection_name}"`,
         )
-        if (index < 0)
-          throw new Error(
-            `DifferentialPairReroutingSolver: accepted replacement for unknown connection "${replacement.connection_name}"`,
-          )
-        this.outputTraces[index] = replacement
-      }
-      this.reroutedPairs.push(pair)
+      this.outputTraces[index] = replacement
     }
+    this.reroutedPairs.push(pair)
     this.nextPairIndex++
-    if (this.nextPairIndex === this.params.differentialPairs.length) {
+    if (
+      this.nextPairIndex ===
+      this.params.simpleRouteJson.differentialPairs.length
+    ) {
       this.finish()
       return
     }
     this.stats = {
-      phase: result.status,
+      phase: "accepted",
       pair: pair.connectionNames.join("/"),
       pairIndex: this.nextPairIndex - 1,
-      pairCount: this.params.differentialPairs.length,
-      errorCount: this.errors.length,
+      pairCount: this.params.simpleRouteJson.differentialPairs.length,
     }
   }
 
@@ -103,7 +103,6 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
     this.stats = {
       phase: "complete",
       acceptedPairCount: this.reroutedPairs.length,
-      retainedPairCount: this.errors.length,
     }
   }
 
@@ -118,7 +117,6 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
       )
     return {
       traces: cloneSimplifiedPcbTraces(this.outputTraces),
-      errors: this.errors.map((error) => new Error(error.message)),
       reroutedPairs: this.reroutedPairs.map((pair) => ({
         ...pair,
         connectionNames: [...pair.connectionNames],
@@ -128,19 +126,19 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
 
   computeProgress(): number {
     if (this.solved) return 1
-    if (this.params.differentialPairs.length === 0) return 0
+    if (this.params.simpleRouteJson.differentialPairs.length === 0) return 0
     return (
       (this.nextPairIndex + (this.activeSession?.getProgress() ?? 0)) /
-      this.params.differentialPairs.length
+      this.params.simpleRouteJson.differentialPairs.length
     )
   }
 
   override visualize(): GraphicsObject {
     return createPostProcessingVisualization({
       traces: this.outputTraces,
-      obstacles: this.params.obstacles,
-      bounds: this.params.bounds,
-      layerCount: this.params.layerCount,
+      obstacles: this.params.simpleRouteJson.obstacles,
+      bounds: this.params.simpleRouteJson.bounds,
+      layerCount: this.params.simpleRouteJson.layerCount,
       activeConnectionNames: this.activeConnectionNames,
       previewPath: this.activeSession?.getPreviewPath() ?? null,
     })

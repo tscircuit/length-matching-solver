@@ -19,6 +19,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
   simplified: FortyFiveDegreeSimplificationOutput
   params: PostProcessingSolverParams
 }): SimplifiedPcbTraces => {
+  const { simpleRouteJson } = input.params
   if (
     input.result.matchedHdRoutes.length !==
     input.binding.solverParams.hdRoutes.length
@@ -74,7 +75,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
       x: point.x,
       y: point.y,
       width: point.traceThickness ?? hdRoute.traceThickness,
-      layer: getLayerName(point.z, input.params.layerCount),
+      layer: getLayerName(point.z, simpleRouteJson.layerCount),
     })
     rebuilt.push(createWire(hdRoute.route[0]!))
     for (let pointIndex = 1; pointIndex < hdRoute.route.length; pointIndex++) {
@@ -97,8 +98,8 @@ export const reconstructSimplifiedPcbTraces = (input: {
         throw new Error(
           `PostProcessingSolver: matched connection "${hdRoute.connectionName}" moved a preserved via`,
         )
-      const fromLayer = getLayerName(previous.z, input.params.layerCount)
-      const toLayer = getLayerName(point.z, input.params.layerCount)
+      const fromLayer = getLayerName(previous.z, simpleRouteJson.layerCount)
+      const toLayer = getLayerName(point.z, simpleRouteJson.layerCount)
       const templateLayers = new Set([template.from_layer, template.to_layer])
       if (!templateLayers.has(fromLayer) || !templateLayers.has(toLayer))
         throw new Error(
@@ -139,11 +140,11 @@ export const reconstructSimplifiedPcbTraces = (input: {
     const secondMatch = matches[1]![0]!
     const first = parseSimplifiedPcbTrace(
       firstMatch.trace,
-      input.params.layerCount,
+      simpleRouteJson.layerCount,
     )
     const second = parseSimplifiedPcbTrace(
       secondMatch.trace,
-      input.params.layerCount,
+      simpleRouteJson.layerCount,
     )
     const finalLengthDifference = Math.abs(
       getSimplifiedTraceLength(first) - getSimplifiedTraceLength(second),
@@ -156,9 +157,9 @@ export const reconstructSimplifiedPcbTraces = (input: {
       immutableTraces: traces.filter(
         (_, index) => index !== firstMatch.index && index !== secondMatch.index,
       ),
-      obstacles: input.params.obstacles,
-      bounds: input.params.bounds,
-      layerCount: input.params.layerCount,
+      obstacles: simpleRouteJson.obstacles,
+      bounds: simpleRouteJson.bounds,
+      layerCount: simpleRouteJson.layerCount,
     })
     if (!valid)
       throw new Error(

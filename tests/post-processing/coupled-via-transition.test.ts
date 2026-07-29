@@ -27,13 +27,14 @@ test("emits corresponding transitions and equal via counts for both members", ()
   })
   const solver = new PostProcessingSolver(
     createPostProcessingTestParams({
-      traces: [makeTrace("p", "P", 0.5), makeTrace("n", "N", -0.5)],
+      simpleRouteJson: {
+        traces: [makeTrace("p", "P", 0.5), makeTrace("n", "N", -0.5)],
+      },
     }),
   )
   solver.solve()
   const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  const vias = output.traces.map((trace) =>
+  const vias = output.simpleRouteJson.traces.map((trace) =>
     trace.route.filter((entry) => entry.route_type === "via"),
   )
   expect(vias[0]!.length).toBeGreaterThan(0)

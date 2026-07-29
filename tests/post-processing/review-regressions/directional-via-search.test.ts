@@ -48,8 +48,8 @@ test("checks search vias on the local spine normal with real diameters and z-lay
     obstacles: [
       {
         type: "rect",
-        layers: [],
-        zLayers: [1],
+        layers: ["top"],
+        __zLayers: [1],
         center: { x: 5, y: 1.5 },
         width: 0.1,
         height: 0.1,

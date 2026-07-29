@@ -25,8 +25,9 @@ test("routes out of obstacles connected to the active pair terminals", () => {
     }))
   })
   const solver = new PostProcessingSolver(
-    createPostProcessingTestParams({ traces, obstacles }),
+    createPostProcessingTestParams({
+      simpleRouteJson: { traces, obstacles },
+    }),
   )
   solver.solve()
-  expect(solver.getOutput().errors).toHaveLength(0)
 })

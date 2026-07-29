@@ -48,6 +48,7 @@ export type PairCandidate = {
   viaPairCount: number
 }
 
-export type PairSolveResult =
-  | { status: "accepted"; candidate: PairCandidate }
-  | { status: "retained"; error: Error }
+export type PairSolveResult = {
+  status: "accepted"
+  candidate: PairCandidate
+}

@@ -33,6 +33,7 @@ export const createLengthMatchingBinding = (input: {
   result: FortyFiveDegreeSimplificationOutput
   params: PostProcessingSolverParams
 }): LengthMatchingBinding => {
+  const { simpleRouteJson } = input.params
   const targetConnectionNames = new Set(
     input.result.reroutedPairs.flatMap((pair) => pair.connectionNames),
   )
@@ -57,7 +58,7 @@ export const createLengthMatchingBinding = (input: {
         `PostProcessingSolver: rerouted connection "${trace.connection_name}" cannot be bound to LengthMatchingSolver`,
       )
     }
-    const parsed = parseSimplifiedPcbTrace(trace, input.params.layerCount)
+    const parsed = parseSimplifiedPcbTrace(trace, simpleRouteJson.layerCount)
     const firstWire = trace.route[0]
     if (firstWire.route_type !== "wire")
       throw new Error(
@@ -67,7 +68,7 @@ export const createLengthMatchingBinding = (input: {
       {
         x: firstWire.x,
         y: firstWire.y,
-        z: getLayerIndex(firstWire.layer, input.params.layerCount),
+        z: getLayerIndex(firstWire.layer, simpleRouteJson.layerCount),
         traceThickness: firstWire.width,
       },
     ]
@@ -85,7 +86,7 @@ export const createLengthMatchingBinding = (input: {
         route.push({
           x: entry.x,
           y: entry.y,
-          z: getLayerIndex(entry.layer, input.params.layerCount),
+          z: getLayerIndex(entry.layer, simpleRouteJson.layerCount),
           traceThickness: entry.width,
         })
         currentWidth = entry.width
@@ -110,13 +111,13 @@ export const createLengthMatchingBinding = (input: {
         route.push({
           x: entry.x,
           y: entry.y,
-          z: getLayerIndex(currentLayer, input.params.layerCount),
+          z: getLayerIndex(currentLayer, simpleRouteJson.layerCount),
           traceThickness: currentWidth,
         })
       route.push({
         x: entry.x,
         y: entry.y,
-        z: getLayerIndex(nextLayer, input.params.layerCount),
+        z: getLayerIndex(nextLayer, simpleRouteJson.layerCount),
         traceThickness: currentWidth,
       })
       vias.push({
@@ -125,8 +126,8 @@ export const createLengthMatchingBinding = (input: {
         zLayers: getTransitionLayers(
           entry.from_layer,
           entry.to_layer,
-          input.params.layerCount,
-        ).map((layer) => getLayerIndex(layer, input.params.layerCount)),
+          simpleRouteJson.layerCount,
+        ).map((layer) => getLayerIndex(layer, simpleRouteJson.layerCount)),
       })
       viaTemplates.push({ ...entry })
       currentLayer = nextLayer
@@ -191,7 +192,7 @@ export const createLengthMatchingBinding = (input: {
   for (const trace of input.result.traces) {
     if (targetConnectionNames.has(trace.connection_name)) continue
     hdRoutes.push(
-      ...createImmutableCollisionRoutes(trace, input.params.layerCount),
+      ...createImmutableCollisionRoutes(trace, simpleRouteJson.layerCount),
     )
   }
   const obstacleMargin = Math.max(
@@ -205,9 +206,9 @@ export const createLengthMatchingBinding = (input: {
       hdRoutes,
       originalConnections,
       differentialPairs: input.result.reroutedPairs,
-      obstacles: input.params.obstacles,
-      bounds: input.params.bounds,
-      layerCount: input.params.layerCount,
+      obstacles: simpleRouteJson.obstacles,
+      bounds: simpleRouteJson.bounds,
+      layerCount: simpleRouteJson.layerCount,
       obstacleMargin,
     },
     traceBindings,

@@ -1,14 +1,15 @@
 import { expect, test } from "bun:test"
 import sampleProblem from "../../../fixtures/sample-12/sample-12.srj.json"
 import {
+  type CompleteSimpleRouteJson,
   PostProcessingSolver,
-  type PostProcessingSolverParams,
 } from "../../../lib"
 
 test("replaces invalid via detours with a clear coupled route around a component", () => {
   // SAFETY: This repository-owned JSON is shared with the Cosmos fixture. The cast restores literal discriminants widened by JSON module inference.
-  const params = sampleProblem as unknown as PostProcessingSolverParams
-  for (const trace of params.traces) {
+  const simpleRouteJson =
+    sampleProblem as unknown as CompleteSimpleRouteJson
+  for (const trace of simpleRouteJson.traces) {
     for (let index = 1; index < trace.route.length - 1; index++) {
       const via = trace.route[index]
       if (via?.route_type !== "via") continue
@@ -28,13 +29,12 @@ test("replaces invalid via detours with a clear coupled route around a component
       expect(outgoing.layer).toBe(via.to_layer)
     }
   }
-  const solver = new PostProcessingSolver(params)
+  const solver = new PostProcessingSolver({ simpleRouteJson })
 
   solver.solve()
 
   const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  const viaTransitions = output.traces.map((trace) =>
+  const viaTransitions = output.simpleRouteJson.traces.map((trace) =>
     trace.route
       .filter((entry) => entry.route_type === "via")
       .map((via) => `${via.from_layer}/${via.to_layer}`),

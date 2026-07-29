@@ -48,13 +48,14 @@ test("preserves endpoint connectivity and port metadata for terminal-via traces"
   })
   const solver = new PostProcessingSolver(
     createPostProcessingTestParams({
-      traces: [makeTrace("p", "P", 0.5), makeTrace("n", "N", -0.5)],
+      simpleRouteJson: {
+        traces: [makeTrace("p", "P", 0.5), makeTrace("n", "N", -0.5)],
+      },
     }),
   )
   solver.solve()
   const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  for (const trace of output.traces) {
+  for (const trace of output.simpleRouteJson.traces) {
     const wires = trace.route.filter((entry) => entry.route_type === "wire")
     expect(wires[0]!.layer).toBe("top")
     expect(wires.at(-1)!.layer).toBe("top")

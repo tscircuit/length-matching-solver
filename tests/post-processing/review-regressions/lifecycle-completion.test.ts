@@ -16,7 +16,6 @@ test("finalizes summary state when the incrementally searched final pair complet
   expect(solver.stats).toEqual({
     phase: "complete",
     acceptedPairCount: 1,
-    retainedPairCount: 0,
   })
   expect(solver.computeProgress()).toBe(1)
 })

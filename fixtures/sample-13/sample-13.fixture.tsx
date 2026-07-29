@@ -1,14 +1,11 @@
 import { GenericSolverDebugger } from "@tscircuit/solver-utils/react"
-import {
-  PostProcessingSolver,
-  type PostProcessingSolverParams,
-} from "../../lib"
+import { PostProcessingSolver, type SimpleRouteJson } from "../../lib"
 import sampleProblem from "./sample-13.srj.json"
 
 export default function GridCrossingFixture(): React.JSX.Element {
   const createSolver = (): PostProcessingSolver => {
-    const params = sampleProblem as unknown as PostProcessingSolverParams
-    return new PostProcessingSolver(params)
+    const simpleRouteJson = sampleProblem as unknown as SimpleRouteJson
+    return new PostProcessingSolver({ simpleRouteJson })
   }
   return <GenericSolverDebugger createSolver={createSolver} />
 }

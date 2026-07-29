@@ -112,6 +112,8 @@ export type Obstacle = {
   type: "rect"
   layers: string[]
   zLayers?: number[]
+  /** Canonicalized z-layer indexes used by autorouter internals. */
+  __zLayers?: number[]
   center: { x: number; y: number }
   width: number
   height: number

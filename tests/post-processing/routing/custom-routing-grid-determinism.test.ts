@@ -28,26 +28,27 @@ test("honors a custom composite grid while preserving exact deterministic endpoi
   const second = solve(customGrid)
   const defaultGrid = solve()
 
-  expect(first.output.errors).toHaveLength(0)
-  expect(first.output.traces).toEqual(second.output.traces)
+  expect(first.output.simpleRouteJson.traces).toEqual(
+    second.output.simpleRouteJson.traces,
+  )
   expect(first.gridNodeCount).toBe(second.gridNodeCount)
   expect(first.gridNodeCount).not.toBe(defaultGrid.gridNodeCount)
-  expect(first.output.traces[0]?.route[0]).toMatchObject({
+  expect(first.output.simpleRouteJson.traces[0]?.route[0]).toMatchObject({
     x: 0,
     y: 2,
     layer: "top",
   })
-  expect(first.output.traces[0]?.route.at(-1)).toMatchObject({
+  expect(first.output.simpleRouteJson.traces[0]?.route.at(-1)).toMatchObject({
     x: 10,
     y: 2,
     layer: "top",
   })
-  expect(first.output.traces[1]?.route[0]).toMatchObject({
+  expect(first.output.simpleRouteJson.traces[1]?.route[0]).toMatchObject({
     x: 0,
     y: -2,
     layer: "top",
   })
-  expect(first.output.traces[1]?.route.at(-1)).toMatchObject({
+  expect(first.output.simpleRouteJson.traces[1]?.route.at(-1)).toMatchObject({
     x: 10,
     y: -2,
     layer: "top",
