@@ -1,17 +1,16 @@
 import { expect, test } from "bun:test"
 import sampleProblem from "../../fixtures/sample-14/sample-14.srj.json"
+import { type HighDensityRoute, PostProcessingSolver } from "../../lib"
 import {
-  PostProcessingSolver,
-  type PostProcessingSolverParams,
-  type SimplifiedPcbTrace,
-} from "../../lib"
+  createPostProcessingParamsFromSimpleRouteJson,
+  type PostProcessingSimpleRouteJsonFixture,
+} from "../../fixtures/createPostProcessingParamsFromSimpleRouteJson"
 
 const getTerminalInteriorAngles = (
-  trace: SimplifiedPcbTrace,
+  hdRoute: HighDensityRoute,
 ): [number, number] => {
-  const wires = trace.route.filter((entry) => entry.route_type === "wire")
-  const [startTerminal, startCorner, startTrunk] = wires
-  const [endTrunk, endCorner, endTerminal] = wires.slice(-3)
+  const [startTerminal, startCorner, startTrunk] = hdRoute.route
+  const [endTrunk, endCorner, endTerminal] = hdRoute.route.slice(-3)
   if (
     !startTerminal ||
     !startCorner ||
@@ -20,7 +19,9 @@ const getTerminalInteriorAngles = (
     !endCorner ||
     !endTerminal
   )
-    throw new Error(`Expected three wire stations for ${trace.connection_name}`)
+    throw new Error(
+      `Expected three route stations for ${hdRoute.connectionName}`,
+    )
   const startIncoming = {
     x: startTerminal.x - startCorner.x,
     y: startTerminal.y - startCorner.y,
@@ -56,38 +57,36 @@ const getTerminalInteriorAngles = (
 }
 
 test("keeps port-selector differential-pair terminal joins at 125 degrees", () => {
-  const solver = new PostProcessingSolver(
-    sampleProblem as unknown as PostProcessingSolverParams,
+  const { routingGrid, ...routeJson } = sampleProblem
+  const params = createPostProcessingParamsFromSimpleRouteJson(
+    routeJson as unknown as PostProcessingSimpleRouteJsonFixture,
+    routingGrid,
   )
+  const solver = new PostProcessingSolver(params)
   solver.solve()
 
   const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  for (const trace of output.traces) {
-    const [startAngle, endAngle] = getTerminalInteriorAngles(trace)
+  for (const hdRoute of output.hdRoutes) {
+    const [startAngle, endAngle] = getTerminalInteriorAngles(hdRoute)
     expect(startAngle).toBeGreaterThanOrEqual(125)
     expect(endAngle).toBeGreaterThanOrEqual(135)
   }
-  const testPointTrace = output.traces.find(
-    (trace) => trace.connection_name === "source_trace_0",
+  const testPointRoute = output.hdRoutes.find(
+    (route) => route.connectionName === "source_trace_0",
   )
-  if (!testPointTrace) throw new Error("Expected the TP1 source trace")
-  const lowerTrunk = testPointTrace.route[1]
-  const lowerTrunkEnd = testPointTrace.route[2]
-  if (lowerTrunk?.route_type !== "wire" || lowerTrunkEnd?.route_type !== "wire")
-    throw new Error("Expected the TP1 lower trunk wire")
-  expect(
-    testPointTrace.route.filter((entry) => entry.route_type === "wire"),
-  ).toHaveLength(4)
-  const matchedTrace = output.traces.find(
-    (trace) => trace.connection_name === "source_trace_1",
+  if (!testPointRoute) throw new Error("Expected the TP1 source route")
+  const lowerTrunk = testPointRoute.route[1]
+  const lowerTrunkEnd = testPointRoute.route[2]
+  if (!lowerTrunk || !lowerTrunkEnd)
+    throw new Error("Expected the TP1 lower trunk")
+  expect(testPointRoute.route).toHaveLength(4)
+  const matchedRoute = output.hdRoutes.find(
+    (route) => route.connectionName === "source_trace_1",
   )
-  if (!matchedTrace) throw new Error("Expected the matching source trace")
-  const centerlineDistances = matchedTrace.route.flatMap((entry) =>
-    entry.route_type === "wire" &&
-    entry.x >= lowerTrunk.x &&
-    entry.x <= lowerTrunkEnd.x
-      ? [Math.abs(entry.y - lowerTrunk.y)]
+  if (!matchedRoute) throw new Error("Expected the matching source route")
+  const centerlineDistances = matchedRoute.route.flatMap((point) =>
+    point.x >= lowerTrunk.x && point.x <= lowerTrunkEnd.x
+      ? [Math.abs(point.y - lowerTrunk.y)]
       : [],
   )
   expect(Math.min(...centerlineDistances)).toBeGreaterThanOrEqual(0.6)

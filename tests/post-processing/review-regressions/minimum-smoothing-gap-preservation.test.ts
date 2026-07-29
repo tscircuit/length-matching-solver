@@ -27,7 +27,6 @@ test("preserves the initial pair gap when an obstacle makes smoothing asymmetric
   )
   const solver = new FortyFiveDegreeSimplificationSolver({
     traces,
-    errors: [],
     reroutedPairs: [{ connectionNames: ["P", "N"], lengthTolerance: 0.01 }],
     obstacles: [
       {

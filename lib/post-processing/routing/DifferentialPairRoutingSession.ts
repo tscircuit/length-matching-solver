@@ -1,4 +1,5 @@
 import type { DifferentialPair, SimplifiedPcbTrace } from "../../types"
+import { DifferentialPairRoutingError } from "../errors/DifferentialPairRoutingError"
 import type { PostProcessingGridConfig } from "../types"
 import { createSearchGeometryValidator } from "../geometry/createSearchGeometryValidator"
 import {
@@ -46,7 +47,7 @@ export type DifferentialPairRoutingInput = {
 /** Incrementally explores and scores coupled route candidates for one differential pair. */
 export class DifferentialPairRoutingSession {
   private readonly pairName: string
-  private readonly prepared: PreparedPair | null
+  private readonly prepared: PreparedPair
   private readonly candidates: PairCandidate[] = []
   private result: PairSolveResult | null = null
   private search: IncrementalCoupledPathSearch | null = null
@@ -77,7 +78,7 @@ export class DifferentialPairRoutingSession {
 
   getProgress(): number {
     if (this.result) return 1
-    const attemptCount = this.prepared?.attempts.length ?? 1
+    const attemptCount = this.prepared.attempts.length
     const attemptProgress = this.search?.getProgress() ?? 0
     return Math.min(0.99, (this.nextAttempt + attemptProgress) / attemptCount)
   }
@@ -91,7 +92,7 @@ export class DifferentialPairRoutingSession {
       phase: this.search ? "searching" : "candidate-selection",
       pair: this.pairName,
       attemptIndex: this.nextAttempt,
-      attemptCount: this.prepared?.attempts.length ?? 0,
+      attemptCount: this.prepared.attempts.length,
       exploredNodeCount:
         this.exploredNodeCount + (this.search?.getExploredCount() ?? 0),
       gridNodeCount: this.search?.getGridNodeCount() ?? 0,
@@ -102,10 +103,6 @@ export class DifferentialPairRoutingSession {
   step(): void {
     if (this.result) return
     const prepared = this.prepared
-    if (!prepared)
-      throw new Error(
-        `PostProcessingSolver: differential pair ${this.pairName} has no prepared state`,
-      )
     if (!this.search) {
       const attempt = prepared.attempts[this.nextAttempt]
       if (!attempt) {
@@ -151,16 +148,7 @@ export class DifferentialPairRoutingSession {
     this.candidates.push(candidate)
   }
 
-  private prepare(): PreparedPair | null {
-    const retained = (message: string): null => {
-      this.result = {
-        status: "retained",
-        error: new Error(
-          `PostProcessingSolver: differential pair ${this.pairName} ${message}`,
-        ),
-      }
-      return null
-    }
+  private prepare(): PreparedPair {
     const firstMatches = this.input.traces
       .map((trace, index) => ({ trace, index }))
       .filter(
@@ -174,13 +162,18 @@ export class DifferentialPairRoutingSession {
           trace.connection_name === this.input.pair.connectionNames[1],
       )
     if (firstMatches.length !== 1 || secondMatches.length !== 1)
-      throw new Error(
-        `PostProcessingSolver: differential pair ${this.pairName} must resolve each connection_name to exactly one non-branching trace`,
-      )
+      throw new DifferentialPairRoutingError({
+        connectionNames: this.input.pair.connectionNames,
+        reason: "trace-resolution-failure",
+        message:
+          "must resolve each connection_name to exactly one non-branching trace",
+      })
     if (firstMatches[0]!.index === secondMatches[0]!.index)
-      throw new Error(
-        `PostProcessingSolver: pair ${this.pairName} resolved both members to one trace`,
-      )
+      throw new DifferentialPairRoutingError({
+        connectionNames: this.input.pair.connectionNames,
+        reason: "trace-resolution-failure",
+        message: "resolved both members to one trace",
+      })
 
     let first: ParsedTrace
     let second: ParsedTrace
@@ -194,9 +187,11 @@ export class DifferentialPairRoutingSession {
         this.input.layerCount,
       )
     } catch (error) {
-      throw new Error(
-        `PostProcessingSolver: differential pair ${this.pairName} has unsupported or invalid routed geometry: ${error instanceof Error ? error.message : String(error)}`,
-      )
+      throw new DifferentialPairRoutingError({
+        connectionNames: this.input.pair.connectionNames,
+        reason: "invalid-routed-geometry",
+        message: `has unsupported or invalid routed geometry: ${error instanceof Error ? error.message : String(error)}`,
+      })
     }
     const firstStart = first.points[0]!
     const firstEnd = first.points.at(-1)!
@@ -227,9 +222,11 @@ export class DifferentialPairRoutingSession {
       firstStart.layer !== secondStart.layer ||
       firstEnd.layer !== secondEnd.layer
     )
-      return retained(
-        "does not have common paired layers at both terminal stations",
-      )
+      throw new DifferentialPairRoutingError({
+        connectionNames: this.input.pair.connectionNames,
+        reason: "terminal-layer-mismatch",
+        message: "does not have common paired layers at both terminal stations",
+      })
 
     const start = {
       x: (firstStart.x + secondStart.x) / 2,
@@ -243,7 +240,11 @@ export class DifferentialPairRoutingSession {
     }
     const spineLength = Math.hypot(end.x - start.x, end.y - start.y)
     if (spineLength < 1e-6)
-      return retained("has coincident terminal-pair midpoints")
+      throw new DifferentialPairRoutingError({
+        connectionNames: this.input.pair.connectionNames,
+        reason: "coincident-terminal-midpoints",
+        message: "has coincident terminal-pair midpoints",
+      })
     const normal = {
       x: -(end.y - start.y) / spineLength,
       y: (end.x - start.x) / spineLength,
@@ -345,9 +346,10 @@ export class DifferentialPairRoutingSession {
             secondEndTerminal: secondEnd,
             firstWidth: first.width,
             secondWidth: second.width,
-            firstViaDiameter: first.transitions[0]?.via_diameter ?? first.width,
+            firstViaDiameter:
+              first.transitions[0]?.via_diameter ?? first.viaDiameter,
             secondViaDiameter:
-              second.transitions[0]?.via_diameter ?? second.width,
+              second.transitions[0]?.via_diameter ?? second.viaDiameter,
             centerlineSpacing,
             side,
             terminalFanout,
@@ -378,15 +380,13 @@ export class DifferentialPairRoutingSession {
   }
 
   private complete(): void {
-    if (this.candidates.length === 0) {
-      this.result = {
-        status: "retained",
-        error: new Error(
-          `PostProcessingSolver: differential pair ${this.pairName} could not be improved without violating bounds, copper clearance, or coupled-via constraints`,
-        ),
-      }
-      return
-    }
+    if (this.candidates.length === 0)
+      throw new DifferentialPairRoutingError({
+        connectionNames: this.input.pair.connectionNames,
+        reason: "no-valid-candidate",
+        message:
+          "could not be improved without violating bounds, copper clearance, or coupled-via constraints",
+      })
     this.candidates.sort(
       (left, right) =>
         this.score(left) - this.score(right) || left.edgeGap - right.edgeGap,

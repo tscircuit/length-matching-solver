@@ -176,8 +176,13 @@ export const parseSimplifiedPcbTrace = (
   segments[0]!.terminal = segments.length === 1 ? "both" : "start"
   segments[segments.length - 1]!.terminal =
     segments.length === 1 ? "both" : "end"
-  if (trace.route.at(-1)?.route_type === "via" && vias.length > 0)
-    vias.at(-1)!.terminal = "end"
+  const finalVia = vias.at(-1)
+  if (
+    finalVia &&
+    Math.hypot(finalVia.x - lastWire.x, finalVia.y - lastWire.y) <=
+      POSITION_EPSILON
+  )
+    finalVia.terminal = "end"
   return {
     source: trace,
     points,
@@ -185,6 +190,7 @@ export const parseSimplifiedPcbTrace = (
     vias,
     transitions,
     width: maximumWidth,
+    viaDiameter: trace.__postProcessingViaDiameter ?? maximumWidth,
     ...(firstWire.start_pcb_port_id
       ? { startPortId: firstWire.start_pcb_port_id }
       : {}),

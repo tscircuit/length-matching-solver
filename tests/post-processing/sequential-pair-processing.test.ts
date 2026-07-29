@@ -1,23 +1,21 @@
 import { expect, test } from "bun:test"
-import { PostProcessingSolver, type SimplifiedPcbTrace } from "../../lib"
+import { PostProcessingSolver, type HighDensityRoute } from "../../lib"
 import { getMinimumSegmentDistance } from "../../lib/route-geometry"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
-test("processes declared pairs sequentially while retaining all trace identities", () => {
-  const params = createPostProcessingTestParams()
-  const shifted = params.traces.map(
-    (trace): SimplifiedPcbTrace => ({
-      ...trace,
-      pcb_trace_id: `${trace.pcb_trace_id}_2`,
-      connection_name: `${trace.connection_name}2`,
-      route: trace.route.map((entry) =>
-        entry.route_type === "wire" ? { ...entry, y: entry.y + 7 } : entry,
-      ),
+test("processes declared pairs sequentially while retaining all route identities", () => {
+  const { simpleRouteJson: _fixture, ...params } =
+    createPostProcessingTestParams()
+  const shifted = params.hdRoutes.map(
+    (hdRoute): HighDensityRoute => ({
+      ...structuredClone(hdRoute),
+      connectionName: `${hdRoute.connectionName}2`,
+      route: hdRoute.route.map((point) => ({ ...point, y: point.y + 7 })),
     }),
   )
   const solver = new PostProcessingSolver({
     ...params,
-    traces: [...params.traces, ...shifted],
+    hdRoutes: [...params.hdRoutes, ...shifted],
     differentialPairs: [
       { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
       { connectionNames: ["P2", "N2"], lengthTolerance: 0.01 },
@@ -25,17 +23,16 @@ test("processes declared pairs sequentially while retaining all trace identities
     bounds: { minX: -2, maxX: 12, minY: -5, maxY: 12 },
   })
   solver.solve()
-  const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  expect(output.traces.map((trace) => trace.connection_name)).toEqual([
+  const { hdRoutes } = solver.getOutput()
+  expect(hdRoutes.map((hdRoute) => hdRoute.connectionName)).toEqual([
     "P",
     "N",
     "P2",
     "N2",
   ])
-  expect(output.traces.every((trace) => trace.route.length > 2)).toBe(true)
-  for (const earlier of output.traces.slice(0, 2)) {
-    for (const later of output.traces.slice(2)) {
+  expect(hdRoutes.every((hdRoute) => hdRoute.route.length > 2)).toBe(true)
+  for (const earlier of hdRoutes.slice(0, 2)) {
+    for (const later of hdRoutes.slice(2)) {
       for (
         let firstIndex = 0;
         firstIndex < earlier.route.length - 1;
@@ -43,12 +40,7 @@ test("processes declared pairs sequentially while retaining all trace identities
       ) {
         const firstStart = earlier.route[firstIndex]
         const firstEnd = earlier.route[firstIndex + 1]
-        if (
-          firstStart?.route_type !== "wire" ||
-          firstEnd?.route_type !== "wire" ||
-          firstStart.layer !== firstEnd.layer
-        )
-          continue
+        if (!firstStart || !firstEnd || firstStart.z !== firstEnd.z) continue
         for (
           let secondIndex = 0;
           secondIndex < later.route.length - 1;
@@ -57,16 +49,16 @@ test("processes declared pairs sequentially while retaining all trace identities
           const secondStart = later.route[secondIndex]
           const secondEnd = later.route[secondIndex + 1]
           if (
-            secondStart?.route_type !== "wire" ||
-            secondEnd?.route_type !== "wire" ||
-            secondStart.layer !== secondEnd.layer ||
-            firstStart.layer !== secondStart.layer
+            !secondStart ||
+            !secondEnd ||
+            secondStart.z !== secondEnd.z ||
+            firstStart.z !== secondStart.z
           )
             continue
+          const firstWidth = firstStart.traceThickness ?? earlier.traceThickness
+          const secondWidth = secondStart.traceThickness ?? later.traceThickness
           const required =
-            firstStart.width / 2 +
-            secondStart.width / 2 +
-            Math.max(firstStart.width, secondStart.width)
+            firstWidth / 2 + secondWidth / 2 + Math.max(firstWidth, secondWidth)
           expect(
             getMinimumSegmentDistance(
               firstStart,

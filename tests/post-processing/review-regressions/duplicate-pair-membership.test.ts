@@ -3,7 +3,8 @@ import { PostProcessingSolver } from "../../../lib"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
 test("rejects a connection declared in more than one differential pair", () => {
-  const params = createPostProcessingTestParams()
+  const { simpleRouteJson: _fixture, ...params } =
+    createPostProcessingTestParams()
   expect(
     () =>
       new PostProcessingSolver({

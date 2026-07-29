@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import type { SimplifiedPcbTrace } from "../../../lib"
 import { createLengthMatchingBinding } from "../../../lib/post-processing/binding/createLengthMatchingBinding"
 
-test("binds retained and special traces as collision-only immutable copper", () => {
+test("binds untargeted and special traces as collision-only immutable copper", () => {
   const createWireTrace = (
     connectionName: string,
     y: number,
@@ -34,28 +34,25 @@ test("binds retained and special traces as collision-only immutable copper", () 
   const traces = [
     createWireTrace("P", 1),
     createWireTrace("N", 2),
-    createWireTrace("RETAINED_P", 3),
-    createWireTrace("RETAINED_N", 3.5),
+    createWireTrace("UNTARGETED_P", 3),
+    createWireTrace("UNTARGETED_N", 3.5),
     specialTrace,
   ]
   const binding = createLengthMatchingBinding({
     result: {
       traces,
-      errors: [new Error("retained")],
       reroutedPairs: [{ connectionNames: ["P", "N"], lengthTolerance: 0.01 }],
     },
     params: {
-      traces,
-      differentialPairs: [
-        { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
-        {
-          connectionNames: ["RETAINED_P", "RETAINED_N"],
-          lengthTolerance: 0.01,
-        },
-      ],
-      obstacles: [],
-      bounds: { minX: -1, maxX: 6, minY: 0, maxY: 5 },
-      layerCount: 2,
+      simpleRouteJson: {
+        traces,
+        differentialPairs: [
+          { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
+        ],
+        obstacles: [],
+        bounds: { minX: -1, maxX: 6, minY: 0, maxY: 5 },
+        layerCount: 2,
+      },
     },
   })
 
@@ -63,7 +60,7 @@ test("binds retained and special traces as collision-only immutable copper", () 
   expect(binding.solverParams.originalConnections).toHaveLength(2)
   expect(
     binding.solverParams.hdRoutes.some(
-      (route) => route.rootConnectionName === "RETAINED_P",
+      (route) => route.rootConnectionName === "UNTARGETED_P",
     ),
   ).toBe(true)
   expect(

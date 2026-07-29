@@ -1,4 +1,5 @@
 import type { GraphicsObject } from "graphics-debug"
+import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import type { Obstacle, SimplifiedPcbTrace } from "../../types"
 import { getLayerIndex } from "../geometry/getLayerIndex"
 import { getTransitionLayers } from "../geometry/getTransitionLayers"
@@ -30,11 +31,7 @@ export const createPostProcessingVisualization = (input: {
     layer: `z${Array.from({ length: input.layerCount }, (_, index) => index).join(",")}`,
   })
   for (const obstacle of input.obstacles) {
-    const indexes =
-      obstacle.zLayers ??
-      obstacle.layers
-        .map((layer) => getLayerIndex(layer, input.layerCount))
-        .filter((index) => index >= 0)
+    const indexes = getObstacleLayerIndexes(obstacle, input.layerCount)
     graphics.rects!.push({
       center: obstacle.center,
       width: obstacle.width,

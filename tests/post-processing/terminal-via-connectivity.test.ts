@@ -1,64 +1,44 @@
 import { expect, test } from "bun:test"
-import { PostProcessingSolver, type SimplifiedPcbTrace } from "../../lib"
+import { PostProcessingSolver, type HighDensityRoute } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
-test("preserves endpoint connectivity and port metadata for terminal-via traces", () => {
-  const makeTrace = (
+test("preserves endpoint connectivity and port metadata for terminal-via routes", () => {
+  const makeRoute = (
     id: string,
-    name: string,
+    connectionName: string,
     y: number,
-  ): SimplifiedPcbTrace => ({
-    type: "pcb_trace",
-    pcb_trace_id: id,
-    connection_name: name,
+  ): HighDensityRoute => ({
+    connectionName,
+    startPcbPortId: `${id}_start`,
+    endPcbPortId: `${id}_end`,
+    traceThickness: 0.2,
+    viaDiameter: 0.4,
     route: [
-      {
-        route_type: "via",
-        x: 0,
-        y,
-        from_layer: "top",
-        to_layer: "bottom",
-        via_diameter: 0.4,
-      },
-      {
-        route_type: "wire",
-        x: 0,
-        y,
-        width: 0.2,
-        layer: "bottom",
-        start_pcb_port_id: `${id}_start`,
-      },
-      {
-        route_type: "wire",
-        x: 10,
-        y,
-        width: 0.2,
-        layer: "bottom",
-        end_pcb_port_id: `${id}_end`,
-      },
-      {
-        route_type: "via",
-        x: 10,
-        y,
-        from_layer: "bottom",
-        to_layer: "top",
-        via_diameter: 0.4,
-      },
+      { x: 0, y, z: 0, pcb_port_id: `${id}_start` },
+      { x: 0, y, z: 1 },
+      { x: 10, y, z: 1 },
+      { x: 10, y, z: 0, pcb_port_id: `${id}_end` },
+    ],
+    vias: [
+      { x: 0, y, zLayers: [0, 1] },
+      { x: 10, y, zLayers: [0, 1] },
     ],
   })
-  const solver = new PostProcessingSolver(
-    createPostProcessingTestParams({
-      traces: [makeTrace("p", "P", 0.5), makeTrace("n", "N", -0.5)],
-    }),
-  )
+  const { simpleRouteJson: _fixture, ...params } =
+    createPostProcessingTestParams()
+  const solver = new PostProcessingSolver({
+    ...params,
+    hdRoutes: [makeRoute("p", "P", 0.5), makeRoute("n", "N", -0.5)],
+  })
   solver.solve()
-  const output = solver.getOutput()
-  expect(output.errors).toHaveLength(0)
-  for (const trace of output.traces) {
-    const wires = trace.route.filter((entry) => entry.route_type === "wire")
-    expect(wires[0]!.layer).toBe("top")
-    expect(wires.at(-1)!.layer).toBe("top")
-    expect(wires[0]!.start_pcb_port_id).toBe(`${trace.pcb_trace_id}_start`)
-    expect(wires.at(-1)!.end_pcb_port_id).toBe(`${trace.pcb_trace_id}_end`)
+  const { hdRoutes } = solver.getOutput()
+  for (const hdRoute of hdRoutes) {
+    const id = hdRoute.connectionName.toLowerCase()
+    expect(hdRoute.route[0]!.z).toBe(0)
+    expect(hdRoute.route.at(-1)!.z).toBe(0)
+    expect(hdRoute.startPcbPortId).toBe(`${id}_start`)
+    expect(hdRoute.endPcbPortId).toBe(`${id}_end`)
+    expect(hdRoute.route[0]!.pcb_port_id).toBe(`${id}_start`)
+    expect(hdRoute.route.at(-1)!.pcb_port_id).toBe(`${id}_end`)
   }
 })

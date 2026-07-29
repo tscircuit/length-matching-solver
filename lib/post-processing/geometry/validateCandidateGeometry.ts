@@ -1,3 +1,4 @@
+import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import type { Obstacle, SimplifiedPcbTrace } from "../../types"
 import type {
@@ -96,10 +97,7 @@ export const validateCandidateGeometry = (
     layerCount: number,
   ): boolean => {
     const layerIndex = getLayerIndex(layer, layerCount)
-    return (
-      obstacle.layers.includes(layer) ||
-      obstacle.zLayers?.includes(layerIndex) === true
-    )
+    return getObstacleLayerIndexes(obstacle, layerCount).includes(layerIndex)
   }
 
   const getImmutableCopper = (

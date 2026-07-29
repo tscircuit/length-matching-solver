@@ -3,19 +3,18 @@ import type { GraphicsObject } from "graphics-debug"
 import type { DifferentialPair, SimplifiedPcbTraces } from "../../types"
 import { cloneSimplifiedPcbTraces } from "../model/cloneSimplifiedPcbTraces"
 import { simplifyDifferentialPairTo45Degrees } from "../smoothing/simplifyDifferentialPairTo45Degrees"
-import type { PostProcessingSolverParams } from "../types"
+import type { InternalPostProcessingParams } from "../types"
 import { createPostProcessingVisualization } from "../visualization/createPostProcessingVisualization"
 import type { DifferentialPairReroutingOutput } from "./DifferentialPairReroutingSolver"
 
 export type FortyFiveDegreeSimplificationInput = Pick<
-  PostProcessingSolverParams,
+  InternalPostProcessingParams["simpleRouteJson"],
   "obstacles" | "bounds" | "layerCount"
 > &
   DifferentialPairReroutingOutput
 
 export type FortyFiveDegreeSimplificationOutput = {
   traces: SimplifiedPcbTraces
-  errors: Error[]
   reroutedPairs: DifferentialPair[]
 }
 
@@ -71,7 +70,6 @@ export class FortyFiveDegreeSimplificationSolver extends BaseSolver {
       )
     return {
       traces: cloneSimplifiedPcbTraces(this.traces),
-      errors: this.input.errors.map((error) => new Error(error.message)),
       reroutedPairs: this.input.reroutedPairs.map((pair) => ({
         ...pair,
         connectionNames: [...pair.connectionNames],

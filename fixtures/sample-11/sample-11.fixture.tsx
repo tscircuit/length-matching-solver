@@ -1,12 +1,17 @@
 import { GenericSolverDebugger } from "@tscircuit/solver-utils/react"
-import type { PostProcessingSolverParams } from "../../lib"
 import { PostProcessingSolver } from "../../lib"
+import {
+  createPostProcessingParamsFromSimpleRouteJson,
+  type PostProcessingSimpleRouteJsonFixture,
+} from "../createPostProcessingParamsFromSimpleRouteJson"
 import sampleProblem from "./sample-11.srj.json"
 
 export default function CoupledObstacleDetourFixture(): React.JSX.Element {
   const createSolver = (): PostProcessingSolver => {
-    // SAFETY: This repository-owned JSON is shared with the coupled-detour regression test. The cast restores JSON literals widened by module inference.
-    const params = sampleProblem as unknown as PostProcessingSolverParams
+    // SAFETY: This repository-owned legacy SRJ is adapted to the flat HD API at the fixture edge.
+    const params = createPostProcessingParamsFromSimpleRouteJson(
+      sampleProblem as unknown as PostProcessingSimpleRouteJsonFixture,
+    )
     return new PostProcessingSolver(params)
   }
   return <GenericSolverDebugger createSolver={createSolver} />

@@ -1,3 +1,4 @@
+import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import type { Obstacle, SimplifiedPcbTrace } from "../../types"
 import type { CopperSegment, CopperVia, Point } from "../model/internal-types"
@@ -83,9 +84,7 @@ export const createSearchGeometryValidator = (input: {
   }
   const obstacleIsOnLayer = (obstacle: Obstacle, layer: string): boolean => {
     const z = getLayerIndex(layer, input.layerCount)
-    return (
-      obstacle.layers.includes(layer) || obstacle.zLayers?.includes(z) === true
-    )
+    return getObstacleLayerIndexes(obstacle, input.layerCount).includes(z)
   }
   const laneSegments = (
     start: CoupledPathPoint,

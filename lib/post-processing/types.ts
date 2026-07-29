@@ -1,4 +1,9 @@
-import type { DifferentialPair, Obstacle, SimplifiedPcbTraces } from "../types"
+import type {
+  DifferentialPair,
+  HighDensityRoute,
+  Obstacle,
+  SimplifiedPcbTraces,
+} from "../types"
 
 export type PostProcessingGridConfig = {
   /** Fine grid step used throughout the board interior, in board units. */
@@ -10,7 +15,7 @@ export type PostProcessingGridConfig = {
 }
 
 export type PostProcessingSolverParams = {
-  traces: SimplifiedPcbTraces
+  hdRoutes: HighDensityRoute[]
   differentialPairs: DifferentialPair[]
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
@@ -19,6 +24,29 @@ export type PostProcessingSolverParams = {
 }
 
 export type PostProcessingSolverOutput = {
-  traces: SimplifiedPcbTraces
-  errors: Error[]
+  hdRoutes: HighDensityRoute[]
+}
+
+/** Private simplified-trace model used by the coupled-routing algorithms. */
+export type InternalPostProcessingParams = {
+  simpleRouteJson: {
+    layerCount: number
+    obstacles: Obstacle[]
+    bounds: { minX: number; maxX: number; minY: number; maxY: number }
+    differentialPairs: DifferentialPair[]
+    traces: SimplifiedPcbTraces
+  }
+  routingGrid?: PostProcessingGridConfig
+}
+
+export type PostProcessingRouteBinding = {
+  hdRouteIndex: number
+  traceIndex: number
+  internalConnectionName: string
+}
+
+export type PostProcessingModel = {
+  params: InternalPostProcessingParams
+  routeBindings: PostProcessingRouteBinding[]
+  sourceHdRoutes: HighDensityRoute[]
 }

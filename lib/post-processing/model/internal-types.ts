@@ -33,6 +33,7 @@ export type ParsedTrace = {
   vias: CopperVia[]
   transitions: SimplifiedPcbTraceViaRoutePoint[]
   width: number
+  viaDiameter: number
   startPortId?: string
   endPortId?: string
 }
@@ -48,6 +49,7 @@ export type PairCandidate = {
   viaPairCount: number
 }
 
-export type PairSolveResult =
-  | { status: "accepted"; candidate: PairCandidate }
-  | { status: "retained"; error: Error }
+export type PairSolveResult = {
+  status: "accepted"
+  candidate: PairCandidate
+}

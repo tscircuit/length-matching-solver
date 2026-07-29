@@ -24,6 +24,30 @@ multi-segment match, every selected segment uses the same tooth count,
 placement, and tapered profile. Invalid or impossible solver states throw with
 a specific error instead of returning partially matched routes.
 
+## HD-route post-processing
+
+`PostProcessingSolver` accepts and returns native high-density routes, so an
+autorouting pipeline does not need to serialize routes before post-processing:
+
+```ts
+import { PostProcessingSolver } from "@tscircuit/length-matching-solver"
+
+const solver = new PostProcessingSolver({
+  hdRoutes,
+  differentialPairs,
+  obstacles,
+  bounds,
+  layerCount,
+  // routingGrid: { innerGridStep: 0.25 },
+})
+solver.solve()
+const { hdRoutes: postProcessedHdRoutes } = solver.getOutput()
+```
+
+Pair members resolve by `connectionName` or `rootConnectionName` and must each
+identify exactly one route. Unsupported or ambiguous geometry throws. Input,
+immutable non-pair routes, and returned outputs are independently cloned.
+
 ## Meander geometry quality
 
 In open routing space, the solver prefers broad, shallow tuning distributed

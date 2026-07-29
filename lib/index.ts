@@ -4,7 +4,9 @@ export {
   type LengthMatchingSolverParams,
 } from "./length-matching-solver"
 export {
+  DifferentialPairRoutingError,
   PostProcessingSolver,
+  type DifferentialPairRoutingFailureReason,
   type PostProcessingGridConfig,
   type PostProcessingSolverOutput,
   type PostProcessingSolverParams,
@@ -13,6 +15,7 @@ export type {
   ConnectionPoint,
   DifferentialPair,
   HighDensityRoute,
+  HighDensityRouteJumper,
   Obstacle,
   RoutePoint,
   SimpleRouteConnection,

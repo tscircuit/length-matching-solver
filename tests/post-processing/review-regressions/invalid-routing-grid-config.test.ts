@@ -13,11 +13,11 @@ test("rejects invalid optional composite routing-grid configuration", () => {
     { outerGridStep: Number.POSITIVE_INFINITY },
     { outerPerimeterWidth: 5 },
   ]
-  for (const routingGrid of invalidConfigurations)
-    expect(
-      () =>
-        new PostProcessingSolver(
-          createPostProcessingTestParams({ routingGrid }),
-        ),
-    ).toThrow(/PostProcessingSolver: routingGrid/)
+  for (const routingGrid of invalidConfigurations) {
+    const { simpleRouteJson: _fixture, ...params } =
+      createPostProcessingTestParams({ routingGrid })
+    expect(() => new PostProcessingSolver(params)).toThrow(
+      /PostProcessingSolver: routingGrid/,
+    )
+  }
 })

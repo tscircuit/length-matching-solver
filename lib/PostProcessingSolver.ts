@@ -10,7 +10,7 @@ import {
   createLengthMatchingBinding,
   type LengthMatchingBinding,
 } from "./post-processing/binding/createLengthMatchingBinding"
-import { cloneSimplifiedPcbTraces } from "./post-processing/model/cloneSimplifiedPcbTraces"
+import { createPostProcessingModel } from "./post-processing/binding/createPostProcessingModel"
 import { getDifferentialPairReroutingIterationLimit } from "./post-processing/routing/getDifferentialPairReroutingIterationLimit"
 import {
   DifferentialPairReroutingSolver,
@@ -20,8 +20,9 @@ import {
   FortyFiveDegreeSimplificationSolver,
   type FortyFiveDegreeSimplificationOutput,
 } from "./post-processing/solvers/FortyFiveDegreeSimplificationSolver"
-import { SimplifiedTraceReconstructionSolver } from "./post-processing/solvers/SimplifiedTraceReconstructionSolver"
+import { HdRouteReconstructionSolver } from "./post-processing/solvers/HdRouteReconstructionSolver"
 import type {
+  PostProcessingModel,
   PostProcessingSolverOutput,
   PostProcessingSolverParams,
 } from "./post-processing/types"
@@ -33,14 +34,15 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   differentialPairReroutingSolver?: DifferentialPairReroutingSolver
   fortyFiveDegreeSimplificationSolver?: FortyFiveDegreeSimplificationSolver
   lengthMatchingSolver?: LengthMatchingSolver
-  simplifiedTraceReconstructionSolver?: SimplifiedTraceReconstructionSolver
+  hdRouteReconstructionSolver?: HdRouteReconstructionSolver
   private lengthMatchingBinding: LengthMatchingBinding | null = null
+  private readonly model: PostProcessingModel
 
   override pipelineDef: PipelineStep<BaseSolver>[] = [
     definePipelineStep(
       "differentialPairReroutingSolver",
       DifferentialPairReroutingSolver,
-      (pipeline: PostProcessingSolver) => [pipeline.inputProblem],
+      (pipeline: PostProcessingSolver) => [pipeline.model.params],
     ),
     definePipelineStep(
       "fortyFiveDegreeSimplificationSolver",
@@ -54,14 +56,9 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
           throw new Error(
             "PostProcessingSolver: rerouting stage completed without output",
           )
-        return [
-          {
-            ...rerouted,
-            obstacles: pipeline.inputProblem.obstacles,
-            bounds: pipeline.inputProblem.bounds,
-            layerCount: pipeline.inputProblem.layerCount,
-          },
-        ]
+        const { obstacles, bounds, layerCount } =
+          pipeline.model.params.simpleRouteJson
+        return [{ ...rerouted, obstacles, bounds, layerCount }]
       },
     ),
     definePipelineStep(
@@ -78,14 +75,14 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
           )
         pipeline.lengthMatchingBinding = createLengthMatchingBinding({
           result: simplified,
-          params: pipeline.inputProblem,
+          params: pipeline.model.params,
         })
         return [pipeline.lengthMatchingBinding.solverParams]
       },
     ),
     definePipelineStep(
-      "simplifiedTraceReconstructionSolver",
-      SimplifiedTraceReconstructionSolver,
+      "hdRouteReconstructionSolver",
+      HdRouteReconstructionSolver,
       (pipeline: PostProcessingSolver) => {
         const simplified =
           pipeline.getStageOutput<FortyFiveDegreeSimplificationOutput>(
@@ -103,7 +100,8 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
             binding: pipeline.lengthMatchingBinding,
             result: matched,
             simplified,
-            params: pipeline.inputProblem,
+            params: pipeline.model.params,
+            model: pipeline.model,
           },
         ]
       },
@@ -120,7 +118,6 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
           pipeline.stats = {
             phase: "complete",
             acceptedPairCount: rerouted.reroutedPairs.length,
-            retainedPairCount: rerouted.errors.length,
           }
         },
       },
@@ -128,10 +125,12 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   ]
 
   constructor(params: PostProcessingSolverParams) {
-    super(params)
+    super(structuredClone(params))
     validatePostProcessingParams(params)
-    const reroutingIterationLimit =
-      getDifferentialPairReroutingIterationLimit(params)
+    this.model = createPostProcessingModel(params)
+    const reroutingIterationLimit = getDifferentialPairReroutingIterationLimit(
+      this.model.params,
+    )
     const simplificationIterationLimit = Math.max(
       1,
       params.differentialPairs.length + 1,
@@ -155,7 +154,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   }
 
   override getConstructorParams(): [PostProcessingSolverParams] {
-    return [this.inputProblem]
+    return [structuredClone(this.inputProblem)]
   }
 
   override getOutput(): PostProcessingSolverOutput {
@@ -164,41 +163,50 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
         "PostProcessingSolver: getOutput() called before the solver completed",
       )
     const output = this.getStageOutput<PostProcessingSolverOutput>(
-      "simplifiedTraceReconstructionSolver",
+      "hdRouteReconstructionSolver",
     )
     if (!output)
       throw new Error(
         "PostProcessingSolver: completed pipeline is missing reconstruction output",
       )
-    return {
-      traces: cloneSimplifiedPcbTraces(output.traces),
-      errors: output.errors.map((error) => new Error(error.message)),
-    }
+    return structuredClone(output)
   }
 
   override initialVisualize(): GraphicsObject {
+    const { traces, obstacles, bounds, layerCount } =
+      this.model.params.simpleRouteJson
     return createPostProcessingVisualization({
-      traces: cloneSimplifiedPcbTraces(this.inputProblem.traces),
-      obstacles: this.inputProblem.obstacles,
-      bounds: this.inputProblem.bounds,
-      layerCount: this.inputProblem.layerCount,
+      traces: structuredClone(traces),
+      obstacles,
+      bounds,
+      layerCount,
       activeConnectionNames: null,
       previewPath: null,
     })
   }
 
   override finalVisualize(): GraphicsObject {
+    const outputModel = createPostProcessingModel({
+      ...this.inputProblem,
+      hdRoutes: this.getOutput().hdRoutes,
+    })
+    const { traces, obstacles, bounds, layerCount } =
+      outputModel.params.simpleRouteJson
     return createPostProcessingVisualization({
-      traces: this.getOutput().traces,
-      obstacles: this.inputProblem.obstacles,
-      bounds: this.inputProblem.bounds,
-      layerCount: this.inputProblem.layerCount,
+      traces,
+      obstacles,
+      bounds,
+      layerCount,
       activeConnectionNames: null,
       previewPath: null,
     })
   }
 }
 
+export {
+  DifferentialPairRoutingError,
+  type DifferentialPairRoutingFailureReason,
+} from "./post-processing/errors/DifferentialPairRoutingError"
 export type {
   PostProcessingGridConfig,
   PostProcessingSolverOutput,

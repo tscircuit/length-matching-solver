@@ -1,15 +1,16 @@
-import type { PostProcessingSolverParams } from "../types"
+import type { InternalPostProcessingParams } from "../types"
 
 /** Bound up to twenty grid searches per pair using the validated 250k-node limit. */
 export const getDifferentialPairReroutingIterationLimit = (
-  params: PostProcessingSolverParams,
+  params: InternalPostProcessingParams,
 ): number => {
   const maximumGridNodeCount = 250_000
   const maximumDirectedEdgeCount = maximumGridNodeCount * 24 + 192
   const searchAttemptCountPerPair = 20
-  const searchStateLimit = maximumDirectedEdgeCount * params.layerCount + 1
+  const searchStateLimit =
+    maximumDirectedEdgeCount * params.simpleRouteJson.layerCount + 1
   const limit =
-    params.differentialPairs.length *
+    params.simpleRouteJson.differentialPairs.length *
     (750_020 + searchAttemptCountPerPair * searchStateLimit)
   if (!Number.isSafeInteger(limit))
     throw new Error(
