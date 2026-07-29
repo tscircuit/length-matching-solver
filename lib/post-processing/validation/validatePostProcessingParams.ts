@@ -5,6 +5,9 @@ import type { PostProcessingSolverParams } from "../types"
 /** Validate the native HD-route boundary before creating any internal model. */
 export function validatePostProcessingParams(
   params: PostProcessingSolverParams,
+  options: { validateHdRouteGeometry: boolean } = {
+    validateHdRouteGeometry: true,
+  },
 ): void {
   if (!params || typeof params !== "object")
     throw new Error("PostProcessingSolver: params must be an object")
@@ -23,7 +26,7 @@ export function validatePostProcessingParams(
     if (
       !obstacle ||
       typeof obstacle !== "object" ||
-      obstacle.type !== "rect" ||
+      (obstacle.type !== "rect" && obstacle.type !== "oval") ||
       !obstacle.center ||
       !Number.isFinite(obstacle.center.x) ||
       !Number.isFinite(obstacle.center.y) ||
@@ -59,7 +62,6 @@ export function validatePostProcessingParams(
       bounds: params.bounds,
       defaultInnerGridStep,
     })
-
   for (const route of params.hdRoutes) {
     if (
       !route ||
@@ -143,10 +145,13 @@ export function validatePostProcessingParams(
             Math.hypot(via.x - point.x, via.y - point.y) <= 1e-8,
         )
         .map(({ viaIndex }) => viaIndex)
-      if (matchingViaIndexes.length !== 1)
-        throw new Error(
-          `PostProcessingSolver: HD route "${route.connectionName}" must have exactly one via for each layer transition`,
-        )
+      if (matchingViaIndexes.length !== 1) {
+        if (options.validateHdRouteGeometry)
+          throw new Error(
+            `PostProcessingSolver: HD route "${route.connectionName}" must have exactly one via for each layer transition`,
+          )
+        continue
+      }
       const matchingViaIndex = matchingViaIndexes[0]!
       const matchingVia = route.vias[matchingViaIndex]!
       if (matchingVia.zLayers !== undefined) {
@@ -189,11 +194,17 @@ export function validatePostProcessingParams(
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" has an invalid via`,
         )
-      if (!transitionViaIndexes.has(viaIndex))
+      if (
+        options.validateHdRouteGeometry &&
+        !transitionViaIndexes.has(viaIndex)
+      )
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" has an unbound or ambiguous via`,
         )
-      if ((transitionCountByViaIndex.get(viaIndex) ?? 0) > 1)
+      if (
+        options.validateHdRouteGeometry &&
+        (transitionCountByViaIndex.get(viaIndex) ?? 0) > 1
+      )
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" uses one physical via for multiple route transitions`,
         )

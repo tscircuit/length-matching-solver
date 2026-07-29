@@ -20,6 +20,7 @@ import {
   FortyFiveDegreeSimplificationSolver,
   type FortyFiveDegreeSimplificationOutput,
 } from "./post-processing/solvers/FortyFiveDegreeSimplificationSolver"
+import { HdRoutePassthroughSolver } from "./post-processing/solvers/HdRoutePassthroughSolver"
 import { HdRouteReconstructionSolver } from "./post-processing/solvers/HdRouteReconstructionSolver"
 import type {
   PostProcessingModel,
@@ -35,8 +36,10 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   fortyFiveDegreeSimplificationSolver?: FortyFiveDegreeSimplificationSolver
   lengthMatchingSolver?: LengthMatchingSolver
   hdRouteReconstructionSolver?: HdRouteReconstructionSolver
+  hdRoutePassthroughSolver?: HdRoutePassthroughSolver
   private lengthMatchingBinding: LengthMatchingBinding | null = null
-  private readonly model: PostProcessingModel
+  private readonly model!: PostProcessingModel
+  private readonly isPassthrough: boolean
 
   override pipelineDef: PipelineStep<BaseSolver>[] = [
     definePipelineStep(
@@ -126,7 +129,36 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
 
   constructor(params: PostProcessingSolverParams) {
     super(structuredClone(params))
-    validatePostProcessingParams(params)
+    this.isPassthrough =
+      Array.isArray(params.differentialPairs) &&
+      params.differentialPairs.length === 0
+    if (this.isPassthrough) {
+      validatePostProcessingParams(params, {
+        validateHdRouteGeometry: false,
+      })
+      this.pipelineDef = [
+        definePipelineStep(
+          "hdRoutePassthroughSolver",
+          HdRoutePassthroughSolver,
+          (pipeline: PostProcessingSolver) => [
+            { hdRoutes: pipeline.inputProblem.hdRoutes },
+          ],
+          {
+            onSolved: (pipeline: PostProcessingSolver) => {
+              pipeline.stats = {
+                phase: "complete",
+                acceptedPairCount: 0,
+              }
+            },
+          },
+        ),
+      ]
+      this.MAX_ITERATIONS = 3
+      return
+    }
+    validatePostProcessingParams(params, {
+      validateHdRouteGeometry: true,
+    })
     this.model = createPostProcessingModel(params)
     const reroutingIterationLimit = getDifferentialPairReroutingIterationLimit(
       this.model.params,
@@ -163,7 +195,9 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
         "PostProcessingSolver: getOutput() called before the solver completed",
       )
     const output = this.getStageOutput<PostProcessingSolverOutput>(
-      "hdRouteReconstructionSolver",
+      this.isPassthrough
+        ? "hdRoutePassthroughSolver"
+        : "hdRouteReconstructionSolver",
     )
     if (!output)
       throw new Error(
@@ -173,8 +207,11 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   }
 
   override initialVisualize(): GraphicsObject {
+    const model = this.isPassthrough
+      ? createPostProcessingModel(this.inputProblem)
+      : this.model
     const { traces, obstacles, bounds, layerCount } =
-      this.model.params.simpleRouteJson
+      model.params.simpleRouteJson
     return createPostProcessingVisualization({
       traces: structuredClone(traces),
       obstacles,
