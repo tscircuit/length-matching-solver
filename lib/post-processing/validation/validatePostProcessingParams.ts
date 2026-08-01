@@ -120,7 +120,9 @@ export function validatePostProcessingParams(
         point.pcb_port_id !== undefined &&
         (typeof point.pcb_port_id !== "string" ||
           point.pcb_port_id.length === 0 ||
-          (pointIndex !== 0 && pointIndex !== route.route.length - 1))
+          (options.validateHdRouteGeometry &&
+            pointIndex !== 0 &&
+            pointIndex !== route.route.length - 1))
       )
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" has unsupported PCB-port metadata`,
