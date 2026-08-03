@@ -2,6 +2,7 @@ import { BaseSolver } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
 import {
   validateAndResolveParams,
+  validateLengthMatchingGroup,
   validatePair,
 } from "./length-matching/config"
 import {
@@ -31,14 +32,24 @@ import type {
   LengthMatchingSolverParams,
 } from "./length-matching/types"
 import { createLengthMatchingVisualization } from "./length-matching/visualization"
-import type { DifferentialPair, HighDensityRoute } from "./types"
+import type {
+  DifferentialPair,
+  HighDensityRoute,
+  LengthMatchingGroup,
+} from "./types"
 
 /** Coordinates the length-matching state machine; algorithm details live in `length-matching/`. */
 export class LengthMatchingSolver extends BaseSolver {
   matchedHdRoutes: HighDensityRoute[]
   private readonly pairs: DifferentialPair[]
+  private readonly groups: LengthMatchingGroup[]
   private nextPairIndex = 0
+  private nextGroupIndex = 0
   private activePair: ActivePair | null = null
+  private activeConstraintSource:
+    | "differential-pair"
+    | "length-matching-group"
+    | null = null
   private currentAttempt: RegressionAttempt | null = null
   private config: LengthMatchingConfig | null = null
   private candidatesTried = 0
@@ -51,19 +62,19 @@ export class LengthMatchingSolver extends BaseSolver {
       route: route.route.map((point) => ({ ...point })),
     }))
     this.pairs = params.differentialPairs ?? []
+    this.groups = params.lengthMatchingGroups ?? []
   }
 
   override getSolverName(): string {
     return "LengthMatchingSolver"
   }
 
-  private startNextPair(): void {
-    const pair = this.pairs[this.nextPairIndex++]
-    if (!pair) {
-      this.solved = true
-      return
-    }
-    validatePair(pair, this.params.originalConnections)
+  private startPair(
+    pair: DifferentialPair,
+    source: "differential-pair" | "length-matching-group",
+  ): void {
+    if (source === "differential-pair")
+      validatePair(pair, this.params.originalConnections)
     const firstIndexes = findConnectionRouteIndexes(
       this.matchedHdRoutes,
       pair.connectionNames[0],
@@ -77,11 +88,12 @@ export class LengthMatchingSolver extends BaseSolver {
       throw new Error(
         `LengthMatchingSolver: differential pair ${pair.connectionNames.join("/")} has routed geometry for only one connection`,
       )
-    const firstLength = getConnectionLength(this.matchedHdRoutes, firstIndexes)
-    const secondLength = getConnectionLength(
-      this.matchedHdRoutes,
-      secondIndexes,
-    )
+    const firstLength =
+      getConnectionLength(this.matchedHdRoutes, firstIndexes) +
+      (pair.fixedLengthByConnectionName?.[pair.connectionNames[0]] ?? 0)
+    const secondLength =
+      getConnectionLength(this.matchedHdRoutes, secondIndexes) +
+      (pair.fixedLengthByConnectionName?.[pair.connectionNames[1]] ?? 0)
     const difference = Math.abs(firstLength - secondLength)
     if (difference <= pair.lengthTolerance) return
     const firstIsShorter = firstLength < secondLength
@@ -100,6 +112,7 @@ export class LengthMatchingSolver extends BaseSolver {
       throw new Error(
         `LengthMatchingSolver: no same-layer straight segment can tune connection "${shorterConnectionName}"`,
       )
+    this.activeConstraintSource = source
     this.activePair = {
       pair,
       longerConnectionName,
@@ -116,7 +129,72 @@ export class LengthMatchingSolver extends BaseSolver {
       hasMinimumHeightBlockedAttempt: false,
     }
   }
+  private startNextConstraint(): void {
+    const pair = this.pairs[this.nextPairIndex]
+    if (pair) {
+      this.nextPairIndex++
+      this.startPair(pair, "differential-pair")
+      return
+    }
 
+    const group = this.groups[this.nextGroupIndex]
+    if (!group) {
+      this.solved = true
+      return
+    }
+    validateLengthMatchingGroup(group, this.params.originalConnections)
+    const routedConnections = group.connectionNames.map((connectionName) => {
+      const routeIndexes = findConnectionRouteIndexes(
+        this.matchedHdRoutes,
+        connectionName,
+      )
+      return {
+        connectionName,
+        routeIndexes,
+        length:
+          routeIndexes.length === 0
+            ? null
+            : getConnectionLength(this.matchedHdRoutes, routeIndexes) +
+              (group.fixedLengthByConnectionName?.[connectionName] ?? 0),
+      }
+    })
+    if (routedConnections.every(({ length }) => length === null)) {
+      this.nextGroupIndex++
+      return
+    }
+    const missingConnection = routedConnections.find(
+      ({ length }) => length === null,
+    )
+    if (missingConnection)
+      throw new Error(
+        `LengthMatchingSolver: length matching group has routed geometry missing for connection "${missingConnection.connectionName}"`,
+      )
+    const rankedConnections = routedConnections
+      .map((connection) => ({
+        ...connection,
+        length: connection.length!,
+      }))
+      .sort((left, right) => left.length - right.length)
+    const shortest = rankedConnections[0]!
+    const longest = rankedConnections.at(-1)!
+    if (longest.length - shortest.length <= group.maxLengthSkew + 1e-7) {
+      this.nextGroupIndex++
+      return
+    }
+    this.startPair(
+      {
+        connectionNames: [longest.connectionName, shortest.connectionName],
+        lengthTolerance: group.maxLengthSkew,
+        fixedLengthByConnectionName: {
+          [longest.connectionName]:
+            group.fixedLengthByConnectionName?.[longest.connectionName] ?? 0,
+          [shortest.connectionName]:
+            group.fixedLengthByConnectionName?.[shortest.connectionName] ?? 0,
+        },
+      },
+      "length-matching-group",
+    )
+  }
   private acceptAttempt(
     activePair: ActivePair,
     attempt: RegressionAttempt,
@@ -137,8 +215,10 @@ export class LengthMatchingSolver extends BaseSolver {
     activePair.plannedAttemptTargets?.delete(getRegressionAttemptKey(attempt))
     if (activePair.plannedAttemptTargets?.size === 0)
       activePair.plannedAttemptTargets = null
-    if (activePair.remainingAddedLength <= activePair.pair.lengthTolerance)
+    if (activePair.remainingAddedLength <= activePair.pair.lengthTolerance) {
       this.activePair = null
+      this.activeConstraintSource = null
+    }
   }
 
   private tryCandidate(activePair: ActivePair): void {
@@ -349,6 +429,7 @@ export class LengthMatchingSolver extends BaseSolver {
       ),
     }
     this.activePair = null
+    this.activeConstraintSource = null
   }
 
   private getConfig(): LengthMatchingConfig {
@@ -359,7 +440,7 @@ export class LengthMatchingSolver extends BaseSolver {
   override _step(): void {
     this.getConfig()
     if (!this.activePair) {
-      this.startNextPair()
+      this.startNextConstraint()
       return
     }
     this.tryCandidate(this.activePair)
@@ -369,7 +450,7 @@ export class LengthMatchingSolver extends BaseSolver {
     return [this.params]
   }
 
-  getOutput(): LengthMatchingSolverOutput {
+  override getOutput(): LengthMatchingSolverOutput {
     if (!this.solved)
       throw new Error(
         "LengthMatchingSolver: getOutput() called before the solver completed",
@@ -379,14 +460,21 @@ export class LengthMatchingSolver extends BaseSolver {
 
   computeProgress(): number {
     if (this.solved) return 1
-    if (this.pairs.length === 0) return this.config ? 1 : 0
-    const completedPairFraction = Math.max(0, this.nextPairIndex - 1)
+    const constraintCount = this.pairs.length + this.groups.length
+    if (constraintCount === 0) return this.config ? 1 : 0
+    const completedPairCount = Math.max(
+      0,
+      this.nextPairIndex -
+        (this.activeConstraintSource === "differential-pair" ? 1 : 0),
+    )
+    const completedGroupCount = this.nextGroupIndex
     const activePairFraction = this.activePair
       ? this.activePair.candidateIndex / this.activePair.candidates.length
       : 0
     return Math.min(
       0.99,
-      (completedPairFraction + activePairFraction) / this.pairs.length,
+      (completedPairCount + completedGroupCount + activePairFraction) /
+        constraintCount,
     )
   }
 

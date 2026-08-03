@@ -272,6 +272,17 @@ export function validatePostProcessingParams(
       throw new Error(
         "PostProcessingSolver: differential pair minimumCenterlineDistance cannot exceed maximumCenterlineDistance",
       )
+    for (const [connectionName, fixedLength] of Object.entries(
+      pair.fixedLengthByConnectionName ?? {},
+    ))
+      if (
+        !pair.connectionNames.includes(connectionName) ||
+        !Number.isFinite(fixedLength) ||
+        fixedLength < 0
+      )
+        throw new Error(
+          "PostProcessingSolver: differential pair fixed lengths must be non-negative finite values for declared connections",
+        )
     for (const connectionName of pair.connectionNames) {
       if (declaredConnections.has(connectionName))
         throw new Error(
@@ -303,6 +314,59 @@ export function validatePostProcessingParams(
       )
         throw new Error(
           `PostProcessingSolver: differential pair connection "${connectionName}" has unsupported HD geometry`,
+        )
+    }
+  }
+
+  for (const group of params.lengthMatchingGroups ?? []) {
+    if (
+      !group ||
+      typeof group !== "object" ||
+      !Array.isArray(group.connectionNames) ||
+      group.connectionNames.length < 2 ||
+      group.connectionNames.some(
+        (connectionName) =>
+          typeof connectionName !== "string" || connectionName.length === 0,
+      ) ||
+      new Set(group.connectionNames).size !== group.connectionNames.length ||
+      !Number.isFinite(group.maxLengthSkew) ||
+      group.maxLengthSkew < 0
+    )
+      throw new Error(
+        "PostProcessingSolver: length matching group declaration is invalid",
+      )
+    for (const [connectionName, fixedLength] of Object.entries(
+      group.fixedLengthByConnectionName ?? {},
+    ))
+      if (
+        !group.connectionNames.includes(connectionName) ||
+        !Number.isFinite(fixedLength) ||
+        fixedLength < 0
+      )
+        throw new Error(
+          "PostProcessingSolver: length matching group fixed lengths must be non-negative finite values for declared connections",
+        )
+    for (const connectionName of group.connectionNames) {
+      const matches = params.hdRoutes
+        .map((route, routeIndex) => ({ route, routeIndex }))
+        .filter(({ route }) => route.connectionName === connectionName)
+      if (matches.length !== 1)
+        throw new Error(
+          `PostProcessingSolver: length matching group connection "${connectionName}" must resolve to exactly one HD route, got ${matches.length}`,
+        )
+      const match = matches[0]!
+      if (
+        match.route.route.length < 2 ||
+        match.route.viaDiameter <= 0 ||
+        match.route.jumpers?.length ||
+        match.route.route.some(
+          (point) =>
+            point.insideJumperPad ||
+            point.toNextSegmentType === "through_obstacle",
+        )
+      )
+        throw new Error(
+          `PostProcessingSolver: length matching group connection "${connectionName}" has unsupported HD geometry`,
         )
     }
   }

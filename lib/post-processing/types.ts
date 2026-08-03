@@ -1,6 +1,7 @@
 import type {
   DifferentialPair,
   HighDensityRoute,
+  LengthMatchingGroup,
   Obstacle,
   SimplifiedPcbTraces,
 } from "../types"
@@ -17,6 +18,7 @@ export type PostProcessingGridConfig = {
 export type PostProcessingSolverParams = {
   hdRoutes: HighDensityRoute[]
   differentialPairs: DifferentialPair[]
+  lengthMatchingGroups?: LengthMatchingGroup[]
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -34,6 +36,7 @@ export type InternalPostProcessingParams = {
     obstacles: Obstacle[]
     bounds: { minX: number; maxX: number; minY: number; maxY: number }
     differentialPairs: DifferentialPair[]
+    lengthMatchingGroups: LengthMatchingGroup[]
     traces: SimplifiedPcbTraces
   }
   routingGrid?: PostProcessingGridConfig

@@ -147,7 +147,10 @@ export const reconstructSimplifiedPcbTraces = (input: {
       simpleRouteJson.layerCount,
     )
     const finalLengthDifference = Math.abs(
-      getSimplifiedTraceLength(first) - getSimplifiedTraceLength(second),
+      getSimplifiedTraceLength(first) +
+        (pair.fixedLengthByConnectionName?.[pair.connectionNames[0]] ?? 0) -
+        (getSimplifiedTraceLength(second) +
+          (pair.fixedLengthByConnectionName?.[pair.connectionNames[1]] ?? 0)),
     )
     if (finalLengthDifference > pair.lengthTolerance + 1e-7)
       throw new Error(
@@ -164,6 +167,27 @@ export const reconstructSimplifiedPcbTraces = (input: {
     if (!valid)
       throw new Error(
         `PostProcessingSolver: length matching produced invalid complete copper for pair ${pairName}`,
+      )
+  }
+  for (const group of simpleRouteJson.lengthMatchingGroups) {
+    const lengths = group.connectionNames.map((connectionName) => {
+      const matches = traces.filter(
+        (trace) => trace.connection_name === connectionName,
+      )
+      if (matches.length !== 1)
+        throw new Error(
+          `PostProcessingSolver: reconstructed length matching group connection "${connectionName}" does not resolve to complete copper`,
+        )
+      return (
+        getSimplifiedTraceLength(
+          parseSimplifiedPcbTrace(matches[0]!, simpleRouteJson.layerCount),
+        ) + (group.fixedLengthByConnectionName?.[connectionName] ?? 0)
+      )
+    })
+    const finalSkew = Math.max(...lengths) - Math.min(...lengths)
+    if (finalSkew > group.maxLengthSkew + 1e-7)
+      throw new Error(
+        `PostProcessingSolver: reconstructed length matching group exceeds maximum skew ${group.maxLengthSkew} with error ${finalSkew}`,
       )
   }
   return traces
