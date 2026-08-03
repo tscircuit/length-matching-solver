@@ -67,6 +67,18 @@ export const validateCandidateGeometry = (
     )
   }
 
+  const pointTouchesInflatedObstacle = (
+    point: Point,
+    obstacle: Obstacle,
+    inflation: number,
+  ): boolean => {
+    const local = rotateIntoObstacle(point, obstacle)
+    return (
+      Math.abs(local.x) <= obstacle.width / 2 + inflation + EPSILON &&
+      Math.abs(local.y) <= obstacle.height / 2 + inflation + EPSILON
+    )
+  }
+
   const pointToSegmentDistance = (
     point: Point,
     start: Point,
@@ -117,6 +129,7 @@ export const validateCandidateGeometry = (
 
   const isSegmentValid = (
     segment: CopperSegment,
+    parsed: ParsedTrace,
     context: CandidateGeometryContext,
     immutableCopper: ReturnType<typeof getImmutableCopper>,
   ): boolean => {
@@ -135,23 +148,36 @@ export const validateCandidateGeometry = (
     for (const obstacle of context.obstacles) {
       if (!isObstacleOnLayer(obstacle, segment.layer, context.layerCount))
         continue
-      const terminalPoints =
-        segment.terminal === "both"
-          ? [segment.start, segment.end]
-          : segment.terminal === "start"
-            ? [segment.start]
-            : segment.terminal === "end"
-              ? [segment.end]
-              : []
+      const startTerminal = parsed.points[0]!
+      const endTerminal = parsed.points.at(-1)!
+      const inflation = radius + segment.width
+      const progressesOutOfStart =
+        pointTouchesInflatedObstacle(startTerminal, obstacle, 0) &&
+        (pointTouchesInflatedObstacle(segment.start, obstacle, inflation) ||
+          pointTouchesInflatedObstacle(segment.end, obstacle, inflation)) &&
+        Math.hypot(
+          segment.end.x - startTerminal.x,
+          segment.end.y - startTerminal.y,
+        ) >=
+          Math.hypot(
+            segment.start.x - startTerminal.x,
+            segment.start.y - startTerminal.y,
+          )
+      const progressesIntoEnd =
+        pointTouchesInflatedObstacle(endTerminal, obstacle, 0) &&
+        (pointTouchesInflatedObstacle(segment.start, obstacle, inflation) ||
+          pointTouchesInflatedObstacle(segment.end, obstacle, inflation)) &&
+        Math.hypot(
+          segment.end.x - endTerminal.x,
+          segment.end.y - endTerminal.y,
+        ) <=
+          Math.hypot(
+            segment.start.x - endTerminal.x,
+            segment.start.y - endTerminal.y,
+          )
       const exitsConnectedTerminalObstacle =
         obstacle.connectedTo.includes(segment.connectionName) &&
-        terminalPoints.some((terminalPoint) => {
-          const localTerminal = rotateIntoObstacle(terminalPoint, obstacle)
-          return (
-            Math.abs(localTerminal.x) <= obstacle.width / 2 + EPSILON &&
-            Math.abs(localTerminal.y) <= obstacle.height / 2 + EPSILON
-          )
-        })
+        (progressesOutOfStart || progressesIntoEnd)
       if (
         !exitsConnectedTerminalObstacle &&
         segmentTouchesInflatedObstacle(
@@ -373,7 +399,7 @@ export const validateCandidateGeometry = (
   for (const parsed of [first, second]) {
     if (
       parsed.segments.some(
-        (segment) => !isSegmentValid(segment, context, immutableCopper),
+        (segment) => !isSegmentValid(segment, parsed, context, immutableCopper),
       ) ||
       parsed.vias.some((via) => !isViaValid(via, context, immutableCopper))
     )
