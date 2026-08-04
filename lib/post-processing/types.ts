@@ -26,7 +26,7 @@ export type PostProcessingSolverParams = {
 
 export type PostProcessingSolverOutput = {
   hdRoutes: HighDensityRoute[]
-  postProcessingErrors: PostProcessingError[]
+  postProcessingErrors?: PostProcessingError[]
 }
 
 export type PostProcessingError = {
