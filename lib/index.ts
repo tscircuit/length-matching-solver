@@ -7,6 +7,8 @@ export {
   DifferentialPairRoutingError,
   PostProcessingSolver,
   type DifferentialPairRoutingFailureReason,
+  type GetPostProcessingOutputOptions,
+  type NonIdealPostProcessingIssue,
   type PostProcessingGridConfig,
   type PostProcessingSolverOutput,
   type PostProcessingSolverParams,

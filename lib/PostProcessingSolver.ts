@@ -23,6 +23,8 @@ import {
 import { HdRoutePassthroughSolver } from "./post-processing/solvers/HdRoutePassthroughSolver"
 import { HdRouteReconstructionSolver } from "./post-processing/solvers/HdRouteReconstructionSolver"
 import type {
+  GetPostProcessingOutputOptions,
+  NonIdealPostProcessingIssue,
   PostProcessingModel,
   PostProcessingSolverOutput,
   PostProcessingSolverParams,
@@ -40,6 +42,8 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   private lengthMatchingBinding: LengthMatchingBinding | null = null
   private readonly model!: PostProcessingModel
   private readonly isPassthrough: boolean
+  private fallbackOutput: PostProcessingSolverOutput | null = null
+  private readonly nonIdealRouteIssues: NonIdealPostProcessingIssue[] = []
 
   override pipelineDef: PipelineStep<BaseSolver>[] = [
     definePipelineStep(
@@ -132,53 +136,57 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     this.isPassthrough =
       Array.isArray(params.differentialPairs) &&
       params.differentialPairs.length === 0
-    if (this.isPassthrough) {
-      validatePostProcessingParams(params, {
-        validateHdRouteGeometry: false,
-      })
-      this.pipelineDef = [
-        definePipelineStep(
-          "hdRoutePassthroughSolver",
-          HdRoutePassthroughSolver,
-          (pipeline: PostProcessingSolver) => [
-            { hdRoutes: pipeline.inputProblem.hdRoutes },
-          ],
-          {
-            onSolved: (pipeline: PostProcessingSolver) => {
-              pipeline.stats = {
-                phase: "complete",
-                acceptedPairCount: 0,
-              }
+    try {
+      if (this.isPassthrough) {
+        validatePostProcessingParams(params, {
+          validateHdRouteGeometry: false,
+        })
+        this.pipelineDef = [
+          definePipelineStep(
+            "hdRoutePassthroughSolver",
+            HdRoutePassthroughSolver,
+            (pipeline: PostProcessingSolver) => [
+              { hdRoutes: pipeline.inputProblem.hdRoutes },
+            ],
+            {
+              onSolved: (pipeline: PostProcessingSolver) => {
+                pipeline.stats = {
+                  phase: "complete",
+                  acceptedPairCount: 0,
+                }
+              },
             },
-          },
-        ),
-      ]
-      this.MAX_ITERATIONS = 3
-      return
-    }
-    validatePostProcessingParams(params, {
-      validateHdRouteGeometry: true,
-    })
-    this.model = createPostProcessingModel(params)
-    const reroutingIterationLimit = getDifferentialPairReroutingIterationLimit(
-      this.model.params,
-    )
-    const simplificationIterationLimit = Math.max(
-      1,
-      params.differentialPairs.length + 1,
-    )
-    const lengthMatchingIterationLimit = 100_000
-    const pipelineLifecycleIterations = 10
-    const pipelineIterationLimit =
-      reroutingIterationLimit +
-      simplificationIterationLimit +
-      lengthMatchingIterationLimit +
-      pipelineLifecycleIterations
-    if (!Number.isSafeInteger(pipelineIterationLimit))
-      throw new Error(
-        "PostProcessingSolver: derived pipeline iteration bound exceeds the safe integer range",
+          ),
+        ]
+        this.MAX_ITERATIONS = 3
+        return
+      }
+      validatePostProcessingParams(params, {
+        validateHdRouteGeometry: true,
+      })
+      this.model = createPostProcessingModel(params)
+      const reroutingIterationLimit =
+        getDifferentialPairReroutingIterationLimit(this.model.params)
+      const simplificationIterationLimit = Math.max(
+        1,
+        params.differentialPairs.length + 1,
       )
-    this.MAX_ITERATIONS = pipelineIterationLimit
+      const lengthMatchingIterationLimit = 100_000
+      const pipelineLifecycleIterations = 10
+      const pipelineIterationLimit =
+        reroutingIterationLimit +
+        simplificationIterationLimit +
+        lengthMatchingIterationLimit +
+        pipelineLifecycleIterations
+      if (!Number.isSafeInteger(pipelineIterationLimit))
+        throw new Error(
+          "PostProcessingSolver: derived pipeline iteration bound exceeds the safe integer range",
+        )
+      this.MAX_ITERATIONS = pipelineIterationLimit
+    } catch (error) {
+      if (!params.allowNonIdealOutput) throw error
+      this.finishWithNonIdealOutput(error, "validation")
+    }
   }
 
   override getSolverName(): string {
@@ -189,24 +197,76 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     return [structuredClone(this.inputProblem)]
   }
 
-  override getOutput(): PostProcessingSolverOutput {
+  override _step(): void {
+    try {
+      super._step()
+    } catch (error) {
+      if (!this.inputProblem.allowNonIdealOutput) throw error
+      this.finishWithNonIdealOutput(error, this.getCurrentStageName())
+      return
+    }
+    if (this.failed && this.inputProblem.allowNonIdealOutput)
+      this.finishWithNonIdealOutput(
+        this.error ?? "PostProcessingSolver failed without an error message",
+        this.getCurrentStageName(),
+      )
+  }
+
+  private finishWithNonIdealOutput(error: unknown, stage: string): void {
+    const message = error instanceof Error ? error.message : String(error)
+    const connectionName = message.match(/(?:HD route|connection) "([^"]+)"/)?.[1]
+    this.nonIdealRouteIssues.push({
+      type: "post_processing_error",
+      stage,
+      message,
+      ...(connectionName ? { connectionName } : {}),
+      returnedRouteSource: "input-hd-routes",
+    })
+    this.fallbackOutput = {
+      hdRoutes: structuredClone(this.inputProblem.hdRoutes),
+    }
+    this.activeSubSolver = null
+    this.error = null
+    this.failed = false
+    this.solved = true
+    this.progress = 1
+    this.stats = { phase: "complete", nonIdealRouteIssueCount: 1 }
+  }
+
+  override getOutput(
+    options: GetPostProcessingOutputOptions = {},
+  ): PostProcessingSolverOutput {
     if (!this.solved)
       throw new Error(
         "PostProcessingSolver: getOutput() called before the solver completed",
       )
-    const output = this.getStageOutput<PostProcessingSolverOutput>(
-      this.isPassthrough
-        ? "hdRoutePassthroughSolver"
-        : "hdRouteReconstructionSolver",
-    )
+    const output =
+      this.fallbackOutput ??
+      this.getStageOutput<PostProcessingSolverOutput>(
+        this.isPassthrough
+          ? "hdRoutePassthroughSolver"
+          : "hdRouteReconstructionSolver",
+      )
     if (!output)
       throw new Error(
         "PostProcessingSolver: completed pipeline is missing reconstruction output",
       )
-    return structuredClone(output)
+    return {
+      ...structuredClone(output),
+      ...(options.includeNonIdealRouteIssues
+        ? { nonIdealRouteIssues: structuredClone(this.nonIdealRouteIssues) }
+        : {}),
+    }
   }
 
   override initialVisualize(): GraphicsObject {
+    if (this.fallbackOutput)
+      return {
+        lines: this.fallbackOutput.hdRoutes.map((route) => ({
+          points: route.route.map(({ x, y }) => ({ x, y })),
+          strokeWidth: route.traceThickness,
+        })),
+      }
     const model = this.isPassthrough
       ? createPostProcessingModel(this.inputProblem)
       : this.model
@@ -223,9 +283,10 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   }
 
   override finalVisualize(): GraphicsObject {
+    if (this.fallbackOutput) return this.initialVisualize()
     const outputModel = createPostProcessingModel({
       ...this.inputProblem,
-      hdRoutes: this.getOutput().hdRoutes,
+      hdRoutes: this.getOutput({ includeNonIdealRouteIssues: true }).hdRoutes,
     })
     const { traces, obstacles, bounds, layerCount } =
       outputModel.params.simpleRouteJson
@@ -245,6 +306,8 @@ export {
   type DifferentialPairRoutingFailureReason,
 } from "./post-processing/errors/DifferentialPairRoutingError"
 export type {
+  GetPostProcessingOutputOptions,
+  NonIdealPostProcessingIssue,
   PostProcessingGridConfig,
   PostProcessingSolverOutput,
   PostProcessingSolverParams,
