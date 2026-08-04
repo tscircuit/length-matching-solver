@@ -3,7 +3,7 @@ import sampleProblem from "../fixtures/sample-15/sample-15.srj.json"
 import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../lib"
 import { getRouteLength } from "../lib/route-geometry"
 
-test("matches short pair segments by adding meanders to both routes", () => {
+test("sample 15", () => {
   // SAFETY: This repository-owned JSON reproduces the short-segment dual-meander regression. The cast restores JSON literals widened by TypeScript module inference.
   const params = sampleProblem as unknown as LengthMatchingSolverParams
   const solver = new LengthMatchingSolver(params)
