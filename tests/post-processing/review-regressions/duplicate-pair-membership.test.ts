@@ -14,7 +14,7 @@ test("reports a connection declared in more than one differential pair", () => {
   }).getOutput()
 
   expect(output.hdRoutes).toEqual(params.hdRoutes)
-  expect(output.nonIdealRouteIssues).toEqual([
+  expect(output.postProcessingErrors).toEqual([
     expect.objectContaining({
       type: "post_processing_error",
       stage: "validation",

@@ -78,7 +78,7 @@ export class HdRouteReconstructionSolver extends BaseSolver {
         })),
       }
     }
-    this.output = { hdRoutes, nonIdealRouteIssues: [] }
+    this.output = { hdRoutes, postProcessingErrors: [] }
     this.stats = { phase: "complete", routeCount: hdRoutes.length }
     this.solved = true
   }

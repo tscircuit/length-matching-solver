@@ -23,8 +23,8 @@ import {
 import { HdRoutePassthroughSolver } from "./post-processing/solvers/HdRoutePassthroughSolver"
 import { HdRouteReconstructionSolver } from "./post-processing/solvers/HdRouteReconstructionSolver"
 import type {
-  NonIdealPostProcessingIssue,
   PostProcessingModel,
+  PostProcessingError,
   PostProcessingSolverOutput,
   PostProcessingSolverParams,
 } from "./post-processing/types"
@@ -42,7 +42,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   private readonly model!: PostProcessingModel
   private readonly isPassthrough: boolean
   private fallbackOutput: PostProcessingSolverOutput | null = null
-  private readonly nonIdealRouteIssues: NonIdealPostProcessingIssue[] = []
+  private readonly postProcessingErrors: PostProcessingError[] = []
 
   override pipelineDef: PipelineStep<BaseSolver>[] = [
     definePipelineStep(
@@ -183,7 +183,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
         )
       this.MAX_ITERATIONS = pipelineIterationLimit
     } catch (error) {
-      this.finishWithNonIdealOutput(error, "validation")
+      this.finishWithErrorOutput(error, "validation")
     }
   }
 
@@ -199,20 +199,20 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     try {
       super._step()
     } catch (error) {
-      this.finishWithNonIdealOutput(error, this.getCurrentStageName())
+      this.finishWithErrorOutput(error, this.getCurrentStageName())
       return
     }
     if (this.failed)
-      this.finishWithNonIdealOutput(
+      this.finishWithErrorOutput(
         this.error ?? "PostProcessingSolver failed without an error message",
         this.getCurrentStageName(),
       )
   }
 
-  private finishWithNonIdealOutput(error: unknown, stage: string): void {
+  private finishWithErrorOutput(error: unknown, stage: string): void {
     const message = error instanceof Error ? error.message : String(error)
     const connectionName = message.match(/(?:HD route|connection) "([^"]+)"/)?.[1]
-    this.nonIdealRouteIssues.push({
+    this.postProcessingErrors.push({
       type: "post_processing_error",
       stage,
       message,
@@ -221,14 +221,14 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     })
     this.fallbackOutput = {
       hdRoutes: structuredClone(this.inputProblem.hdRoutes),
-      nonIdealRouteIssues: [],
+      postProcessingErrors: [],
     }
     this.activeSubSolver = null
     this.error = null
     this.failed = false
     this.solved = true
     this.progress = 1
-    this.stats = { phase: "complete", nonIdealRouteIssueCount: 1 }
+    this.stats = { phase: "complete", postProcessingErrorCount: 1 }
   }
 
   override getOutput(): PostProcessingSolverOutput {
@@ -249,7 +249,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
       )
     return {
       ...structuredClone(output),
-      nonIdealRouteIssues: structuredClone(this.nonIdealRouteIssues),
+      postProcessingErrors: structuredClone(this.postProcessingErrors),
     }
   }
 
@@ -300,7 +300,7 @@ export {
   type DifferentialPairRoutingFailureReason,
 } from "./post-processing/errors/DifferentialPairRoutingError"
 export type {
-  NonIdealPostProcessingIssue,
+  PostProcessingError,
   PostProcessingGridConfig,
   PostProcessingSolverOutput,
   PostProcessingSolverParams,

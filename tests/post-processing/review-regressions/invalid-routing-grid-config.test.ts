@@ -19,7 +19,7 @@ test("reports invalid optional composite routing-grid configuration", () => {
     const output = new PostProcessingSolver(params).getOutput()
 
     expect(output.hdRoutes).toEqual(params.hdRoutes)
-    expect(output.nonIdealRouteIssues).toEqual([
+    expect(output.postProcessingErrors).toEqual([
       expect.objectContaining({
         type: "post_processing_error",
         stage: "validation",

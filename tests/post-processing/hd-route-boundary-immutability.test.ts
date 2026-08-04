@@ -43,7 +43,7 @@ test("keeps the native HD-route input and returned output immutable", () => {
   const outputSnapshot = structuredClone(firstOutput)
   expect(Object.keys(firstOutput)).toEqual([
     "hdRoutes",
-    "nonIdealRouteIssues",
+    "postProcessingErrors",
   ])
   expect(firstOutput.hdRoutes).not.toBe(params.hdRoutes)
   expect(firstOutput.hdRoutes[0]).not.toBe(params.hdRoutes[0])

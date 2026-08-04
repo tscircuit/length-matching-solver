@@ -17,7 +17,7 @@ test("reports a native via span that cannot be represented by its route transiti
   const output = new PostProcessingSolver(params).getOutput()
 
   expect(output.hdRoutes).toEqual(inputRoutes)
-  expect(output.nonIdealRouteIssues).toEqual([
+  expect(output.postProcessingErrors).toEqual([
     expect.objectContaining({
       type: "post_processing_error",
       stage: "validation",

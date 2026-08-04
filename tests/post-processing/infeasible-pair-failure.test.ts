@@ -52,7 +52,7 @@ test("returns the input routes when a pair cannot be rerouted", () => {
   expect(solver.lengthMatchingSolver).toBeUndefined()
   expect(solver.hdRouteReconstructionSolver).toBeUndefined()
   expect(output.hdRoutes).toEqual(hdRoutes)
-  expect(output.nonIdealRouteIssues).toEqual([
+  expect(output.postProcessingErrors).toEqual([
     expect.objectContaining({
       type: "post_processing_error",
       stage: "differentialPairReroutingSolver",

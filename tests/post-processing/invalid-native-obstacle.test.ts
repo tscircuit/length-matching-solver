@@ -20,7 +20,7 @@ test("reports malformed native obstacle geometry at the public boundary", () => 
   const output = new PostProcessingSolver(params).getOutput()
 
   expect(output.hdRoutes).toEqual(inputRoutes)
-  expect(output.nonIdealRouteIssues).toEqual([
+  expect(output.postProcessingErrors).toEqual([
     expect.objectContaining({
       type: "post_processing_error",
       stage: "validation",

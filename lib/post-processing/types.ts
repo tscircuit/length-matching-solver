@@ -26,10 +26,10 @@ export type PostProcessingSolverParams = {
 
 export type PostProcessingSolverOutput = {
   hdRoutes: HighDensityRoute[]
-  nonIdealRouteIssues: NonIdealPostProcessingIssue[]
+  postProcessingErrors: PostProcessingError[]
 }
 
-export type NonIdealPostProcessingIssue = {
+export type PostProcessingError = {
   type: "post_processing_error"
   stage: string
   message: string

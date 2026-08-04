@@ -26,8 +26,8 @@ test("returns input routes when a post-processing stage fails", () => {
   expect(solver.solved).toBe(true)
   expect(solver.failed).toBe(false)
   expect(output.hdRoutes).toEqual(inputRoutes)
-  expect(output.nonIdealRouteIssues).toHaveLength(1)
-  expect(output.nonIdealRouteIssues?.[0]).toMatchObject({
+  expect(output.postProcessingErrors).toHaveLength(1)
+  expect(output.postProcessingErrors[0]).toMatchObject({
     type: "post_processing_error",
     stage: "differentialPairReroutingSolver",
     returnedRouteSource: "input-hd-routes",

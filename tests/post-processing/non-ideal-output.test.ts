@@ -21,7 +21,7 @@ test("returns input routes and structured issues by default", () => {
   expect(solver.failed).toBe(false)
   expect(output).toEqual({
     hdRoutes: inputRoutes,
-    nonIdealRouteIssues: [
+    postProcessingErrors: [
       {
         type: "post_processing_error",
         stage: "validation",

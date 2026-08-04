@@ -11,7 +11,7 @@ test("reports non-positive or non-finite native via diameters", () => {
     const output = new PostProcessingSolver({ ...params, hdRoutes }).getOutput()
 
     expect(output.hdRoutes).toEqual(hdRoutes)
-    expect(output.nonIdealRouteIssues).toEqual([
+    expect(output.postProcessingErrors).toEqual([
       expect.objectContaining({
         type: "post_processing_error",
         stage: "validation",
