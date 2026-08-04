@@ -47,7 +47,44 @@
   ],
   "maximumMeanderDepth": 5,
   "bounds": { "minX": -10, "maxX": -6, "minY": 1, "maxY": 6 },
-  "obstacles": [],
+  "obstacles": [
+    {
+      "obstacleId": "source-trace-14-start-pad",
+      "type": "rect",
+      "layers": ["top"],
+      "center": { "x": -6.99999, "y": 3.800094 },
+      "width": 0.7999984,
+      "height": 0.1999996,
+      "connectedTo": ["source_trace_14"]
+    },
+    {
+      "obstacleId": "source-trace-13-start-pad",
+      "type": "rect",
+      "layers": ["top"],
+      "center": { "x": -6.99999, "y": 3.400044 },
+      "width": 0.7999984,
+      "height": 0.1999996,
+      "connectedTo": ["source_trace_13"]
+    },
+    {
+      "obstacleId": "source-trace-14-end-pad",
+      "type": "rect",
+      "layers": ["top"],
+      "center": { "x": -9.067184, "y": 4.6 },
+      "width": 0.565658,
+      "height": 0.540004,
+      "connectedTo": ["source_trace_14"]
+    },
+    {
+      "obstacleId": "source-trace-13-end-pad",
+      "type": "rect",
+      "layers": ["top"],
+      "center": { "x": -9.067184, "y": 3 },
+      "width": 0.565658,
+      "height": 0.540004,
+      "connectedTo": ["source_trace_13"]
+    }
+  ],
   "obstacleMargin": 0.1,
   "layerCount": 4
 }

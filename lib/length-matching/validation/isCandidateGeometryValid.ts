@@ -84,6 +84,7 @@ export const isCandidateGeometryValid = (input: {
     )
   }
   const connectionName = getLogicalConnectionName(input.route)
+  const routeTerminals = [input.route.route[0], input.route.route.at(-1)]
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
   const obstacles = normalizeOvalObstacles(input.obstacles)
   for (let index = 0; index < input.meanderPoints.length - 1; index++) {
@@ -94,10 +95,17 @@ export const isCandidateGeometryValid = (input: {
         !getObstacleLayerIndexes(obstacle, input.layerCount).includes(start.z)
       )
         continue
-      const isTerminalLead =
-        index === 0 || index === input.meanderPoints.length - 2
-      if (obstacle.connectedTo.includes(connectionName) && isTerminalLead)
-        continue
+      const isConnectedTerminalObstacle =
+        obstacle.connectedTo.includes(connectionName) &&
+        routeTerminals.some(
+          (terminal) =>
+            terminal &&
+            terminal.x >= obstacle.center.x - obstacle.width / 2 &&
+            terminal.x <= obstacle.center.x + obstacle.width / 2 &&
+            terminal.y >= obstacle.center.y - obstacle.height / 2 &&
+            terminal.y <= obstacle.center.y + obstacle.height / 2,
+        )
+      if (isConnectedTerminalObstacle) continue
       if (segmentTouchesInflatedObstacle(start, end, obstacle, obstacleMargin))
         return false
     }
