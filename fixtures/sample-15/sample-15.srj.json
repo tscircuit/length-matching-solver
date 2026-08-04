@@ -1,0 +1,53 @@
+{
+  "hdRoutes": [
+    {
+      "connectionName": "source_trace_14",
+      "traceThickness": 0.15,
+      "viaDiameter": 0.3,
+      "route": [
+        { "x": -6.99999, "y": 3.800094, "z": 0 },
+        { "x": -8.267094, "y": 3.800094, "z": 0 },
+        { "x": -9.067184, "y": 4.6, "z": 0 }
+      ],
+      "vias": []
+    },
+    {
+      "connectionName": "source_trace_13",
+      "traceThickness": 0.15,
+      "viaDiameter": 0.3,
+      "route": [
+        { "x": -6.99999, "y": 3.400044, "z": 0 },
+        { "x": -8.666956, "y": 3.400044, "z": 0 },
+        { "x": -9.067184, "y": 3, "z": 0 }
+      ],
+      "vias": []
+    }
+  ],
+  "originalConnections": [
+    {
+      "name": "source_trace_14",
+      "pointsToConnect": [
+        { "x": -6.99999, "y": 3.800094, "layer": "top" },
+        { "x": -9.067184, "y": 4.6, "layer": "top" }
+      ]
+    },
+    {
+      "name": "source_trace_13",
+      "pointsToConnect": [
+        { "x": -6.99999, "y": 3.400044, "layer": "top" },
+        { "x": -9.067184, "y": 3, "layer": "top" }
+      ]
+    }
+  ],
+  "differentialPairs": [
+    {
+      "connectionNames": ["source_trace_13", "source_trace_14"],
+      "lengthTolerance": 0.15
+    }
+  ],
+  "maximumMeanderDepth": 5,
+  "bounds": { "minX": -10, "maxX": -6, "minY": 1, "maxY": 6 },
+  "obstacles": [],
+  "obstacleMargin": 0.1,
+  "layerCount": 4
+}

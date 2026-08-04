@@ -36,14 +36,23 @@ export const createMeanderCandidates = (input: {
       const end = route.route[segmentIndex + 1]!
       const segmentLength = getSegmentLength(start, end)
       if (segmentLength <= 0 || start.z !== end.z) continue
+      // A single tooth occupies half its pitch; retain the existing conservative
+      // capacity for larger patterns while allowing that compact valid case.
+      const minimumToothCapacity = segmentLength >= toothPitch / 2 ? 1 : 0
       const toothCapacity = Math.min(
-        Math.max(0, Math.floor(segmentLength / toothPitch) - 1),
+        Math.max(
+          minimumToothCapacity,
+          Math.floor(segmentLength / toothPitch) - 1,
+        ),
         input.maxToothCount,
       )
       for (let toothCount = 1; toothCount <= toothCapacity; toothCount++) {
         // Explore the open segment as well as the minimum-clearance footprint.
         // The geometric mean supplies one deterministic constrained compromise.
-        const maximumRelaxedPitch = segmentLength / (toothCount + 1)
+        const maximumRelaxedPitch = Math.max(
+          toothPitch,
+          segmentLength / (toothCount + 1),
+        )
         const pitchOptions = [
           maximumRelaxedPitch,
           Math.sqrt(toothPitch * maximumRelaxedPitch),
