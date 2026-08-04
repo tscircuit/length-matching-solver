@@ -211,7 +211,9 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
 
   private finishWithErrorOutput(error: unknown, stage: string): void {
     const message = error instanceof Error ? error.message : String(error)
-    const connectionName = message.match(/(?:HD route|connection) "([^"]+)"/)?.[1]
+    const connectionName = message.match(
+      /(?:HD route|connection) "([^"]+)"/,
+    )?.[1]
     this.postProcessingErrors.push({
       type: "post_processing_error",
       stage,

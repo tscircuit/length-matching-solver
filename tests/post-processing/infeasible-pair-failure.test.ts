@@ -1,8 +1,5 @@
 import { expect, test } from "bun:test"
-import {
-  PostProcessingSolver,
-  type HighDensityRoute,
-} from "../../lib"
+import { PostProcessingSolver, type HighDensityRoute } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
 test("returns the input routes when a pair cannot be rerouted", () => {

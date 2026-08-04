@@ -41,10 +41,7 @@ test("keeps the native HD-route input and returned output immutable", () => {
 
   const firstOutput = solver.getOutput()
   const outputSnapshot = structuredClone(firstOutput)
-  expect(Object.keys(firstOutput)).toEqual([
-    "hdRoutes",
-    "postProcessingErrors",
-  ])
+  expect(Object.keys(firstOutput)).toEqual(["hdRoutes", "postProcessingErrors"])
   expect(firstOutput.hdRoutes).not.toBe(params.hdRoutes)
   expect(firstOutput.hdRoutes[0]).not.toBe(params.hdRoutes[0])
   expect(firstOutput.hdRoutes[0]!.route).not.toBe(params.hdRoutes[0]!.route)
