@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { PostProcessingSolver, type PostProcessingSolverParams } from "../../../lib"
+import {
+  PostProcessingSolver,
+  type PostProcessingSolverParams,
+} from "../../../lib"
 import { createPostProcessingModel } from "../../../lib/post-processing/binding/createPostProcessingModel"
 import { createPostProcessingVisualization } from "../../../lib/post-processing/visualization/createPostProcessingVisualization"
 
