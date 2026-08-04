@@ -20,7 +20,10 @@ export class HdRoutePassthroughSolver extends BaseSolver {
   }
 
   override _step(): void {
-    this.output = { hdRoutes: structuredClone(this.params.hdRoutes) }
+    this.output = {
+      hdRoutes: structuredClone(this.params.hdRoutes),
+      nonIdealRouteIssues: [],
+    }
     this.stats = { phase: "complete", routeCount: this.output.hdRoutes.length }
     this.solved = true
   }

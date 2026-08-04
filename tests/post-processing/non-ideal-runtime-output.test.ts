@@ -8,7 +8,6 @@ test("returns input routes when a post-processing stage fails", () => {
   const inputRoutes = structuredClone(params.hdRoutes)
   const solver = new PostProcessingSolver({
     ...params,
-    allowNonIdealOutput: true,
     obstacles: [
       {
         type: "rect",
@@ -22,7 +21,7 @@ test("returns input routes when a post-processing stage fails", () => {
   })
 
   solver.solve()
-  const output = solver.getOutput({ includeNonIdealRouteIssues: true })
+  const output = solver.getOutput()
 
   expect(solver.solved).toBe(true)
   expect(solver.failed).toBe(false)

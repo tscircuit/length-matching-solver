@@ -23,7 +23,6 @@ import {
 import { HdRoutePassthroughSolver } from "./post-processing/solvers/HdRoutePassthroughSolver"
 import { HdRouteReconstructionSolver } from "./post-processing/solvers/HdRouteReconstructionSolver"
 import type {
-  GetPostProcessingOutputOptions,
   NonIdealPostProcessingIssue,
   PostProcessingModel,
   PostProcessingSolverOutput,
@@ -184,7 +183,6 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
         )
       this.MAX_ITERATIONS = pipelineIterationLimit
     } catch (error) {
-      if (!params.allowNonIdealOutput) throw error
       this.finishWithNonIdealOutput(error, "validation")
     }
   }
@@ -201,11 +199,10 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     try {
       super._step()
     } catch (error) {
-      if (!this.inputProblem.allowNonIdealOutput) throw error
       this.finishWithNonIdealOutput(error, this.getCurrentStageName())
       return
     }
-    if (this.failed && this.inputProblem.allowNonIdealOutput)
+    if (this.failed)
       this.finishWithNonIdealOutput(
         this.error ?? "PostProcessingSolver failed without an error message",
         this.getCurrentStageName(),
@@ -224,6 +221,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     })
     this.fallbackOutput = {
       hdRoutes: structuredClone(this.inputProblem.hdRoutes),
+      nonIdealRouteIssues: [],
     }
     this.activeSubSolver = null
     this.error = null
@@ -233,9 +231,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     this.stats = { phase: "complete", nonIdealRouteIssueCount: 1 }
   }
 
-  override getOutput(
-    options: GetPostProcessingOutputOptions = {},
-  ): PostProcessingSolverOutput {
+  override getOutput(): PostProcessingSolverOutput {
     if (!this.solved)
       throw new Error(
         "PostProcessingSolver: getOutput() called before the solver completed",
@@ -253,9 +249,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
       )
     return {
       ...structuredClone(output),
-      ...(options.includeNonIdealRouteIssues
-        ? { nonIdealRouteIssues: structuredClone(this.nonIdealRouteIssues) }
-        : {}),
+      nonIdealRouteIssues: structuredClone(this.nonIdealRouteIssues),
     }
   }
 
@@ -286,7 +280,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     if (this.fallbackOutput) return this.initialVisualize()
     const outputModel = createPostProcessingModel({
       ...this.inputProblem,
-      hdRoutes: this.getOutput({ includeNonIdealRouteIssues: true }).hdRoutes,
+      hdRoutes: this.getOutput().hdRoutes,
     })
     const { traces, obstacles, bounds, layerCount } =
       outputModel.params.simpleRouteJson
@@ -306,7 +300,6 @@ export {
   type DifferentialPairRoutingFailureReason,
 } from "./post-processing/errors/DifferentialPairRoutingError"
 export type {
-  GetPostProcessingOutputOptions,
   NonIdealPostProcessingIssue,
   PostProcessingGridConfig,
   PostProcessingSolverOutput,

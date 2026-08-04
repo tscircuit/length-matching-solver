@@ -5,7 +5,7 @@ import {
 } from "../../../lib"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
-test("rejects invalid optional composite routing-grid configuration", () => {
+test("reports invalid optional composite routing-grid configuration", () => {
   const invalidConfigurations: PostProcessingGridConfig[] = [
     { innerGridStep: 0 },
     { innerGridStep: 0.00001 },
@@ -16,8 +16,16 @@ test("rejects invalid optional composite routing-grid configuration", () => {
   for (const routingGrid of invalidConfigurations) {
     const { simpleRouteJson: _fixture, ...params } =
       createPostProcessingTestParams({ routingGrid })
-    expect(() => new PostProcessingSolver(params)).toThrow(
-      /PostProcessingSolver: routingGrid/,
-    )
+    const output = new PostProcessingSolver(params).getOutput()
+
+    expect(output.hdRoutes).toEqual(params.hdRoutes)
+    expect(output.nonIdealRouteIssues).toEqual([
+      expect.objectContaining({
+        type: "post_processing_error",
+        stage: "validation",
+        message: expect.stringMatching(/PostProcessingSolver: routingGrid/),
+        returnedRouteSource: "input-hd-routes",
+      }),
+    ])
   }
 })

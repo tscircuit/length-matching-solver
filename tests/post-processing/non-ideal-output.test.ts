@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { PostProcessingSolver } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
-test("returns input routes and structured issues when non-ideal output is allowed", () => {
+test("returns input routes and structured issues by default", () => {
   const { simpleRouteJson: _fixture, ...params } =
     createPostProcessingTestParams()
   params.layerCount = 3
@@ -14,19 +14,12 @@ test("returns input routes and structured issues when non-ideal output is allowe
   params.hdRoutes[0]!.vias = [{ x: 0, y: 2, zLayers: [0, 1, 2] }]
   const inputRoutes = structuredClone(params.hdRoutes)
 
-  const solver = new PostProcessingSolver({
-    ...params,
-    allowNonIdealOutput: true,
-  })
-  const defaultOutput = solver.getOutput()
-  const outputWithIssues = solver.getOutput({
-    includeNonIdealRouteIssues: true,
-  })
+  const solver = new PostProcessingSolver(params)
+  const output = solver.getOutput()
 
   expect(solver.solved).toBe(true)
   expect(solver.failed).toBe(false)
-  expect(defaultOutput).toEqual({ hdRoutes: inputRoutes })
-  expect(outputWithIssues).toEqual({
+  expect(output).toEqual({
     hdRoutes: inputRoutes,
     nonIdealRouteIssues: [
       {

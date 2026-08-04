@@ -22,13 +22,11 @@ export type PostProcessingSolverParams = {
   layerCount: number
   allowViaInPad?: boolean
   routingGrid?: PostProcessingGridConfig
-  /** Return the input routes with diagnostics when post-processing fails. */
-  allowNonIdealOutput?: boolean
 }
 
 export type PostProcessingSolverOutput = {
   hdRoutes: HighDensityRoute[]
-  nonIdealRouteIssues?: NonIdealPostProcessingIssue[]
+  nonIdealRouteIssues: NonIdealPostProcessingIssue[]
 }
 
 export type NonIdealPostProcessingIssue = {
@@ -37,10 +35,6 @@ export type NonIdealPostProcessingIssue = {
   message: string
   connectionName?: string
   returnedRouteSource: "input-hd-routes"
-}
-
-export type GetPostProcessingOutputOptions = {
-  includeNonIdealRouteIssues?: boolean
 }
 
 /** Private simplified-trace model used by the coupled-routing algorithms. */
