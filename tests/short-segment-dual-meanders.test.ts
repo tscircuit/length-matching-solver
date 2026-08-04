@@ -10,11 +10,23 @@ test("matches short pair segments by adding meanders to both routes", () => {
 
   solver.solve()
 
-  const originalLongerRoute = params.hdRoutes[0]
-  const originalShorterRoute = params.hdRoutes[1]
-  const matchedLongerRoute = solver.matchedHdRoutes[0]
-  const matchedShorterRoute = solver.matchedHdRoutes[1]
-  const pair = params.differentialPairs?.[0]
+  const originalLongerRoute = params.hdRoutes.find(
+    (route) => route.connectionName === "source_trace_14",
+  )
+  const originalShorterRoute = params.hdRoutes.find(
+    (route) => route.connectionName === "source_trace_13",
+  )
+  const matchedLongerRoute = solver.matchedHdRoutes.find(
+    (route) => route.connectionName === "source_trace_14",
+  )
+  const matchedShorterRoute = solver.matchedHdRoutes.find(
+    (route) => route.connectionName === "source_trace_13",
+  )
+  const pair = params.differentialPairs?.find(
+    ({ connectionNames }) =>
+      connectionNames.includes("source_trace_13") &&
+      connectionNames.includes("source_trace_14"),
+  )
   if (
     !originalLongerRoute ||
     !originalShorterRoute ||
@@ -34,5 +46,6 @@ test("matches short pair segments by adding meanders to both routes", () => {
       getRouteLength(matchedLongerRoute) - getRouteLength(matchedShorterRoute),
     ),
   ).toBeLessThanOrEqual(pair.lengthTolerance)
+  expect(solver.stats.mode).toBe("dual-meander")
   expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
 })
