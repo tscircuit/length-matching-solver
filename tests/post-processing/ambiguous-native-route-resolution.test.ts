@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { PostProcessingSolver } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
-test("requires pair members to directly name one HD route", () => {
+test("reports pair members that do not directly name one HD route", () => {
   const { simpleRouteJson: _fixture, ...params } =
     createPostProcessingTestParams()
   params.hdRoutes[0]!.connectionName = "P_SEGMENT_A"
@@ -11,8 +11,19 @@ test("requires pair members to directly name one HD route", () => {
     ...structuredClone(params.hdRoutes[0]!),
     connectionName: "P_SEGMENT_B",
   })
+  const inputRoutes = structuredClone(params.hdRoutes)
 
-  expect(() => new PostProcessingSolver(params)).toThrow(
-    'PostProcessingSolver: differential pair connection "P" must resolve to exactly one HD route, got 0',
-  )
+  const output = new PostProcessingSolver(params).getOutput()
+
+  expect(output.hdRoutes).toEqual(inputRoutes)
+  expect(output.postProcessingErrors).toEqual([
+    expect.objectContaining({
+      type: "post_processing_error",
+      stage: "validation",
+      message:
+        'PostProcessingSolver: differential pair connection "P" must resolve to exactly one HD route, got 0',
+      connectionName: "P",
+      returnedRouteSource: "input-hd-routes",
+    }),
+  ])
 })

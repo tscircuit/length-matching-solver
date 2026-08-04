@@ -1,12 +1,8 @@
 import { expect, test } from "bun:test"
-import {
-  DifferentialPairRoutingError,
-  PostProcessingSolver,
-  type HighDensityRoute,
-} from "../../lib"
+import { PostProcessingSolver, type HighDensityRoute } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
-test("throws a pair-specific error and stops before processing the next pair", () => {
+test("returns the input routes when a pair cannot be rerouted", () => {
   const { simpleRouteJson: _fixture, ...params } =
     createPostProcessingTestParams()
   const laterRoutes = params.hdRoutes.map(
@@ -16,9 +12,10 @@ test("throws a pair-specific error and stops before processing the next pair", (
       route: hdRoute.route.map((point) => ({ ...point, y: point.y + 10 })),
     }),
   )
+  const hdRoutes = [...params.hdRoutes, ...laterRoutes]
   const solver = new PostProcessingSolver({
     ...params,
-    hdRoutes: [...params.hdRoutes, ...laterRoutes],
+    hdRoutes,
     differentialPairs: [
       { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
       {
@@ -38,20 +35,11 @@ test("throws a pair-specific error and stops before processing the next pair", (
     ],
   })
 
-  let thrown: unknown
-  try {
-    solver.solve()
-  } catch (error) {
-    thrown = error
-  }
+  solver.solve()
+  const output = solver.getOutput()
 
-  expect(thrown).toBeInstanceOf(DifferentialPairRoutingError)
-  if (!(thrown instanceof DifferentialPairRoutingError)) throw thrown
-  expect(thrown.name).toBe("DifferentialPairRoutingError")
-  expect(thrown.connectionNames).toEqual(["P", "N"])
-  expect(thrown.reason).toBe("no-valid-candidate")
-  expect(solver.failed).toBe(true)
-  expect(solver.solved).toBe(false)
+  expect(solver.failed).toBe(false)
+  expect(solver.solved).toBe(true)
   expect(solver.differentialPairReroutingSolver?.failed).toBe(true)
   expect(
     solver.differentialPairReroutingSolver?.computeProgress(),
@@ -60,5 +48,12 @@ test("throws a pair-specific error and stops before processing the next pair", (
   expect(solver.fortyFiveDegreeSimplificationSolver).toBeUndefined()
   expect(solver.lengthMatchingSolver).toBeUndefined()
   expect(solver.hdRouteReconstructionSolver).toBeUndefined()
-  expect(() => solver.getOutput()).toThrow(/before the solver completed/)
+  expect(output.hdRoutes).toEqual(hdRoutes)
+  expect(output.postProcessingErrors).toEqual([
+    expect.objectContaining({
+      type: "post_processing_error",
+      stage: "differentialPairReroutingSolver",
+      returnedRouteSource: "input-hd-routes",
+    }),
+  ])
 })

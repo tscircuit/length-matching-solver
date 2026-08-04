@@ -26,6 +26,15 @@ export type PostProcessingSolverParams = {
 
 export type PostProcessingSolverOutput = {
   hdRoutes: HighDensityRoute[]
+  postProcessingErrors?: PostProcessingError[]
+}
+
+export type PostProcessingError = {
+  type: "post_processing_error"
+  stage: string
+  message: string
+  connectionName?: string
+  returnedRouteSource: "input-hd-routes"
 }
 
 /** Private simplified-trace model used by the coupled-routing algorithms. */

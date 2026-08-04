@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { PostProcessingSolver } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
-test("rejects malformed native obstacle geometry at the public boundary", () => {
+test("reports malformed native obstacle geometry at the public boundary", () => {
   const { simpleRouteJson: _fixture, ...params } =
     createPostProcessingTestParams()
   params.obstacles = [
@@ -15,8 +15,17 @@ test("rejects malformed native obstacle geometry at the public boundary", () => 
       connectedTo: [],
     },
   ]
+  const inputRoutes = structuredClone(params.hdRoutes)
 
-  expect(() => new PostProcessingSolver(params)).toThrow(
-    "PostProcessingSolver: obstacle declaration is invalid",
-  )
+  const output = new PostProcessingSolver(params).getOutput()
+
+  expect(output.hdRoutes).toEqual(inputRoutes)
+  expect(output.postProcessingErrors).toEqual([
+    expect.objectContaining({
+      type: "post_processing_error",
+      stage: "validation",
+      message: "PostProcessingSolver: obstacle declaration is invalid",
+      returnedRouteSource: "input-hd-routes",
+    }),
+  ])
 })
