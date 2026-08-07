@@ -30,7 +30,16 @@ export type LengthMatchingSolverParams = {
   colorMap?: Record<string, string>
 }
 
-/** Routed geometry after every requested differential pair has been matched. */
+/** A recoverable failure encountered while matching one differential pair. */
+export type LengthMatchingError = {
+  type: "length-matching-error"
+  message: string
+  connectionNames: [string, string] | null
+  usedBestEffortRoute: boolean
+}
+
+/** Best-effort routed geometry and every recoverable matching error. */
 export type LengthMatchingSolverOutput = {
   matchedHdRoutes: HighDensityRoute[]
+  errors: LengthMatchingError[]
 }

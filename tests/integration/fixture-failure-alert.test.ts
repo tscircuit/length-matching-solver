@@ -3,7 +3,7 @@ import sampleProblem from "../../fixtures/sample-03/sample-03.srj.json"
 import { AlertingLengthMatchingSolver } from "../../fixtures/alerting-length-matching-solver"
 import type { LengthMatchingSolverParams } from "../../lib"
 
-test("reports an unsolved fixture through the browser alert and failed state", () => {
+test("reports an unsolved fixture through structured output", () => {
   const originalWindow = globalThis.window
   let alertMessage = ""
   Object.defineProperty(globalThis, "window", {
@@ -21,9 +21,12 @@ test("reports an unsolved fixture through the browser alert and failed state", (
     const solver = new AlertingLengthMatchingSolver(params)
     solver.solve()
 
-    expect(solver.failed).toBe(true)
-    expect(solver.solved).toBe(false)
-    expect(alertMessage).toContain("linear regression exhausted")
+    expect(solver.failed).toBe(false)
+    expect(solver.solved).toBe(true)
+    expect(alertMessage).toBe("")
+    expect(solver.getOutput().errors[0]?.message).toContain(
+      "linear regression exhausted",
+    )
   } finally {
     Object.defineProperty(globalThis, "window", {
       configurable: true,

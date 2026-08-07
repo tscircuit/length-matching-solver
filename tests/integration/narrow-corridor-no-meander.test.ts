@@ -5,13 +5,24 @@ import {
   type LengthMatchingSolverParams,
 } from "../../lib"
 
-test("rejects length matching when close keepouts leave no room for a meander", () => {
+test("returns the original route and an error when no meander fits", () => {
   // SAFETY: This repository-owned JSON is an intentionally unsolvable narrow-corridor fixture. The cast restores JSON literals widened by TypeScript module inference.
   const params = sampleProblem as unknown as LengthMatchingSolverParams
   const solver = new LengthMatchingSolver(params)
 
-  expect(() => solver.solve()).toThrow(
-    'linear regression exhausted all segment/tooth combinations for "corridor_n"',
-  )
-  expect(solver.solved).toBe(false)
+  solver.solve()
+
+  expect(solver.solved).toBe(true)
+  expect(solver.failed).toBe(false)
+  const output = solver.getOutput()
+  expect(output.matchedHdRoutes).toEqual(params.hdRoutes)
+  expect(output.errors).toEqual([
+    {
+      type: "length-matching-error",
+      message:
+        'LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "corridor_n"; required 2.0000mm',
+      connectionNames: ["corridor_p", "corridor_n"],
+      usedBestEffortRoute: false,
+    },
+  ])
 })
