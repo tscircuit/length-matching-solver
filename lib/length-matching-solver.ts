@@ -27,6 +27,7 @@ import {
   selectPartialMeanderPlan,
 } from "./length-matching/multi-segment-plan"
 import type {
+  LengthMatchingError,
   LengthMatchingSolverOutput,
   LengthMatchingSolverParams,
 } from "./length-matching/types"
@@ -42,6 +43,9 @@ export class LengthMatchingSolver extends BaseSolver {
   private currentAttempt: RegressionAttempt | null = null
   private config: LengthMatchingConfig | null = null
   private candidatesTried = 0
+  private readonly errors: LengthMatchingError[] = []
+  private pairInputRoutes: HighDensityRoute[] | null = null
+  private pairConnectionNames: [string, string] | null = null
 
   constructor(private readonly params: LengthMatchingSolverParams) {
     super()
@@ -63,6 +67,8 @@ export class LengthMatchingSolver extends BaseSolver {
       this.solved = true
       return
     }
+    this.pairInputRoutes = structuredClone(this.matchedHdRoutes)
+    this.pairConnectionNames = [...pair.connectionNames]
     validatePair(pair, this.params.originalConnections)
     const firstIndexes = findConnectionRouteIndexes(
       this.matchedHdRoutes,
@@ -72,7 +78,11 @@ export class LengthMatchingSolver extends BaseSolver {
       this.matchedHdRoutes,
       pair.connectionNames[1],
     )
-    if (firstIndexes.length === 0 && secondIndexes.length === 0) return
+    if (firstIndexes.length === 0 && secondIndexes.length === 0) {
+      this.pairInputRoutes = null
+      this.pairConnectionNames = null
+      return
+    }
     if (firstIndexes.length === 0 || secondIndexes.length === 0)
       throw new Error(
         `LengthMatchingSolver: differential pair ${pair.connectionNames.join("/")} has routed geometry for only one connection`,
@@ -83,7 +93,11 @@ export class LengthMatchingSolver extends BaseSolver {
       secondIndexes,
     )
     const difference = Math.abs(firstLength - secondLength)
-    if (difference <= pair.lengthTolerance) return
+    if (difference <= pair.lengthTolerance) {
+      this.pairInputRoutes = null
+      this.pairConnectionNames = null
+      return
+    }
     const firstIsShorter = firstLength < secondLength
     const shorterConnectionName = pair.connectionNames[firstIsShorter ? 0 : 1]
     const longerConnectionName = pair.connectionNames[firstIsShorter ? 1 : 0]
@@ -356,13 +370,52 @@ export class LengthMatchingSolver extends BaseSolver {
     return this.config
   }
 
-  override _step(): void {
-    this.getConfig()
-    if (!this.activePair) {
-      this.startNextPair()
-      return
+  private recoverFromMatchingError(error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error)
+    const bestPartialAttempt = this.activePair?.partialAttempts.reduce<
+      RegressionAttempt | undefined
+    >((best, attempt) => {
+      if (!best || attempt.addedLength > best.addedLength) return attempt
+      if (
+        attempt.addedLength === best.addedLength &&
+        attempt.qualityScore > best.qualityScore
+      )
+        return attempt
+      return best
+    }, undefined)
+    if (this.pairInputRoutes) this.matchedHdRoutes = this.pairInputRoutes
+    if (bestPartialAttempt) {
+      const route = this.matchedHdRoutes[bestPartialAttempt.routeIndex]
+      if (route)
+        this.matchedHdRoutes[bestPartialAttempt.routeIndex] = {
+          ...route,
+          route: bestPartialAttempt.predictedRoute,
+        }
     }
-    this.tryCandidate(this.activePair)
+    this.errors.push({
+      type: "length-matching-error",
+      message,
+      connectionNames: this.pairConnectionNames ?? undefined,
+      usedBestEffortRoute: bestPartialAttempt !== undefined,
+    })
+    this.activePair = null
+    this.currentAttempt = null
+    this.pairInputRoutes = null
+    this.pairConnectionNames = null
+    if (!this.config) this.solved = true
+  }
+
+  override _step(): void {
+    try {
+      this.getConfig()
+      if (!this.activePair) {
+        this.startNextPair()
+        return
+      }
+      this.tryCandidate(this.activePair)
+    } catch (error) {
+      this.recoverFromMatchingError(error)
+    }
   }
 
   override getConstructorParams(): [LengthMatchingSolverParams] {
@@ -374,7 +427,10 @@ export class LengthMatchingSolver extends BaseSolver {
       throw new Error(
         "LengthMatchingSolver: getOutput() called before the solver completed",
       )
-    return { matchedHdRoutes: this.matchedHdRoutes }
+    return {
+      matchedHdRoutes: structuredClone(this.matchedHdRoutes),
+      errors: structuredClone(this.errors),
+    }
   }
 
   computeProgress(): number {
@@ -406,6 +462,7 @@ export class LengthMatchingSolver extends BaseSolver {
 }
 
 export type {
+  LengthMatchingError,
   LengthMatchingSolverOutput,
   LengthMatchingSolverParams,
 } from "./length-matching/types"
