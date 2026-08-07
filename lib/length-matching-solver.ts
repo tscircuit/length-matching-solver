@@ -371,32 +371,45 @@ export class LengthMatchingSolver extends BaseSolver {
   }
 
   private recoverFromMatchingError(error: unknown): void {
-    const message = error instanceof Error ? error.message : String(error)
-    const bestPartialAttempt = this.activePair?.partialAttempts.reduce<
-      RegressionAttempt | undefined
-    >((best, attempt) => {
-      if (!best || attempt.addedLength > best.addedLength) return attempt
-      if (
-        attempt.addedLength === best.addedLength &&
-        attempt.qualityScore > best.qualityScore
-      )
-        return attempt
-      return best
-    }, undefined)
+    let message = String(error)
+    if (error instanceof Error) message = error.message
+
+    let bestPartialAttempt: RegressionAttempt | null = null
+    if (this.activePair) {
+      for (const attempt of this.activePair.partialAttempts) {
+        if (!bestPartialAttempt) {
+          bestPartialAttempt = attempt
+          continue
+        }
+        if (attempt.addedLength > bestPartialAttempt.addedLength) {
+          bestPartialAttempt = attempt
+          continue
+        }
+        if (
+          attempt.addedLength === bestPartialAttempt.addedLength &&
+          attempt.qualityScore > bestPartialAttempt.qualityScore
+        )
+          bestPartialAttempt = attempt
+      }
+    }
+
     if (this.pairInputRoutes) this.matchedHdRoutes = this.pairInputRoutes
+    let usedBestEffortRoute = false
     if (bestPartialAttempt) {
       const route = this.matchedHdRoutes[bestPartialAttempt.routeIndex]
-      if (route)
+      if (route) {
         this.matchedHdRoutes[bestPartialAttempt.routeIndex] = {
           ...route,
           route: bestPartialAttempt.predictedRoute,
         }
+        usedBestEffortRoute = true
+      }
     }
     this.errors.push({
       type: "length-matching-error",
       message,
-      connectionNames: this.pairConnectionNames ?? undefined,
-      usedBestEffortRoute: bestPartialAttempt !== undefined,
+      connectionNames: this.pairConnectionNames,
+      usedBestEffortRoute,
     })
     this.activePair = null
     this.currentAttempt = null

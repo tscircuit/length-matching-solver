@@ -34,7 +34,7 @@ export type LengthMatchingSolverParams = {
 export type LengthMatchingError = {
   type: "length-matching-error"
   message: string
-  connectionNames?: [string, string]
+  connectionNames: [string, string] | null
   usedBestEffortRoute: boolean
 }
 
