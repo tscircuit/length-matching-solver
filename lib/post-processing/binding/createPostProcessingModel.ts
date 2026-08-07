@@ -3,6 +3,7 @@ import type {
   SimplifiedPcbTraceRoutePoint,
 } from "../../types"
 import { getLayerName } from "../geometry/getLayerName"
+import { normalizeOvalObstacles } from "../../obstacles/normalizeOvalObstacles"
 import type { PostProcessingModel, PostProcessingSolverParams } from "../types"
 
 /** Adapt native HD routes to the private simplified-copper routing model. */
@@ -172,7 +173,7 @@ export const createPostProcessingModel = (
       }
     },
   )
-  const obstacles = structuredClone(params.obstacles)
+  const obstacles = normalizeOvalObstacles(params.obstacles)
   for (
     let hdRouteIndex = 0;
     hdRouteIndex < params.hdRoutes.length;
@@ -203,6 +204,9 @@ export const createPostProcessingModel = (
         obstacles,
         bounds: structuredClone(params.bounds),
         layerCount: params.layerCount,
+        ...(params.allowViaInPad !== undefined
+          ? { allowViaInPad: params.allowViaInPad }
+          : {}),
       },
       ...(params.routingGrid
         ? { routingGrid: structuredClone(params.routingGrid) }

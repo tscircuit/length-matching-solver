@@ -1,5 +1,6 @@
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
+import { normalizeOvalObstacles } from "../../obstacles/normalizeOvalObstacles"
 import type { HighDensityRoute, Obstacle, RoutePoint } from "../../types"
 import { getLogicalConnectionName } from "../connection-routes"
 
@@ -84,10 +85,11 @@ export const isCandidateGeometryValid = (input: {
   }
   const connectionName = getLogicalConnectionName(input.route)
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
+  const obstacles = normalizeOvalObstacles(input.obstacles)
   for (let index = 0; index < input.meanderPoints.length - 1; index++) {
     const start = input.meanderPoints[index]!
     const end = input.meanderPoints[index + 1]!
-    for (const obstacle of input.obstacles) {
+    for (const obstacle of obstacles) {
       if (
         !getObstacleLayerIndexes(obstacle, input.layerCount).includes(start.z)
       )
