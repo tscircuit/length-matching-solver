@@ -67,6 +67,8 @@ you can debug—it is silently wrong routed geometry.
 - Define types near the start of new code so variables, function parameters,
   and return values have explicit types.
 - Always define function return types in new code.
+- Do not use ternary conditional expressions in new or modified code. Use
+  explicit variables and `if` statements instead.
 - Structure types so invalid states are not representable where practical.
 - Keep implementation details private wherever possible. Public functions and
   classes should be thin entry points that validate inputs and imperatively
