@@ -1,4 +1,5 @@
 import type { PostProcessingGridConfig } from "../types"
+import { PostProcessingGridCapacityError } from "../errors/PostProcessingGridCapacityError"
 import type { CompositeGridConfig } from "./types"
 
 /** Resolve the optional public grid controls against the pair's adaptive inner step. */
@@ -45,8 +46,8 @@ export const resolvePostProcessingGridConfig = (input: {
   const nodeCountUpperBound =
     outerAxisXCount * outerAxisYCount + innerAxisXCount * innerAxisYCount + 18
   if (nodeCountUpperBound > 250_000)
-    throw new Error(
-      "PostProcessingSolver: routingGrid exceeds the 250000-node composite-grid invariant limit",
+    throw new PostProcessingGridCapacityError(
+      "PostProcessingSolver: valid input exceeds the 250000-node optimization grid capacity",
     )
 
   return { innerGridStep, outerGridStep, outerPerimeterWidth }

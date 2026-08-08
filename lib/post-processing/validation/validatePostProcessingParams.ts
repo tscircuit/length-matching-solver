@@ -53,13 +53,6 @@ export function validatePostProcessingParams(
     throw new Error(
       "PostProcessingSolver: bounds must have finite positive extents",
     )
-  for (const defaultInnerGridStep of [0.25, 0.5])
-    resolvePostProcessingGridConfig({
-      config: params.routingGrid,
-      bounds: params.bounds,
-      defaultInnerGridStep,
-    })
-
   for (const route of params.hdRoutes) {
     if (
       !route ||
@@ -306,4 +299,11 @@ export function validatePostProcessingParams(
         )
     }
   }
+
+  for (const defaultInnerGridStep of [0.25, 0.5])
+    resolvePostProcessingGridConfig({
+      config: params.routingGrid,
+      bounds: params.bounds,
+      defaultInnerGridStep,
+    })
 }

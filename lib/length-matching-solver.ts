@@ -9,6 +9,7 @@ import {
   getConnectionLength,
 } from "./length-matching/connection-routes"
 import { selectDualMeanderPlan } from "./length-matching/dual-meander-plan"
+import { LengthMatchingNoSolutionError } from "./length-matching/errors/LengthMatchingNoSolutionError"
 import { isCandidateGeometryValid } from "./length-matching/geometry-validation"
 import type {
   ActivePair,
@@ -97,9 +98,11 @@ export class LengthMatchingSolver extends BaseSolver {
       maxToothCount: this.getConfig().maxToothCount,
     })
     if (candidates.length === 0)
-      throw new Error(
-        `LengthMatchingSolver: no same-layer straight segment can tune connection "${shorterConnectionName}"`,
-      )
+      throw new LengthMatchingNoSolutionError({
+        message: `LengthMatchingSolver: no same-layer straight segment can tune connection "${shorterConnectionName}"`,
+        connectionName: shorterConnectionName,
+        reason: "no-meander-candidate",
+      })
     this.activePair = {
       pair,
       longerConnectionName,
@@ -193,9 +196,11 @@ export class LengthMatchingSolver extends BaseSolver {
           activePair.plannedAttemptTargets === null &&
           activePair.lastMatchedSegmentIndexByRoute.size === 0
         if (!canTryDualPlan)
-          throw new Error(
-            `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
-          )
+          throw new LengthMatchingNoSolutionError({
+            message: `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+            connectionName: activePair.shorterConnectionName,
+            reason: "meander-search-exhausted",
+          })
         return this.tryDualMeanderPlan(activePair)
       }
       activePair.plannedAttemptTargets = getPlannedAttemptTargets({
@@ -314,9 +319,11 @@ export class LengthMatchingSolver extends BaseSolver {
       obstacleMargin: config.obstacleMargin,
     })
     if (!plan)
-      throw new Error(
-        `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
-      )
+      throw new LengthMatchingNoSolutionError({
+        message: `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+        connectionName: activePair.shorterConnectionName,
+        reason: "meander-search-exhausted",
+      })
     const updatedRoutes = [...this.matchedHdRoutes]
     for (const attempt of [...plan.longerAttempts, ...plan.shorterAttempts]) {
       const route = this.matchedHdRoutes[attempt.routeIndex]
@@ -375,6 +382,39 @@ export class LengthMatchingSolver extends BaseSolver {
         "LengthMatchingSolver: getOutput() called before the solver completed",
       )
     return { matchedHdRoutes: this.matchedHdRoutes }
+  }
+
+  /** Returns completed work plus the strongest valid in-progress attempt. */
+  getBestEffortOutput(): LengthMatchingSolverOutput {
+    const matchedHdRoutes = structuredClone(this.matchedHdRoutes)
+    const fullAttempts = this.activePair?.fullAttempts ?? []
+    let bestAttempt: RegressionAttempt | null = null
+    for (const attempt of fullAttempts) {
+      if (!bestAttempt || attempt.qualityScore > bestAttempt.qualityScore)
+        bestAttempt = attempt
+    }
+    if (!bestAttempt) {
+      for (const attempt of this.activePair?.partialAttempts ?? []) {
+        if (!bestAttempt || attempt.addedLength > bestAttempt.addedLength) {
+          bestAttempt = attempt
+          continue
+        }
+        if (
+          attempt.addedLength === bestAttempt.addedLength &&
+          attempt.qualityScore > bestAttempt.qualityScore
+        )
+          bestAttempt = attempt
+      }
+    }
+    if (bestAttempt) {
+      const route = matchedHdRoutes[bestAttempt.routeIndex]
+      if (route)
+        matchedHdRoutes[bestAttempt.routeIndex] = {
+          ...route,
+          route: structuredClone(bestAttempt.predictedRoute),
+        }
+    }
+    return { matchedHdRoutes }
   }
 
   computeProgress(): number {

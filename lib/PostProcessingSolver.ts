@@ -6,11 +6,16 @@ import {
 } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
 import { LengthMatchingSolver } from "./length-matching-solver"
+import { LengthMatchingNoSolutionError } from "./length-matching/errors/LengthMatchingNoSolutionError"
 import {
   createLengthMatchingBinding,
   type LengthMatchingBinding,
 } from "./post-processing/binding/createLengthMatchingBinding"
 import { createPostProcessingModel } from "./post-processing/binding/createPostProcessingModel"
+import { reconstructHdRoutesFromMatchingOutput } from "./post-processing/binding/reconstructHdRoutesFromMatchingOutput"
+import { DifferentialPairRoutingError } from "./post-processing/errors/DifferentialPairRoutingError"
+import { PostProcessingConstraintError } from "./post-processing/errors/PostProcessingConstraintError"
+import { PostProcessingGridCapacityError } from "./post-processing/errors/PostProcessingGridCapacityError"
 import { getDifferentialPairReroutingIterationLimit } from "./post-processing/routing/getDifferentialPairReroutingIterationLimit"
 import {
   DifferentialPairReroutingSolver,
@@ -23,11 +28,17 @@ import {
 import { HdRouteReconstructionSolver } from "./post-processing/solvers/HdRouteReconstructionSolver"
 import type {
   PostProcessingModel,
+  PostProcessingError,
   PostProcessingSolverOutput,
   PostProcessingSolverParams,
 } from "./post-processing/types"
 import { validatePostProcessingParams } from "./post-processing/validation/validatePostProcessingParams"
 import { createPostProcessingVisualization } from "./post-processing/visualization/createPostProcessingVisualization"
+
+type OptimizationFailureDiagnostic = Omit<
+  PostProcessingError,
+  "type" | "returnedRouteSource"
+>
 
 /** Runs coupled rerouting, 45-degree smoothing, and regular length matching. */
 export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolverParams> {
@@ -37,6 +48,8 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   hdRouteReconstructionSolver?: HdRouteReconstructionSolver
   private lengthMatchingBinding: LengthMatchingBinding | null = null
   private readonly model: PostProcessingModel
+  private fallbackOutput: PostProcessingSolverOutput | null = null
+  private readonly postProcessingErrors: PostProcessingError[] = []
 
   override pipelineDef: PipelineStep<BaseSolver>[] = [
     definePipelineStep(
@@ -119,6 +132,10 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
             phase: "complete",
             acceptedPairCount: rerouted.reroutedPairs.length,
           }
+          if (rerouted.failures.length > 0) {
+            pipeline.stats.skippedPairCount = rerouted.failures.length
+            pipeline.stats.postProcessingErrorCount = rerouted.failures.length
+          }
         },
       },
     ),
@@ -126,8 +143,22 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
 
   constructor(params: PostProcessingSolverParams) {
     super(structuredClone(params))
-    validatePostProcessingParams(params)
+    let gridCapacityError: PostProcessingGridCapacityError | null = null
+    try {
+      validatePostProcessingParams(params)
+    } catch (error) {
+      if (!(error instanceof PostProcessingGridCapacityError)) throw error
+      gridCapacityError = error
+    }
     this.model = createPostProcessingModel(params)
+    if (gridCapacityError) {
+      this.finishWithBestEffortOutput({
+        stage: "differentialPairReroutingSolver",
+        message: gridCapacityError.message,
+        reason: gridCapacityError.reason,
+      })
+      return
+    }
     const reroutingIterationLimit = getDifferentialPairReroutingIterationLimit(
       this.model.params,
     )
@@ -157,22 +188,210 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     return [structuredClone(this.inputProblem)]
   }
 
+  override _step(): void {
+    const stage = this.getCurrentStageName()
+    try {
+      super._step()
+    } catch (error) {
+      const diagnostic = this.classifyOptimizationFailure(error, stage)
+      if (!diagnostic) throw error
+      this.finishWithBestEffortOutput(diagnostic)
+      return
+    }
+    if (!this.failed) return
+    const diagnostic = this.classifyIterationFailure(this.error, stage)
+    if (!diagnostic)
+      throw new Error(
+        this.error ?? "PostProcessingSolver failed without an error message",
+      )
+    this.finishWithBestEffortOutput(diagnostic)
+  }
+
+  override tryFinalAcceptance(): void {
+    const stage = this.getCurrentStageName()
+    if (
+      stage !== "differentialPairReroutingSolver" &&
+      stage !== "lengthMatchingSolver"
+    )
+      return
+    this.finishWithBestEffortOutput({
+      stage,
+      message: "PostProcessingSolver reached its iteration limit",
+      reason: "iteration-limit-exhausted",
+    })
+  }
+
+  private classifyOptimizationFailure(
+    error: unknown,
+    stage: string,
+  ): OptimizationFailureDiagnostic | null {
+    if (
+      stage === "lengthMatchingSolver" &&
+      error instanceof LengthMatchingNoSolutionError
+    )
+      return {
+        stage,
+        message: error.message,
+        connectionName: error.connectionName,
+        reason: error.reason,
+      }
+    if (
+      stage === "hdRouteReconstructionSolver" &&
+      error instanceof PostProcessingConstraintError
+    )
+      return {
+        stage,
+        message: error.message,
+        connectionNames: [...error.connectionNames],
+        reason: error.reason,
+      }
+    if (
+      stage === "differentialPairReroutingSolver" &&
+      error instanceof DifferentialPairRoutingError &&
+      error.reason === "no-valid-candidate"
+    )
+      return {
+        stage,
+        message: error.message,
+        connectionNames: [...error.connectionNames],
+        reason: error.reason,
+      }
+    return null
+  }
+
+  private classifyIterationFailure(
+    error: string | null,
+    stage: string,
+  ): OptimizationFailureDiagnostic | null {
+    if (
+      stage !== "differentialPairReroutingSolver" &&
+      stage !== "lengthMatchingSolver"
+    )
+      return null
+    if (!error || !error.endsWith("ran out of iterations")) return null
+    return {
+      stage,
+      message: error,
+      reason: "iteration-limit-exhausted",
+    }
+  }
+
+  private createBestEffortOutput(diagnostic: OptimizationFailureDiagnostic): {
+    output: PostProcessingSolverOutput
+    source: PostProcessingError["returnedRouteSource"]
+  } {
+    let binding = this.lengthMatchingBinding
+    if (!binding) {
+      const simplified =
+        this.getStageOutput<FortyFiveDegreeSimplificationOutput>(
+          "fortyFiveDegreeSimplificationSolver",
+        ) ?? this.fortyFiveDegreeSimplificationSolver?.getBestEffortOutput()
+      const rerouted =
+        this.getStageOutput<DifferentialPairReroutingOutput>(
+          "differentialPairReroutingSolver",
+        ) ?? this.differentialPairReroutingSolver?.getBestEffortOutput()
+      const bestSimplified = simplified ?? rerouted
+      if (bestSimplified)
+        binding = createLengthMatchingBinding({
+          result: bestSimplified,
+          params: this.model.params,
+        })
+    }
+    if (!binding)
+      return {
+        output: {
+          hdRoutes: structuredClone(this.inputProblem.hdRoutes),
+          postProcessingErrors: [],
+        },
+        source: "input-hd-routes",
+      }
+    let matched = this.getStageOutput<
+      ReturnType<LengthMatchingSolver["getOutput"]>
+    >("lengthMatchingSolver")
+    if (!matched) matched = this.lengthMatchingSolver?.getBestEffortOutput()
+    if (!matched || diagnostic.reason === "invalid-final-copper")
+      matched = { matchedHdRoutes: binding.solverParams.hdRoutes }
+    return {
+      output: reconstructHdRoutesFromMatchingOutput({
+        binding,
+        result: matched,
+        model: this.model,
+      }),
+      source: "best-effort-hd-routes",
+    }
+  }
+
+  private finishWithBestEffortOutput(
+    failure: OptimizationFailureDiagnostic,
+  ): void {
+    const bestEffort = this.createBestEffortOutput(failure)
+    const diagnostic: PostProcessingError = {
+      type: "post_processing_error",
+      ...failure,
+      returnedRouteSource: bestEffort.source,
+    }
+    this.postProcessingErrors.push(diagnostic)
+    this.fallbackOutput = bestEffort.output
+    this.activeSubSolver = null
+    this.error = null
+    this.failed = false
+    this.solved = true
+    this.progress = 1
+    this.stats = {
+      phase: "complete",
+      postProcessingErrorCount: this.postProcessingErrors.length,
+    }
+  }
+
   override getOutput(): PostProcessingSolverOutput {
     if (!this.solved)
       throw new Error(
         "PostProcessingSolver: getOutput() called before the solver completed",
       )
-    const output = this.getStageOutput<PostProcessingSolverOutput>(
-      "hdRouteReconstructionSolver",
-    )
+    const output =
+      this.fallbackOutput ??
+      this.getStageOutput<PostProcessingSolverOutput>(
+        "hdRouteReconstructionSolver",
+      )
     if (!output)
       throw new Error(
         "PostProcessingSolver: completed pipeline is missing reconstruction output",
       )
-    return structuredClone(output)
+    const rerouting =
+      this.getStageOutput<DifferentialPairReroutingOutput>(
+        "differentialPairReroutingSolver",
+      ) ?? this.differentialPairReroutingSolver?.getBestEffortOutput()
+    const reroutingFailures = rerouting?.failures ?? []
+    let reroutingRouteSource: PostProcessingError["returnedRouteSource"] =
+      "input-hd-routes"
+    if ((rerouting?.reroutedPairs.length ?? 0) > 0)
+      reroutingRouteSource = "best-effort-hd-routes"
+    const errors = [
+      ...reroutingFailures.map(
+        (failure): PostProcessingError => ({
+          type: "post_processing_error",
+          stage: "differentialPairReroutingSolver",
+          message: failure.message,
+          connectionNames: [...failure.connectionNames],
+          reason: failure.reason,
+          returnedRouteSource: reroutingRouteSource,
+        }),
+      ),
+      ...this.postProcessingErrors,
+    ]
+    const clonedOutput = structuredClone(output)
+    clonedOutput.postProcessingErrors = structuredClone(errors)
+    return clonedOutput
   }
 
   override initialVisualize(): GraphicsObject {
+    if (this.fallbackOutput)
+      return {
+        lines: this.fallbackOutput.hdRoutes.map((route) => ({
+          points: route.route.map(({ x, y }) => ({ x, y })),
+          strokeWidth: route.traceThickness,
+        })),
+      }
     const { traces, obstacles, bounds, layerCount } =
       this.model.params.simpleRouteJson
     return createPostProcessingVisualization({
@@ -186,6 +405,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   }
 
   override finalVisualize(): GraphicsObject {
+    if (this.fallbackOutput) return this.initialVisualize()
     const outputModel = createPostProcessingModel({
       ...this.inputProblem,
       hdRoutes: this.getOutput().hdRoutes,
@@ -208,6 +428,7 @@ export {
   type DifferentialPairRoutingFailureReason,
 } from "./post-processing/errors/DifferentialPairRoutingError"
 export type {
+  PostProcessingError,
   PostProcessingGridConfig,
   PostProcessingSolverOutput,
   PostProcessingSolverParams,

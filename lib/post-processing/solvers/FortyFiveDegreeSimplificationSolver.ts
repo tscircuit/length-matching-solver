@@ -11,7 +11,7 @@ export type FortyFiveDegreeSimplificationInput = Pick<
   InternalPostProcessingParams["simpleRouteJson"],
   "obstacles" | "bounds" | "layerCount"
 > &
-  DifferentialPairReroutingOutput
+  Omit<DifferentialPairReroutingOutput, "failures">
 
 export type FortyFiveDegreeSimplificationOutput = {
   traces: SimplifiedPcbTraces
@@ -68,6 +68,11 @@ export class FortyFiveDegreeSimplificationSolver extends BaseSolver {
       throw new Error(
         "FortyFiveDegreeSimplificationSolver: getOutput() called before completion",
       )
+    return this.getBestEffortOutput()
+  }
+
+  /** Returns every simplification committed before an interruption. */
+  getBestEffortOutput(): FortyFiveDegreeSimplificationOutput {
     return {
       traces: cloneSimplifiedPcbTraces(this.traces),
       reroutedPairs: this.input.reroutedPairs.map((pair) => ({
