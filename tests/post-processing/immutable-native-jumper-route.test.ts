@@ -39,7 +39,4 @@ test("preserves an immutable native jumper route without modeling its bridge as 
 
   expect(solver.getOutput().hdRoutes).toEqual(snapshot)
   expect(params.hdRoutes).toEqual(snapshot)
-  expect(solver.hdRoutePassthroughSolver?.solved).toBe(true)
-  expect(solver.differentialPairReroutingSolver).toBeUndefined()
-  expect(solver.computeProgress()).toBe(1)
 })

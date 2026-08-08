@@ -129,7 +129,11 @@ export const createPostProcessingParamsFromSimpleRouteJson = (
   return {
     hdRoutes,
     differentialPairs: structuredClone(simpleRouteJson.differentialPairs),
-    obstacles: structuredClone(simpleRouteJson.obstacles),
+    obstacles: structuredClone(simpleRouteJson.obstacles).map((obstacle) => ({
+      ...obstacle,
+      // Legacy fixtures used oval component bodies that routing treated as their bounding rect.
+      type: "rect",
+    })),
     bounds: structuredClone(simpleRouteJson.bounds),
     layerCount: simpleRouteJson.layerCount,
     ...(routingGrid ? { routingGrid: structuredClone(routingGrid) } : {}),
