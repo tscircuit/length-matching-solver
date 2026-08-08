@@ -44,10 +44,7 @@ export function reconstructHdRoutesFromMatchingOutput(input: {
     hdRoutes[routeBinding.hdRouteIndex] = {
       ...sourceRoute,
       route,
-      vias: matchedRoute.vias.map((via) => ({
-        ...via,
-        ...(via.zLayers ? { zLayers: [...via.zLayers] } : {}),
-      })),
+      vias: structuredClone(matchedRoute.vias),
     }
   }
   return { hdRoutes }

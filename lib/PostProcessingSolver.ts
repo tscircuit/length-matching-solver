@@ -262,7 +262,8 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
         source: "input-hd-routes",
       }
     }
-    const message = error instanceof Error ? error.message : String(error)
+    let message = String(error)
+    if (error instanceof Error) message = error.message
     const connectionName = message.match(
       /(?:HD route|connection) "([^"]+)"/,
     )?.[1]
@@ -309,10 +310,10 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
         "differentialPairReroutingSolver",
       ) ?? this.differentialPairReroutingSolver?.getBestEffortOutput()
     const reroutingFailures = rerouting?.failures ?? []
-    const reroutingRouteSource =
-      (rerouting?.reroutedPairs.length ?? 0) > 0
-        ? "best-effort-hd-routes"
-        : "input-hd-routes"
+    let reroutingRouteSource: PostProcessingError["returnedRouteSource"] =
+      "input-hd-routes"
+    if ((rerouting?.reroutedPairs.length ?? 0) > 0)
+      reroutingRouteSource = "best-effort-hd-routes"
     const errors = [
       ...reroutingFailures.map(
         (failure): PostProcessingError => ({
