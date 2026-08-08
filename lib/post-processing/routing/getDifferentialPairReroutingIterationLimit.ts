@@ -1,6 +1,6 @@
 import type { InternalPostProcessingParams } from "../types"
 
-export const MAXIMUM_REROUTING_ITERATIONS_PER_PAIR = 100_000
+export const MAXIMUM_REROUTING_ITERATIONS_PER_PAIR = 50_000
 
 /** Keep best-effort rerouting bounded when a large search cannot improve a pair. */
 export const getDifferentialPairReroutingIterationLimit = (
