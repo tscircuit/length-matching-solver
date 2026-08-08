@@ -53,7 +53,6 @@ export class DifferentialPairRoutingSession {
   private search: IncrementalCoupledPathSearch | null = null
   private nextAttempt = 0
   private exploredNodeCount = 0
-  private allocatedSearchStateCount = 0
 
   constructor(private readonly input: DifferentialPairRoutingInput) {
     this.pairName = input.pair.connectionNames.join("/")
@@ -83,10 +82,6 @@ export class DifferentialPairRoutingSession {
     return Math.min(0.99, (this.nextAttempt + attemptProgress) / attemptCount)
   }
 
-  getAllocatedSearchStateCount(): number {
-    return this.allocatedSearchStateCount
-  }
-
   getStats(): Record<string, number | string> {
     return {
       phase: this.search ? "searching" : "candidate-selection",
@@ -110,7 +105,6 @@ export class DifferentialPairRoutingSession {
         return
       }
       this.search = new IncrementalCoupledPathSearch(attempt.input)
-      this.allocatedSearchStateCount += this.search.getSearchStateLimit()
       return
     }
     this.search.step()

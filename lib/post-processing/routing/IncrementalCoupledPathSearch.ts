@@ -14,6 +14,8 @@ type SearchNode = {
   sequence: number
 }
 
+const MAXIMUM_EXPLORED_STATES_PER_ATTEMPT = 20_000
+
 /** Advances the common-spine composite-grid A* search one explored node at a time. */
 export class IncrementalCoupledPathSearch {
   private readonly queue: SearchNode[]
@@ -22,6 +24,7 @@ export class IncrementalCoupledPathSearch {
   private readonly endLayer: number
   private readonly grid: CompositeRoutingGrid
   private readonly maxSearchStates: number
+  private readonly exploredStateLimit: number
   private current: SearchNode | null = null
   private result: CoupledPathPoint[] | null = null
   private status: "searching" | "found" | "exhausted" = "searching"
@@ -34,6 +37,10 @@ export class IncrementalCoupledPathSearch {
     this.grid = new CompositeRoutingGrid(input)
     this.maxSearchStates = this.grid.getSearchStateCountUpperBound(
       input.layerCount,
+    )
+    this.exploredStateLimit = Math.min(
+      this.maxSearchStates,
+      MAXIMUM_EXPLORED_STATES_PER_ATTEMPT,
     )
     if (this.startLayer < 0 || this.endLayer < 0) {
       this.queue = []
@@ -70,11 +77,7 @@ export class IncrementalCoupledPathSearch {
 
   getProgress(): number {
     if (this.status !== "searching") return 1
-    return Math.min(0.99, this.explored / this.maxSearchStates)
-  }
-
-  getSearchStateLimit(): number {
-    return this.maxSearchStates
+    return Math.min(0.99, this.explored / this.exploredStateLimit)
   }
 
   getGridNodeCount(): number {
@@ -83,20 +86,7 @@ export class IncrementalCoupledPathSearch {
 
   step(): void {
     if (this.status !== "searching") return
-    this.queue.sort(
-      (left, right) =>
-        left.estimate - right.estimate ||
-        left.cost - right.cost ||
-        left.point.x - right.point.x ||
-        left.point.y - right.point.y ||
-        (left.point.layer < right.point.layer
-          ? -1
-          : left.point.layer > right.point.layer
-            ? 1
-            : 0) ||
-        left.sequence - right.sequence,
-    )
-    const current = this.queue.shift()
+    const current = this.popQueue()
     if (!current) {
       this.status = "exhausted"
       return
@@ -123,6 +113,10 @@ export class IncrementalCoupledPathSearch {
       path[path.length - 1] = this.input.end
       this.result = this.simplifyPath(path)
       this.status = "found"
+      return
+    }
+    if (this.explored >= this.exploredStateLimit) {
+      this.status = "exhausted"
       return
     }
     this.enqueuePlanarNeighbors(current)
@@ -198,6 +192,58 @@ export class IncrementalCoupledPathSearch {
     })
   }
 
+  private hasHigherQueuePriority(left: SearchNode, right: SearchNode): boolean {
+    if (left.estimate !== right.estimate) return left.estimate < right.estimate
+    if (left.cost !== right.cost) return left.cost < right.cost
+    if (left.point.x !== right.point.x) return left.point.x < right.point.x
+    if (left.point.y !== right.point.y) return left.point.y < right.point.y
+    if (left.point.layer !== right.point.layer)
+      return left.point.layer < right.point.layer
+    return left.sequence < right.sequence
+  }
+
+  private pushQueue(node: SearchNode): void {
+    this.queue.push(node)
+    let nodeIndex = this.queue.length - 1
+    while (nodeIndex > 0) {
+      const parentIndex = Math.floor((nodeIndex - 1) / 2)
+      const parent = this.queue[parentIndex]!
+      if (!this.hasHigherQueuePriority(node, parent)) break
+      this.queue[nodeIndex] = parent
+      nodeIndex = parentIndex
+    }
+    this.queue[nodeIndex] = node
+  }
+
+  private popQueue(): SearchNode | undefined {
+    const first = this.queue[0]
+    const last = this.queue.pop()
+    if (!first || !last || this.queue.length === 0) return first
+
+    let nodeIndex = 0
+    while (true) {
+      const leftIndex = nodeIndex * 2 + 1
+      if (leftIndex >= this.queue.length) break
+      const rightIndex = leftIndex + 1
+      let childIndex = leftIndex
+      if (
+        rightIndex < this.queue.length &&
+        this.hasHigherQueuePriority(
+          this.queue[rightIndex]!,
+          this.queue[leftIndex]!,
+        )
+      ) {
+        childIndex = rightIndex
+      }
+      const child = this.queue[childIndex]!
+      if (!this.hasHigherQueuePriority(child, last)) break
+      this.queue[nodeIndex] = child
+      nodeIndex = childIndex
+    }
+    this.queue[nodeIndex] = last
+    return first
+  }
+
   private enqueuePlanarNeighbors(current: SearchNode): void {
     for (const next of this.grid.getPlanarNeighbors(current.point)) {
       if (!this.input.isEdgeValid(current.point, next)) continue
@@ -214,7 +260,7 @@ export class IncrementalCoupledPathSearch {
       if ((this.bestCosts.get(key) ?? Number.POSITIVE_INFINITY) <= cost)
         continue
       this.bestCosts.set(key, cost)
-      this.queue.push({
+      this.pushQueue({
         point: next,
         direction,
         cost,
@@ -243,7 +289,7 @@ export class IncrementalCoupledPathSearch {
       if ((this.bestCosts.get(key) ?? Number.POSITIVE_INFINITY) <= cost)
         continue
       this.bestCosts.set(key, cost)
-      this.queue.push({
+      this.pushQueue({
         point: next,
         direction: current.direction,
         cost,
