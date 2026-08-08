@@ -246,7 +246,10 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     }
     if (!binding)
       return {
-        output: { hdRoutes: structuredClone(this.inputProblem.hdRoutes) },
+        output: {
+          hdRoutes: structuredClone(this.inputProblem.hdRoutes),
+          postProcessingErrors: [],
+        },
         source: "input-hd-routes",
       }
     const matched = this.getStageOutput<
@@ -333,8 +336,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
       ...this.postProcessingErrors,
     ]
     const clonedOutput = structuredClone(output)
-    if (errors.length > 0)
-      clonedOutput.postProcessingErrors = structuredClone(errors)
+    clonedOutput.postProcessingErrors = structuredClone(errors)
     return clonedOutput
   }
 

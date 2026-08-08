@@ -25,8 +25,8 @@ export type PostProcessingSolverParams = {
 
 export type PostProcessingSolverOutput = {
   hdRoutes: HighDensityRoute[]
-  /** Present when one or more post-processing stages could not finish ideally. */
-  postProcessingErrors?: PostProcessingError[]
+  /** Empty when post-processing completed ideally. */
+  postProcessingErrors: PostProcessingError[]
 }
 
 export type PostProcessingError = {

@@ -47,5 +47,5 @@ export function reconstructHdRoutesFromMatchingOutput(input: {
       vias: structuredClone(matchedRoute.vias),
     }
   }
-  return { hdRoutes }
+  return { hdRoutes, postProcessingErrors: [] }
 }
