@@ -2,7 +2,7 @@ import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes
 import { resolvePostProcessingGridConfig } from "../routing/resolvePostProcessingGridConfig"
 import type { PostProcessingSolverParams } from "../types"
 
-/** Validate the native HD-route boundary before creating any internal model. */
+/** Validate only the basic shape and numeric safety of native input. */
 export function validatePostProcessingParams(
   params: PostProcessingSolverParams,
 ): void {
@@ -66,7 +66,6 @@ export function validatePostProcessingParams(
       route.traceThickness <= 0 ||
       !Number.isFinite(route.viaDiameter) ||
       route.viaDiameter < 0 ||
-      (route.viaDiameter === 0 && !route.jumpers?.length) ||
       !Array.isArray(route.route) ||
       !Array.isArray(route.vias) ||
       (route.jumpers !== undefined && !Array.isArray(route.jumpers))
@@ -83,10 +82,7 @@ export function validatePostProcessingParams(
       throw new Error(
         `PostProcessingSolver: HD route "${route.connectionName}" has invalid terminal metadata`,
       )
-    const transitionViaIndexes = new Set<number>()
-    const transitionCountByViaIndex = new Map<number, number>()
-    for (let pointIndex = 0; pointIndex < route.route.length; pointIndex++) {
-      const point = route.route[pointIndex]
+    for (const point of route.route) {
       if (
         !point ||
         typeof point !== "object" ||
@@ -101,73 +97,8 @@ export function validatePostProcessingParams(
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" has an invalid route point`,
         )
-      if (
-        point.pcb_port_id !== undefined &&
-        (typeof point.pcb_port_id !== "string" ||
-          point.pcb_port_id.length === 0 ||
-          (pointIndex !== 0 && pointIndex !== route.route.length - 1))
-      )
-        throw new Error(
-          `PostProcessingSolver: HD route "${route.connectionName}" has unsupported PCB-port metadata`,
-        )
-      const next = route.route[pointIndex + 1]
-      if (next !== undefined && (!next || typeof next !== "object"))
-        throw new Error(
-          `PostProcessingSolver: HD route "${route.connectionName}" has an invalid route point`,
-        )
-      if (!next || next.z === point.z) {
-        if (point.toNextSegmentType === "through_obstacle")
-          throw new Error(
-            `PostProcessingSolver: HD route "${route.connectionName}" has a through-obstacle marker without a layer transition`,
-          )
-        continue
-      }
-      if (point.toNextSegmentType === "through_obstacle") continue
-      if (Math.hypot(point.x - next.x, point.y - next.y) > 1e-8)
-        throw new Error(
-          `PostProcessingSolver: HD route "${route.connectionName}" moves in-plane while changing layers`,
-        )
-      const matchingViaIndexes = route.vias
-        .map((via, viaIndex) => ({ via, viaIndex }))
-        .filter(
-          ({ via }) =>
-            Boolean(via) &&
-            typeof via === "object" &&
-            Math.hypot(via.x - point.x, via.y - point.y) <= 1e-8,
-        )
-        .map(({ viaIndex }) => viaIndex)
-      if (matchingViaIndexes.length !== 1)
-        throw new Error(
-          `PostProcessingSolver: HD route "${route.connectionName}" must have exactly one via for each layer transition`,
-        )
-      const matchingViaIndex = matchingViaIndexes[0]!
-      const matchingVia = route.vias[matchingViaIndex]!
-      if (matchingVia.zLayers !== undefined) {
-        const expectedLayers = Array.from(
-          { length: Math.abs(next.z - point.z) + 1 },
-          (_, index) => Math.min(point.z, next.z) + index,
-        )
-        const declaredLayers = Array.isArray(matchingVia.zLayers)
-          ? [...new Set(matchingVia.zLayers)].sort((a, b) => a - b)
-          : []
-        if (
-          !Array.isArray(matchingVia.zLayers) ||
-          matchingVia.zLayers.length !== declaredLayers.length ||
-          declaredLayers.length !== expectedLayers.length ||
-          declaredLayers.some((z, index) => z !== expectedLayers[index])
-        )
-          throw new Error(
-            `PostProcessingSolver: HD route "${route.connectionName}" has a via span incompatible with its layer transition`,
-          )
-      }
-      transitionViaIndexes.add(matchingViaIndex)
-      transitionCountByViaIndex.set(
-        matchingViaIndex,
-        (transitionCountByViaIndex.get(matchingViaIndex) ?? 0) + 1,
-      )
     }
-    for (let viaIndex = 0; viaIndex < route.vias.length; viaIndex++) {
-      const via = route.vias[viaIndex]
+    for (const via of route.vias) {
       if (
         !via ||
         typeof via !== "object" ||
@@ -182,34 +113,10 @@ export function validatePostProcessingParams(
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" has an invalid via`,
         )
-      if (!transitionViaIndexes.has(viaIndex))
-        throw new Error(
-          `PostProcessingSolver: HD route "${route.connectionName}" has an unbound or ambiguous via`,
-        )
-      if ((transitionCountByViaIndex.get(viaIndex) ?? 0) > 1)
-        throw new Error(
-          `PostProcessingSolver: HD route "${route.connectionName}" uses one physical via for multiple route transitions`,
-        )
     }
     if (route.vias.length > 0 && route.viaDiameter <= 0)
       throw new Error(
         `PostProcessingSolver: HD route "${route.connectionName}" has a non-positive via diameter`,
-      )
-    if (
-      route.startPcbPortId !== undefined &&
-      route.route[0]?.pcb_port_id !== undefined &&
-      route.startPcbPortId !== route.route[0].pcb_port_id
-    )
-      throw new Error(
-        `PostProcessingSolver: HD route "${route.connectionName}" has conflicting start PCB-port metadata`,
-      )
-    if (
-      route.endPcbPortId !== undefined &&
-      route.route.at(-1)?.pcb_port_id !== undefined &&
-      route.endPcbPortId !== route.route.at(-1)!.pcb_port_id
-    )
-      throw new Error(
-        `PostProcessingSolver: HD route "${route.connectionName}" has conflicting end PCB-port metadata`,
       )
     for (const jumper of route.jumpers ?? []) {
       if (
@@ -229,7 +136,6 @@ export function validatePostProcessingParams(
   }
 
   const declaredConnections = new Set<string>()
-  const claimedRouteIndexes = new Set<number>()
   for (const pair of params.differentialPairs) {
     if (
       !pair ||
@@ -271,32 +177,6 @@ export function validatePostProcessingParams(
           `PostProcessingSolver: connection "${connectionName}" belongs to multiple differential pairs`,
         )
       declaredConnections.add(connectionName)
-      const matches = params.hdRoutes
-        .map((route, routeIndex) => ({ route, routeIndex }))
-        .filter(({ route }) => route.connectionName === connectionName)
-      if (matches.length !== 1)
-        throw new Error(
-          `PostProcessingSolver: differential pair connection "${connectionName}" must resolve to exactly one HD route, got ${matches.length}`,
-        )
-      const match = matches[0]!
-      if (claimedRouteIndexes.has(match.routeIndex))
-        throw new Error(
-          `PostProcessingSolver: differential pair connection "${connectionName}" ambiguously resolves to an already claimed HD route`,
-        )
-      claimedRouteIndexes.add(match.routeIndex)
-      if (
-        match.route.route.length < 2 ||
-        match.route.viaDiameter <= 0 ||
-        match.route.jumpers?.length ||
-        match.route.route.some(
-          (point) =>
-            point.insideJumperPad ||
-            point.toNextSegmentType === "through_obstacle",
-        )
-      )
-        throw new Error(
-          `PostProcessingSolver: differential pair connection "${connectionName}" has unsupported HD geometry`,
-        )
     }
   }
 

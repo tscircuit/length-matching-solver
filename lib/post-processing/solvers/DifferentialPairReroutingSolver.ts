@@ -66,7 +66,6 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
       this.activeSession.step()
     } catch (error) {
       if (!(error instanceof DifferentialPairRoutingError)) throw error
-      if (error.reason !== "no-valid-candidate") throw error
       this.skipFailedPair(pair, error)
       return
     }
