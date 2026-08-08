@@ -1,6 +1,5 @@
 export {
   LengthMatchingSolver,
-  type LengthMatchingError,
   type LengthMatchingSolverOutput,
   type LengthMatchingSolverParams,
 } from "./length-matching-solver"
