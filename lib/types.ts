@@ -122,8 +122,7 @@ export type SimplifiedPcbTraces = SimplifiedPcbTrace[]
 export type Obstacle = {
   obstacleId?: string
   componentId?: string
-  /** Ovals are conservatively collision-checked as their bounding rectangle. */
-  type: "rect" | "oval"
+  type: "rect"
   layers: string[]
   zLayers?: number[]
   /** Canonicalized z-layer indexes used by autorouter internals. */

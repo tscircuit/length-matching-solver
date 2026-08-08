@@ -15,7 +15,6 @@ export type CandidateGeometryContext = {
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
-  allowViaInPad?: boolean
 }
 
 /** Validate complete replacement copper against bounds, obstacles, and immutable copper. */
@@ -214,7 +213,6 @@ export const validateCandidateGeometry = (
         continue
       const local = rotateIntoObstacle(via, obstacle)
       const exitsConnectedTerminalObstacle =
-        context.allowViaInPad &&
         via.terminal !== null &&
         obstacle.connectedTo.includes(via.connectionName) &&
         Math.abs(local.x) <= obstacle.width / 2 + EPSILON &&

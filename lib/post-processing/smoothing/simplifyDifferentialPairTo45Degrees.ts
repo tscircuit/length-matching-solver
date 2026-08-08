@@ -27,7 +27,6 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
   obstacles: Parameters<typeof validateCandidateGeometry>[2]["obstacles"]
   bounds: Parameters<typeof validateCandidateGeometry>[2]["bounds"]
   layerCount: number
-  allowViaInPad?: boolean
 }): SimplifiedPcbTraces => {
   const pairName = input.pair.connectionNames.join("/")
   const indexes = input.pair.connectionNames.map((connectionName) =>
@@ -54,7 +53,6 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
     obstacles: input.obstacles,
     bounds: input.bounds,
     layerCount: input.layerCount,
-    allowViaInPad: input.allowViaInPad,
   }
   const getMaximumInteriorPairSeparation = (
     traces: SimplifiedPcbTraces,

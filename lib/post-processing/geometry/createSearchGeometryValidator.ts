@@ -22,7 +22,6 @@ export const createSearchGeometryValidator = (input: {
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
-  allowViaInPad?: boolean
   start: CoupledPathPoint
   end: CoupledPathPoint
   firstConnectionName: string
@@ -260,7 +259,6 @@ export const createSearchGeometryValidator = (input: {
       if (!via.layers.some((layer) => obstacleIsOnLayer(obstacle, layer)))
         continue
       const exitsConnectedTerminal =
-        input.allowViaInPad &&
         via.terminal !== null &&
         obstacle.connectedTo.includes(via.connectionName) &&
         obstacleContains(via, obstacle, 0)
