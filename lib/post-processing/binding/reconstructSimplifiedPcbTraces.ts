@@ -151,9 +151,11 @@ export const reconstructSimplifiedPcbTraces = (input: {
       getSimplifiedTraceLength(first) - getSimplifiedTraceLength(second),
     )
     if (finalLengthDifference > pair.lengthTolerance + 1e-7)
-      throw new PostProcessingConstraintError(
-        `PostProcessingSolver: reconstructed pair ${pairName} exceeds length tolerance ${pair.lengthTolerance} with error ${finalLengthDifference}`,
-      )
+      throw new PostProcessingConstraintError({
+        message: `PostProcessingSolver: reconstructed pair ${pairName} exceeds length tolerance ${pair.lengthTolerance} with error ${finalLengthDifference}`,
+        connectionNames: [...pair.connectionNames],
+        reason: "length-tolerance-unsatisfied",
+      })
     const valid = validateCandidateGeometry(first, second, {
       immutableTraces: traces.filter(
         (_, index) => index !== firstMatch.index && index !== secondMatch.index,
@@ -163,9 +165,11 @@ export const reconstructSimplifiedPcbTraces = (input: {
       layerCount: simpleRouteJson.layerCount,
     })
     if (!valid)
-      throw new PostProcessingConstraintError(
-        `PostProcessingSolver: length matching produced invalid complete copper for pair ${pairName}`,
-      )
+      throw new PostProcessingConstraintError({
+        message: `PostProcessingSolver: length matching produced invalid complete copper for pair ${pairName}`,
+        connectionNames: [...pair.connectionNames],
+        reason: "invalid-final-copper",
+      })
   }
   return traces
 }

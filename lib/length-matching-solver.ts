@@ -98,9 +98,11 @@ export class LengthMatchingSolver extends BaseSolver {
       maxToothCount: this.getConfig().maxToothCount,
     })
     if (candidates.length === 0)
-      throw new LengthMatchingNoSolutionError(
-        `LengthMatchingSolver: no same-layer straight segment can tune connection "${shorterConnectionName}"`,
-      )
+      throw new LengthMatchingNoSolutionError({
+        message: `LengthMatchingSolver: no same-layer straight segment can tune connection "${shorterConnectionName}"`,
+        connectionName: shorterConnectionName,
+        reason: "no-meander-candidate",
+      })
     this.activePair = {
       pair,
       longerConnectionName,
@@ -194,9 +196,11 @@ export class LengthMatchingSolver extends BaseSolver {
           activePair.plannedAttemptTargets === null &&
           activePair.lastMatchedSegmentIndexByRoute.size === 0
         if (!canTryDualPlan)
-          throw new LengthMatchingNoSolutionError(
-            `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
-          )
+          throw new LengthMatchingNoSolutionError({
+            message: `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+            connectionName: activePair.shorterConnectionName,
+            reason: "meander-search-exhausted",
+          })
         return this.tryDualMeanderPlan(activePair)
       }
       activePair.plannedAttemptTargets = getPlannedAttemptTargets({
@@ -315,9 +319,11 @@ export class LengthMatchingSolver extends BaseSolver {
       obstacleMargin: config.obstacleMargin,
     })
     if (!plan)
-      throw new LengthMatchingNoSolutionError(
-        `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
-      )
+      throw new LengthMatchingNoSolutionError({
+        message: `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+        connectionName: activePair.shorterConnectionName,
+        reason: "meander-search-exhausted",
+      })
     const updatedRoutes = [...this.matchedHdRoutes]
     for (const attempt of [...plan.longerAttempts, ...plan.shorterAttempts]) {
       const route = this.matchedHdRoutes[attempt.routeIndex]

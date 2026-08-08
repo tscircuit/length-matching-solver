@@ -34,6 +34,11 @@ import type {
 import { validatePostProcessingParams } from "./post-processing/validation/validatePostProcessingParams"
 import { createPostProcessingVisualization } from "./post-processing/visualization/createPostProcessingVisualization"
 
+type OptimizationFailureDiagnostic = Omit<
+  PostProcessingError,
+  "type" | "returnedRouteSource"
+>
+
 /** Runs coupled rerouting, 45-degree smoothing, and regular length matching. */
 export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolverParams> {
   differentialPairReroutingSolver?: DifferentialPairReroutingSolver
@@ -173,20 +178,18 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     try {
       super._step()
     } catch (error) {
-      if (!this.isRecoverableOptimizationFailure(error, stage)) throw error
-      this.finishWithBestEffortOutput(error, stage)
+      const diagnostic = this.classifyOptimizationFailure(error, stage)
+      if (!diagnostic) throw error
+      this.finishWithBestEffortOutput(diagnostic)
       return
     }
     if (!this.failed) return
-    if (
-      stage !== "differentialPairReroutingSolver" &&
-      stage !== "lengthMatchingSolver"
-    )
-      return
-    this.finishWithBestEffortOutput(
-      this.error ?? "PostProcessingSolver failed without an error message",
-      stage,
-    )
+    const diagnostic = this.classifyIterationFailure(this.error, stage)
+    if (!diagnostic)
+      throw new Error(
+        this.error ?? "PostProcessingSolver failed without an error message",
+      )
+    this.finishWithBestEffortOutput(diagnostic)
   }
 
   override tryFinalAcceptance(): void {
@@ -196,34 +199,71 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
       stage !== "lengthMatchingSolver"
     )
       return
-    this.finishWithBestEffortOutput(
-      "PostProcessingSolver reached its iteration limit",
+    this.finishWithBestEffortOutput({
       stage,
-    )
+      message: "PostProcessingSolver reached its iteration limit",
+      reason: "iteration-limit-exhausted",
+    })
   }
 
-  private isRecoverableOptimizationFailure(
+  private classifyOptimizationFailure(
     error: unknown,
     stage: string,
-  ): boolean {
+  ): OptimizationFailureDiagnostic | null {
     if (
       stage === "lengthMatchingSolver" &&
       error instanceof LengthMatchingNoSolutionError
     )
-      return true
+      return {
+        stage,
+        message: error.message,
+        connectionName: error.connectionName,
+        reason: error.reason,
+      }
     if (
       stage === "hdRouteReconstructionSolver" &&
       error instanceof PostProcessingConstraintError
     )
-      return true
-    return (
+      return {
+        stage,
+        message: error.message,
+        connectionNames: [...error.connectionNames],
+        reason: error.reason,
+      }
+    if (
       stage === "differentialPairReroutingSolver" &&
       error instanceof DifferentialPairRoutingError &&
       error.reason === "no-valid-candidate"
     )
+      return {
+        stage,
+        message: error.message,
+        connectionNames: [...error.connectionNames],
+        reason: error.reason,
+      }
+    return null
   }
 
-  private createBestEffortOutput(): {
+  private classifyIterationFailure(
+    error: string | null,
+    stage: string,
+  ): OptimizationFailureDiagnostic | null {
+    if (
+      stage !== "differentialPairReroutingSolver" &&
+      stage !== "lengthMatchingSolver"
+    )
+      return null
+    if (!error || !error.endsWith("ran out of iterations")) return null
+    return {
+      stage,
+      message: error,
+      reason: "iteration-limit-exhausted",
+    }
+  }
+
+  private createBestEffortOutput(
+    diagnostic: OptimizationFailureDiagnostic,
+  ): {
     output: PostProcessingSolverOutput
     source: PostProcessingError["returnedRouteSource"]
   } {
@@ -252,12 +292,12 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
         },
         source: "input-hd-routes",
       }
-    const matched = this.getStageOutput<
+    let matched = this.getStageOutput<
       ReturnType<LengthMatchingSolver["getOutput"]>
-    >("lengthMatchingSolver") ??
-      this.lengthMatchingSolver?.getBestEffortOutput() ?? {
-        matchedHdRoutes: binding.solverParams.hdRoutes,
-      }
+    >("lengthMatchingSolver")
+    if (!matched) matched = this.lengthMatchingSolver?.getBestEffortOutput()
+    if (!matched || diagnostic.reason === "invalid-final-copper")
+      matched = { matchedHdRoutes: binding.solverParams.hdRoutes }
     return {
       output: reconstructHdRoutesFromMatchingOutput({
         binding,
@@ -268,23 +308,14 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     }
   }
 
-  private finishWithBestEffortOutput(error: unknown, stage: string): void {
-    const bestEffort = this.createBestEffortOutput()
-    let message = String(error)
-    if (error instanceof Error) message = error.message
-    const connectionName = message.match(
-      /(?:HD route|connection) "([^"]+)"/,
-    )?.[1]
+  private finishWithBestEffortOutput(
+    failure: OptimizationFailureDiagnostic,
+  ): void {
+    const bestEffort = this.createBestEffortOutput(failure)
     const diagnostic: PostProcessingError = {
       type: "post_processing_error",
-      stage,
-      message,
+      ...failure,
       returnedRouteSource: bestEffort.source,
-    }
-    if (connectionName) diagnostic.connectionName = connectionName
-    if (error instanceof DifferentialPairRoutingError) {
-      diagnostic.connectionNames = [...error.connectionNames]
-      diagnostic.reason = error.reason
     }
     this.postProcessingErrors.push(diagnostic)
     this.fallbackOutput = bestEffort.output
