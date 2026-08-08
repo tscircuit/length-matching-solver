@@ -73,10 +73,6 @@ export class IncrementalCoupledPathSearch {
     return Math.min(0.99, this.explored / this.maxSearchStates)
   }
 
-  getSearchStateLimit(): number {
-    return this.maxSearchStates
-  }
-
   getGridNodeCount(): number {
     return this.grid.getNodeCount()
   }

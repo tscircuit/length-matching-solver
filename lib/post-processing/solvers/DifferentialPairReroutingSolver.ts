@@ -7,6 +7,7 @@ import {
   type DifferentialPairRoutingFailureReason,
 } from "../errors/DifferentialPairRoutingError"
 import { DifferentialPairRoutingSession } from "../routing/DifferentialPairRoutingSession"
+import { getDifferentialPairReroutingIterationLimit } from "../routing/getDifferentialPairReroutingIterationLimit"
 import type { InternalPostProcessingParams } from "../types"
 import { createPostProcessingVisualization } from "../visualization/createPostProcessingVisualization"
 
@@ -30,15 +31,11 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
   private nextPairIndex = 0
   private activeConnectionNames: [string, string] | null = null
   private activeSession: DifferentialPairRoutingSession | null = null
-  private allocatedActiveSearchStateCount = 0
 
   constructor(private readonly params: InternalPostProcessingParams) {
     super()
     this.outputTraces = cloneSimplifiedPcbTraces(params.simpleRouteJson.traces)
-    this.MAX_ITERATIONS = Math.max(
-      1,
-      params.simpleRouteJson.differentialPairs.length * 750_020,
-    )
+    this.MAX_ITERATIONS = getDifferentialPairReroutingIterationLimit(params)
   }
 
   override getSolverName(): string {
@@ -73,19 +70,11 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
       this.skipFailedPair(pair, error)
       return
     }
-    const allocatedSearchStateCount =
-      this.activeSession.getAllocatedSearchStateCount()
-    if (allocatedSearchStateCount > this.allocatedActiveSearchStateCount) {
-      this.MAX_ITERATIONS +=
-        allocatedSearchStateCount - this.allocatedActiveSearchStateCount
-      this.allocatedActiveSearchStateCount = allocatedSearchStateCount
-    }
     this.stats = this.activeSession.getStats()
     if (!this.activeSession.isComplete()) return
 
     const result = this.activeSession.getResult()
     this.activeSession = null
-    this.allocatedActiveSearchStateCount = 0
     for (const replacement of [
       result.candidate.first,
       result.candidate.second,
@@ -136,7 +125,6 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
       message: error.message,
     })
     this.activeSession = null
-    this.allocatedActiveSearchStateCount = 0
     this.nextPairIndex++
     if (
       this.nextPairIndex ===
