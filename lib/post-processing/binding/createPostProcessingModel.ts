@@ -10,17 +10,21 @@ export const createPostProcessingModel = (
   params: PostProcessingSolverParams,
 ): PostProcessingModel => {
   const internalNamesByRouteIndex = new Map<number, string>()
-  for (const pair of params.differentialPairs) {
-    for (const connectionName of pair.connectionNames) {
-      const matches = params.hdRoutes
-        .map((route, hdRouteIndex) => ({ route, hdRouteIndex }))
-        .filter(({ route }) => route.connectionName === connectionName)
-      if (matches.length !== 1)
-        throw new Error(
-          `PostProcessingSolver: differential pair connection "${connectionName}" lost its unique HD route binding`,
-        )
-      internalNamesByRouteIndex.set(matches[0]!.hdRouteIndex, connectionName)
-    }
+  const tunedConnectionNames = new Set([
+    ...params.differentialPairs.flatMap((pair) => pair.connectionNames),
+    ...(params.lengthMatchingGroups ?? []).flatMap(
+      (group) => group.connectionNames,
+    ),
+  ])
+  for (const connectionName of tunedConnectionNames) {
+    const matches = params.hdRoutes
+      .map((route, hdRouteIndex) => ({ route, hdRouteIndex }))
+      .filter(({ route }) => route.connectionName === connectionName)
+    if (matches.length !== 1)
+      throw new Error(
+        `PostProcessingSolver: tuned connection "${connectionName}" lost its unique HD route binding`,
+      )
+    internalNamesByRouteIndex.set(matches[0]!.hdRouteIndex, connectionName)
   }
 
   const traces: SimplifiedPcbTrace[] = params.hdRoutes.map(
@@ -200,6 +204,9 @@ export const createPostProcessingModel = (
       simpleRouteJson: {
         traces,
         differentialPairs: structuredClone(params.differentialPairs),
+        lengthMatchingGroups: structuredClone(
+          params.lengthMatchingGroups ?? [],
+        ),
         obstacles,
         bounds: structuredClone(params.bounds),
         layerCount: params.layerCount,

@@ -1,15 +1,17 @@
 import type {
   DifferentialPair,
   HighDensityRoute,
+  LengthMatchingGroup,
   Obstacle,
   SimpleRouteConnection,
 } from "../types"
 
-/** Input geometry and tuning constraints for a differential-pair matching run. */
+/** Input geometry and tuning constraints for a routed length-matching run. */
 export type LengthMatchingSolverParams = {
   hdRoutes: HighDensityRoute[]
   originalConnections: SimpleRouteConnection[]
   differentialPairs?: DifferentialPair[]
+  lengthMatchingGroups?: LengthMatchingGroup[]
   maximumMeanderDepth?: number
   minimumToothPitch?: number
   /**

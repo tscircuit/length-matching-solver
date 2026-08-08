@@ -42,6 +42,7 @@ export type {
   DifferentialPair,
   HighDensityRoute,
   HighDensityRouteJumper,
+  LengthMatchingGroup,
   Obstacle,
   RoutePoint,
   SimpleRouteConnection,

@@ -34,9 +34,12 @@ export const createLengthMatchingBinding = (input: {
   params: InternalPostProcessingParams
 }): LengthMatchingBinding => {
   const { simpleRouteJson } = input.params
-  const targetConnectionNames = new Set(
-    input.result.reroutedPairs.flatMap((pair) => pair.connectionNames),
-  )
+  const targetConnectionNames = new Set([
+    ...input.result.reroutedPairs.flatMap((pair) => pair.connectionNames),
+    ...simpleRouteJson.lengthMatchingGroups.flatMap(
+      (group) => group.connectionNames,
+    ),
+  ])
   const hdRoutes: HighDensityRoute[] = []
   const originalConnections: SimpleRouteConnection[] = []
   const traceBindings: LengthMatchingTraceBinding[] = []
@@ -203,6 +206,7 @@ export const createLengthMatchingBinding = (input: {
       hdRoutes,
       originalConnections,
       differentialPairs: input.result.reroutedPairs,
+      lengthMatchingGroups: simpleRouteJson.lengthMatchingGroups,
       obstacles: simpleRouteJson.obstacles,
       bounds: simpleRouteJson.bounds,
       layerCount: simpleRouteJson.layerCount,

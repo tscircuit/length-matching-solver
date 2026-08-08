@@ -57,10 +57,21 @@ export type SimpleRouteConnection = {
 export type DifferentialPair = {
   connectionNames: [string, string]
   lengthTolerance: number
+  /** Immutable routed length outside the geometry supplied to this solver. */
+  fixedLengthByConnectionName?: Record<string, number>
   /** Soft lower center-to-center spacing preference during rerouting and meander ranking. */
   minimumCenterlineDistance?: number
   /** Soft upper center-to-center spacing preference during rerouting and meander ranking. */
   maximumCenterlineDistance?: number
+}
+
+export type LengthMatchingGroup = {
+  /** Logical connections whose final longest-to-shortest skew is constrained. */
+  connectionNames: string[]
+  /** Maximum permitted route-length difference in millimeters. */
+  maxLengthSkew: number
+  /** Immutable routed length outside the geometry supplied to this solver. */
+  fixedLengthByConnectionName?: Record<string, number>
 }
 
 export type SimplifiedPcbTraceWireRoutePoint = {

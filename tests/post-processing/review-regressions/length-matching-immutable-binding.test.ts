@@ -49,6 +49,7 @@ test("binds untargeted and special traces as collision-only immutable copper", (
         differentialPairs: [
           { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
         ],
+        lengthMatchingGroups: [],
         obstacles: [],
         bounds: { minX: -1, maxX: 6, minY: 0, maxY: 5 },
         layerCount: 2,

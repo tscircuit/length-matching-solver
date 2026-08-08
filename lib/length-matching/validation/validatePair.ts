@@ -31,6 +31,17 @@ export const validatePair = (
     throw new Error(
       "LengthMatchingSolver: differential pair minimumCenterlineDistance cannot exceed maximumCenterlineDistance",
     )
+  for (const [connectionName, fixedLength] of Object.entries(
+    pair.fixedLengthByConnectionName ?? {},
+  ))
+    if (
+      !pair.connectionNames.includes(connectionName) ||
+      !Number.isFinite(fixedLength) ||
+      fixedLength < 0
+    )
+      throw new Error(
+        "LengthMatchingSolver: differential pair fixed lengths must be non-negative finite values for declared connections",
+      )
   const connectionsByName = new Map(
     originalConnections.map((connection) => [connection.name, connection]),
   )
