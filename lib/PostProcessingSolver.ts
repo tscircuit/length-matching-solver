@@ -261,9 +261,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     }
   }
 
-  private createBestEffortOutput(
-    diagnostic: OptimizationFailureDiagnostic,
-  ): {
+  private createBestEffortOutput(diagnostic: OptimizationFailureDiagnostic): {
     output: PostProcessingSolverOutput
     source: PostProcessingError["returnedRouteSource"]
   } {
