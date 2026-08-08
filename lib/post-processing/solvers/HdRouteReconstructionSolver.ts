@@ -1,8 +1,9 @@
 import { BaseSolver } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
 import type { LengthMatchingSolverOutput } from "../../length-matching/types"
-import type { RoutePoint, SimplifiedPcbTraces } from "../../types"
+import type { SimplifiedPcbTraces } from "../../types"
 import type { LengthMatchingBinding } from "../binding/createLengthMatchingBinding"
+import { reconstructHdRoutesFromMatchingOutput } from "../binding/reconstructHdRoutesFromMatchingOutput"
 import { reconstructSimplifiedPcbTraces } from "../binding/reconstructSimplifiedPcbTraces"
 import type {
   InternalPostProcessingParams,
@@ -35,51 +36,14 @@ export class HdRouteReconstructionSolver extends BaseSolver {
 
   override _step(): void {
     this.visualizationTraces = reconstructSimplifiedPcbTraces(this.input)
-    const hdRoutes = structuredClone(this.input.model.sourceHdRoutes)
-    for (const routeBinding of this.input.model.routeBindings) {
-      const lengthBinding = this.input.binding.traceBindings.find(
-        (candidate) => candidate.traceIndex === routeBinding.traceIndex,
-      )
-      if (!lengthBinding)
-        throw new Error(
-          `PostProcessingSolver: missing native HD binding for "${routeBinding.internalConnectionName}"`,
-        )
-      const matchedRoute =
-        this.input.result.matchedHdRoutes[lengthBinding.matchedRouteIndex]
-      const sourceRoute = hdRoutes[routeBinding.hdRouteIndex]
-      if (!matchedRoute || !sourceRoute)
-        throw new Error(
-          `PostProcessingSolver: missing matched or source HD route for "${routeBinding.internalConnectionName}"`,
-        )
-      if (matchedRoute.connectionName !== routeBinding.internalConnectionName)
-        throw new Error(
-          `PostProcessingSolver: matched HD binding changed "${routeBinding.internalConnectionName}" to "${matchedRoute.connectionName}"`,
-        )
-      const route = matchedRoute.route.map((point) => ({ ...point }))
-      const copyEndpointMetadata = (
-        target: RoutePoint | undefined,
-        source: RoutePoint | undefined,
-      ): void => {
-        if (!target || !source) return
-        if (source.pcb_port_id) target.pcb_port_id = source.pcb_port_id
-        if (source.insideJumperPad)
-          throw new Error(
-            `PostProcessingSolver: cannot restore jumper-pad metadata on rerouted connection "${routeBinding.internalConnectionName}"`,
-          )
-      }
-      copyEndpointMetadata(route[0], sourceRoute.route[0])
-      copyEndpointMetadata(route.at(-1), sourceRoute.route.at(-1))
-      hdRoutes[routeBinding.hdRouteIndex] = {
-        ...sourceRoute,
-        route,
-        vias: matchedRoute.vias.map((via) => ({
-          ...via,
-          ...(via.zLayers ? { zLayers: [...via.zLayers] } : {}),
-        })),
-      }
+    this.output = reconstructHdRoutesFromMatchingOutput({
+      ...this.input,
+      rejectInsideJumperPad: true,
+    })
+    this.stats = {
+      phase: "complete",
+      routeCount: this.output.hdRoutes.length,
     }
-    this.output = { hdRoutes }
-    this.stats = { phase: "complete", routeCount: hdRoutes.length }
     this.solved = true
   }
 

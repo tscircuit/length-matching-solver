@@ -377,6 +377,39 @@ export class LengthMatchingSolver extends BaseSolver {
     return { matchedHdRoutes: this.matchedHdRoutes }
   }
 
+  /** Returns completed work plus the strongest valid in-progress attempt. */
+  getBestEffortOutput(): LengthMatchingSolverOutput {
+    const matchedHdRoutes = structuredClone(this.matchedHdRoutes)
+    const fullAttempts = this.activePair?.fullAttempts ?? []
+    let bestAttempt: RegressionAttempt | null = null
+    for (const attempt of fullAttempts) {
+      if (!bestAttempt || attempt.qualityScore > bestAttempt.qualityScore)
+        bestAttempt = attempt
+    }
+    if (!bestAttempt) {
+      for (const attempt of this.activePair?.partialAttempts ?? []) {
+        if (!bestAttempt || attempt.addedLength > bestAttempt.addedLength) {
+          bestAttempt = attempt
+          continue
+        }
+        if (
+          attempt.addedLength === bestAttempt.addedLength &&
+          attempt.qualityScore > bestAttempt.qualityScore
+        )
+          bestAttempt = attempt
+      }
+    }
+    if (bestAttempt) {
+      const route = matchedHdRoutes[bestAttempt.routeIndex]
+      if (route)
+        matchedHdRoutes[bestAttempt.routeIndex] = {
+          ...route,
+          route: structuredClone(bestAttempt.predictedRoute),
+        }
+    }
+    return { matchedHdRoutes }
+  }
+
   computeProgress(): number {
     if (this.solved) return 1
     if (this.pairs.length === 0) return this.config ? 1 : 0

@@ -2,6 +2,10 @@ import { BaseSolver } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
 import type { DifferentialPair, SimplifiedPcbTraces } from "../../types"
 import { cloneSimplifiedPcbTraces } from "../model/cloneSimplifiedPcbTraces"
+import {
+  DifferentialPairRoutingError,
+  type DifferentialPairRoutingFailureReason,
+} from "../errors/DifferentialPairRoutingError"
 import { DifferentialPairRoutingSession } from "../routing/DifferentialPairRoutingSession"
 import type { InternalPostProcessingParams } from "../types"
 import { createPostProcessingVisualization } from "../visualization/createPostProcessingVisualization"
@@ -9,12 +13,20 @@ import { createPostProcessingVisualization } from "../visualization/createPostPr
 export type DifferentialPairReroutingOutput = {
   traces: SimplifiedPcbTraces
   reroutedPairs: DifferentialPair[]
+  failures: DifferentialPairReroutingFailure[]
+}
+
+export type DifferentialPairReroutingFailure = {
+  connectionNames: [string, string]
+  reason: DifferentialPairRoutingFailureReason
+  message: string
 }
 
 /** Incrementally reroutes one declared differential pair at a time. */
 export class DifferentialPairReroutingSolver extends BaseSolver {
   private readonly outputTraces: SimplifiedPcbTraces
   private readonly reroutedPairs: DifferentialPair[] = []
+  private readonly failures: DifferentialPairReroutingFailure[] = []
   private nextPairIndex = 0
   private activeConnectionNames: [string, string] | null = null
   private activeSession: DifferentialPairRoutingSession | null = null
@@ -41,19 +53,25 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
       return
     }
     this.activeConnectionNames = pair.connectionNames
-    if (!this.activeSession) {
-      this.activeSession = new DifferentialPairRoutingSession({
-        pair,
-        traces: this.outputTraces,
-        obstacles: this.params.simpleRouteJson.obstacles,
-        bounds: this.params.simpleRouteJson.bounds,
-        layerCount: this.params.simpleRouteJson.layerCount,
-        routingGrid: this.params.routingGrid,
-      })
-      this.stats = this.activeSession.getStats()
+    try {
+      if (!this.activeSession) {
+        this.activeSession = new DifferentialPairRoutingSession({
+          pair,
+          traces: this.outputTraces,
+          obstacles: this.params.simpleRouteJson.obstacles,
+          bounds: this.params.simpleRouteJson.bounds,
+          layerCount: this.params.simpleRouteJson.layerCount,
+          routingGrid: this.params.routingGrid,
+        })
+        this.stats = this.activeSession.getStats()
+        return
+      }
+      this.activeSession.step()
+    } catch (error) {
+      if (!(error instanceof DifferentialPairRoutingError)) throw error
+      this.skipFailedPair(pair, error)
       return
     }
-    this.activeSession.step()
     const allocatedSearchStateCount =
       this.activeSession.getAllocatedSearchStateCount()
     if (allocatedSearchStateCount > this.allocatedActiveSearchStateCount) {
@@ -103,6 +121,35 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
     this.stats = {
       phase: "complete",
       acceptedPairCount: this.reroutedPairs.length,
+      skippedPairCount: this.failures.length,
+    }
+  }
+
+  private skipFailedPair(
+    pair: DifferentialPair,
+    error: DifferentialPairRoutingError,
+  ): void {
+    this.failures.push({
+      connectionNames: [...pair.connectionNames],
+      reason: error.reason,
+      message: error.message,
+    })
+    this.activeSession = null
+    this.allocatedActiveSearchStateCount = 0
+    this.nextPairIndex++
+    if (
+      this.nextPairIndex ===
+      this.params.simpleRouteJson.differentialPairs.length
+    ) {
+      this.finish()
+      return
+    }
+    this.stats = {
+      phase: "skipped",
+      pair: pair.connectionNames.join("/"),
+      pairIndex: this.nextPairIndex - 1,
+      pairCount: this.params.simpleRouteJson.differentialPairs.length,
+      skippedPairCount: this.failures.length,
     }
   }
 
@@ -115,11 +162,20 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
       throw new Error(
         "DifferentialPairReroutingSolver: getOutput() called before completion",
       )
+    return this.getBestEffortOutput()
+  }
+
+  /** Returns all candidates committed before an interruption. */
+  getBestEffortOutput(): DifferentialPairReroutingOutput {
     return {
       traces: cloneSimplifiedPcbTraces(this.outputTraces),
       reroutedPairs: this.reroutedPairs.map((pair) => ({
         ...pair,
         connectionNames: [...pair.connectionNames],
+      })),
+      failures: this.failures.map((failure) => ({
+        ...failure,
+        connectionNames: [...failure.connectionNames],
       })),
     }
   }

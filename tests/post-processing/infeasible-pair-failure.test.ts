@@ -1,12 +1,8 @@
 import { expect, test } from "bun:test"
-import {
-  DifferentialPairRoutingError,
-  PostProcessingSolver,
-  type HighDensityRoute,
-} from "../../lib"
+import { PostProcessingSolver, type HighDensityRoute } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
-test("throws a pair-specific error and stops before processing the next pair", () => {
+test("skips an infeasible pair and returns later improvements", () => {
   const { simpleRouteJson: _fixture, ...params } =
     createPostProcessingTestParams()
   const laterRoutes = params.hdRoutes.map(
@@ -26,39 +22,42 @@ test("throws a pair-specific error and stops before processing the next pair", (
         lengthTolerance: 0.01,
       },
     ],
+    bounds: { minX: -2, maxX: 12, minY: -5, maxY: 15 },
     obstacles: [
       {
         type: "rect",
         layers: ["top", "bottom"],
         center: { x: 5, y: 0 },
-        width: 8,
+        width: 12,
         height: 9,
         connectedTo: [],
       },
     ],
   })
 
-  let thrown: unknown
-  try {
-    solver.solve()
-  } catch (error) {
-    thrown = error
-  }
+  solver.solve()
+  const output = solver.getOutput()
 
-  expect(thrown).toBeInstanceOf(DifferentialPairRoutingError)
-  if (!(thrown instanceof DifferentialPairRoutingError)) throw thrown
-  expect(thrown.name).toBe("DifferentialPairRoutingError")
-  expect(thrown.connectionNames).toEqual(["P", "N"])
-  expect(thrown.reason).toBe("no-valid-candidate")
-  expect(solver.failed).toBe(true)
-  expect(solver.solved).toBe(false)
-  expect(solver.differentialPairReroutingSolver?.failed).toBe(true)
+  expect(solver.failed).toBe(false)
+  expect(solver.solved).toBe(true)
+  expect(solver.differentialPairReroutingSolver?.failed).toBe(false)
+  expect(solver.differentialPairReroutingSolver?.stats).toMatchObject({
+    acceptedPairCount: 1,
+    skippedPairCount: 1,
+  })
+  expect(output.hdRoutes.slice(0, 2)).toEqual(params.hdRoutes)
   expect(
-    solver.differentialPairReroutingSolver?.computeProgress(),
-  ).toBeLessThan(0.5)
-  expect(solver.differentialPairReroutingSolver?.stats.pair).toBe("P/N")
-  expect(solver.fortyFiveDegreeSimplificationSolver).toBeUndefined()
-  expect(solver.lengthMatchingSolver).toBeUndefined()
-  expect(solver.hdRouteReconstructionSolver).toBeUndefined()
-  expect(() => solver.getOutput()).toThrow(/before the solver completed/)
+    output.hdRoutes.slice(2).every((route) => route.route.length > 2),
+  ).toBe(true)
+  expect(output.postProcessingErrors).toEqual([
+    {
+      type: "post_processing_error",
+      stage: "differentialPairReroutingSolver",
+      message:
+        "PostProcessingSolver: differential pair P/N could not be improved without violating bounds, copper clearance, or coupled-via constraints",
+      connectionNames: ["P", "N"],
+      reason: "no-valid-candidate",
+      returnedRouteSource: "best-effort-hd-routes",
+    },
+  ])
 })

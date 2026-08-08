@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { PostProcessingSolver } from "../../lib"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
-test("rejects a native via span that cannot be represented by its route transition", () => {
+test("returns input routes for an ambiguous native via span", () => {
   const { simpleRouteJson: _fixture, ...params } =
     createPostProcessingTestParams()
   params.layerCount = 3
@@ -13,7 +13,16 @@ test("rejects a native via span that cannot be represented by its route transiti
   ]
   params.hdRoutes[0]!.vias = [{ x: 0, y: 2, zLayers: [0, 1, 2] }]
 
-  expect(() => new PostProcessingSolver(params)).toThrow(
-    /via span incompatible with its layer transition/,
-  )
+  const output = new PostProcessingSolver(params).getOutput()
+
+  expect(output.hdRoutes).toEqual(params.hdRoutes)
+  expect(output.postProcessingErrors).toEqual([
+    expect.objectContaining({
+      stage: "validation",
+      message: expect.stringMatching(
+        /via span incompatible with its layer transition/,
+      ),
+      returnedRouteSource: "input-hd-routes",
+    }),
+  ])
 })
