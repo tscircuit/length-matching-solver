@@ -15,6 +15,7 @@ import { createPostProcessingModel } from "./post-processing/binding/createPostP
 import { reconstructHdRoutesFromMatchingOutput } from "./post-processing/binding/reconstructHdRoutesFromMatchingOutput"
 import { DifferentialPairRoutingError } from "./post-processing/errors/DifferentialPairRoutingError"
 import { PostProcessingConstraintError } from "./post-processing/errors/PostProcessingConstraintError"
+import { PostProcessingGridCapacityError } from "./post-processing/errors/PostProcessingGridCapacityError"
 import { getDifferentialPairReroutingIterationLimit } from "./post-processing/routing/getDifferentialPairReroutingIterationLimit"
 import {
   DifferentialPairReroutingSolver,
@@ -142,8 +143,22 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
 
   constructor(params: PostProcessingSolverParams) {
     super(structuredClone(params))
-    validatePostProcessingParams(params)
+    let gridCapacityError: PostProcessingGridCapacityError | null = null
+    try {
+      validatePostProcessingParams(params)
+    } catch (error) {
+      if (!(error instanceof PostProcessingGridCapacityError)) throw error
+      gridCapacityError = error
+    }
     this.model = createPostProcessingModel(params)
+    if (gridCapacityError) {
+      this.finishWithBestEffortOutput({
+        stage: "differentialPairReroutingSolver",
+        message: gridCapacityError.message,
+        reason: gridCapacityError.reason,
+      })
+      return
+    }
     const reroutingIterationLimit = getDifferentialPairReroutingIterationLimit(
       this.model.params,
     )

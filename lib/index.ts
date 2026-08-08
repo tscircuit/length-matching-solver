@@ -3,6 +3,7 @@ export {
   type LengthMatchingSolverOutput,
   type LengthMatchingSolverParams,
 } from "./length-matching-solver"
+export { LengthMatchingNoSolutionError } from "./length-matching/errors/LengthMatchingNoSolutionError"
 export {
   DifferentialPairRoutingError,
   PostProcessingSolver,
