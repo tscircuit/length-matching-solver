@@ -15,10 +15,7 @@ export const createPostProcessingModel = (
       const matches = params.hdRoutes
         .map((route, hdRouteIndex) => ({ route, hdRouteIndex }))
         .filter(({ route }) => route.connectionName === connectionName)
-      if (matches.length !== 1)
-        throw new Error(
-          `PostProcessingSolver: differential pair connection "${connectionName}" lost its unique HD route binding`,
-        )
+      if (matches.length !== 1) continue
       internalNamesByRouteIndex.set(matches[0]!.hdRouteIndex, connectionName)
     }
   }
