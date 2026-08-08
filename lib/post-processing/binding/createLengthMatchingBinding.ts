@@ -35,7 +35,7 @@ export const createLengthMatchingBinding = (input: {
 }): LengthMatchingBinding => {
   const { simpleRouteJson } = input.params
   const targetConnectionNames = new Set(
-    input.result.reroutedPairs.flatMap((pair) => pair.connectionNames),
+    simpleRouteJson.differentialPairs.flatMap((pair) => pair.connectionNames),
   )
   const hdRoutes: HighDensityRoute[] = []
   const originalConnections: SimpleRouteConnection[] = []
@@ -202,7 +202,7 @@ export const createLengthMatchingBinding = (input: {
     solverParams: {
       hdRoutes,
       originalConnections,
-      differentialPairs: input.result.reroutedPairs,
+      differentialPairs: structuredClone(simpleRouteJson.differentialPairs),
       obstacles: simpleRouteJson.obstacles,
       bounds: simpleRouteJson.bounds,
       layerCount: simpleRouteJson.layerCount,
