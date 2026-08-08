@@ -9,6 +9,7 @@ import {
   getConnectionLength,
 } from "./length-matching/connection-routes"
 import { selectDualMeanderPlan } from "./length-matching/dual-meander-plan"
+import { LengthMatchingNoSolutionError } from "./length-matching/errors/LengthMatchingNoSolutionError"
 import { isCandidateGeometryValid } from "./length-matching/geometry-validation"
 import type {
   ActivePair,
@@ -97,7 +98,7 @@ export class LengthMatchingSolver extends BaseSolver {
       maxToothCount: this.getConfig().maxToothCount,
     })
     if (candidates.length === 0)
-      throw new Error(
+      throw new LengthMatchingNoSolutionError(
         `LengthMatchingSolver: no same-layer straight segment can tune connection "${shorterConnectionName}"`,
       )
     this.activePair = {
@@ -193,7 +194,7 @@ export class LengthMatchingSolver extends BaseSolver {
           activePair.plannedAttemptTargets === null &&
           activePair.lastMatchedSegmentIndexByRoute.size === 0
         if (!canTryDualPlan)
-          throw new Error(
+          throw new LengthMatchingNoSolutionError(
             `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
           )
         return this.tryDualMeanderPlan(activePair)
@@ -314,7 +315,7 @@ export class LengthMatchingSolver extends BaseSolver {
       obstacleMargin: config.obstacleMargin,
     })
     if (!plan)
-      throw new Error(
+      throw new LengthMatchingNoSolutionError(
         `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
       )
     const updatedRoutes = [...this.matchedHdRoutes]

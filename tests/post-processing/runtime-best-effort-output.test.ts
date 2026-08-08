@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { PostProcessingSolver } from "../../lib"
+import { LengthMatchingNoSolutionError } from "../../lib/length-matching/errors/LengthMatchingNoSolutionError"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
 test("returns completed stage geometry when a later stage fails", () => {
@@ -10,7 +11,11 @@ test("returns completed stage geometry when a later stage fails", () => {
     solver.step()
   if (!solver.lengthMatchingSolver)
     throw new Error("Expected the length-matching stage to start")
-  solver.lengthMatchingSolver.MAX_ITERATIONS = 1
+  solver.lengthMatchingSolver._step = (): void => {
+    throw new LengthMatchingNoSolutionError(
+      "LengthMatchingSolver: no valid meander meets the requested constraints",
+    )
+  }
 
   solver.solve()
   const output = solver.getOutput()
@@ -23,7 +28,8 @@ test("returns completed stage geometry when a later stage fails", () => {
     {
       type: "post_processing_error",
       stage: "lengthMatchingSolver",
-      message: "LengthMatchingSolver ran out of iterations",
+      message:
+        "LengthMatchingSolver: no valid meander meets the requested constraints",
       returnedRouteSource: "best-effort-hd-routes",
     },
   ])

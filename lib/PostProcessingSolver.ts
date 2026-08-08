@@ -6,6 +6,7 @@ import {
 } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
 import { LengthMatchingSolver } from "./length-matching-solver"
+import { LengthMatchingNoSolutionError } from "./length-matching/errors/LengthMatchingNoSolutionError"
 import {
   createLengthMatchingBinding,
   type LengthMatchingBinding,
@@ -13,6 +14,7 @@ import {
 import { createPostProcessingModel } from "./post-processing/binding/createPostProcessingModel"
 import { reconstructHdRoutesFromMatchingOutput } from "./post-processing/binding/reconstructHdRoutesFromMatchingOutput"
 import { DifferentialPairRoutingError } from "./post-processing/errors/DifferentialPairRoutingError"
+import { PostProcessingConstraintError } from "./post-processing/errors/PostProcessingConstraintError"
 import { getDifferentialPairReroutingIterationLimit } from "./post-processing/routing/getDifferentialPairReroutingIterationLimit"
 import {
   DifferentialPairReroutingSolver,
@@ -39,7 +41,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   lengthMatchingSolver?: LengthMatchingSolver
   hdRouteReconstructionSolver?: HdRouteReconstructionSolver
   private lengthMatchingBinding: LengthMatchingBinding | null = null
-  private readonly model!: PostProcessingModel
+  private readonly model: PostProcessingModel
   private fallbackOutput: PostProcessingSolverOutput | null = null
   private readonly postProcessingErrors: PostProcessingError[] = []
 
@@ -47,7 +49,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     definePipelineStep(
       "differentialPairReroutingSolver",
       DifferentialPairReroutingSolver,
-      (pipeline: PostProcessingSolver) => [pipeline.getModel().params],
+      (pipeline: PostProcessingSolver) => [pipeline.model.params],
     ),
     definePipelineStep(
       "fortyFiveDegreeSimplificationSolver",
@@ -62,7 +64,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
             "PostProcessingSolver: rerouting stage completed without output",
           )
         const { obstacles, bounds, layerCount } =
-          pipeline.getModel().params.simpleRouteJson
+          pipeline.model.params.simpleRouteJson
         return [{ ...rerouted, obstacles, bounds, layerCount }]
       },
     ),
@@ -80,7 +82,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
           )
         pipeline.lengthMatchingBinding = createLengthMatchingBinding({
           result: simplified,
-          params: pipeline.getModel().params,
+          params: pipeline.model.params,
         })
         return [pipeline.lengthMatchingBinding.solverParams]
       },
@@ -105,8 +107,8 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
             binding: pipeline.lengthMatchingBinding,
             result: matched,
             simplified,
-            params: pipeline.getModel().params,
-            model: pipeline.getModel(),
+            params: pipeline.model.params,
+            model: pipeline.model,
           },
         ]
       },
@@ -123,8 +125,10 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
           pipeline.stats = {
             phase: "complete",
             acceptedPairCount: rerouted.reroutedPairs.length,
-            skippedPairCount: rerouted.failures.length,
-            postProcessingErrorCount: rerouted.failures.length,
+          }
+          if (rerouted.failures.length > 0) {
+            pipeline.stats.skippedPairCount = rerouted.failures.length
+            pipeline.stats.postProcessingErrorCount = rerouted.failures.length
           }
         },
       },
@@ -133,30 +137,27 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
 
   constructor(params: PostProcessingSolverParams) {
     super(structuredClone(params))
-    try {
-      validatePostProcessingParams(params)
-      this.model = createPostProcessingModel(params)
-      const reroutingIterationLimit =
-        getDifferentialPairReroutingIterationLimit(this.model.params)
-      const simplificationIterationLimit = Math.max(
-        1,
-        params.differentialPairs.length + 1,
+    validatePostProcessingParams(params)
+    this.model = createPostProcessingModel(params)
+    const reroutingIterationLimit = getDifferentialPairReroutingIterationLimit(
+      this.model.params,
+    )
+    const simplificationIterationLimit = Math.max(
+      1,
+      params.differentialPairs.length + 1,
+    )
+    const lengthMatchingIterationLimit = 100_000
+    const pipelineLifecycleIterations = 10
+    const pipelineIterationLimit =
+      reroutingIterationLimit +
+      simplificationIterationLimit +
+      lengthMatchingIterationLimit +
+      pipelineLifecycleIterations
+    if (!Number.isSafeInteger(pipelineIterationLimit))
+      throw new Error(
+        "PostProcessingSolver: derived pipeline iteration bound exceeds the safe integer range",
       )
-      const lengthMatchingIterationLimit = 100_000
-      const pipelineLifecycleIterations = 10
-      const pipelineIterationLimit =
-        reroutingIterationLimit +
-        simplificationIterationLimit +
-        lengthMatchingIterationLimit +
-        pipelineLifecycleIterations
-      if (!Number.isSafeInteger(pipelineIterationLimit))
-        throw new Error(
-          "PostProcessingSolver: derived pipeline iteration bound exceeds the safe integer range",
-        )
-      this.MAX_ITERATIONS = pipelineIterationLimit
-    } catch (error) {
-      this.finishWithBestEffortOutput(error, "validation")
-    }
+    this.MAX_ITERATIONS = pipelineIterationLimit
   }
 
   override getSolverName(): string {
@@ -168,41 +169,64 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
   }
 
   override _step(): void {
+    const stage = this.getCurrentStageName()
     try {
       super._step()
     } catch (error) {
-      this.finishWithBestEffortOutput(error, this.getCurrentStageName())
+      if (!this.isRecoverableOptimizationFailure(error, stage)) throw error
+      this.finishWithBestEffortOutput(error, stage)
       return
     }
-    if (this.failed)
-      this.finishWithBestEffortOutput(
-        this.error ?? "PostProcessingSolver failed without an error message",
-        this.getCurrentStageName(),
-      )
-  }
-
-  override tryFinalAcceptance(): void {
+    if (!this.failed) return
+    if (
+      stage !== "differentialPairReroutingSolver" &&
+      stage !== "lengthMatchingSolver"
+    )
+      return
     this.finishWithBestEffortOutput(
-      "PostProcessingSolver reached its iteration limit",
-      this.getCurrentStageName(),
+      this.error ?? "PostProcessingSolver failed without an error message",
+      stage,
     )
   }
 
-  private getModel(): PostProcessingModel {
-    if (!this.model)
-      throw new Error("PostProcessingSolver: validated model is unavailable")
-    return this.model
+  override tryFinalAcceptance(): void {
+    const stage = this.getCurrentStageName()
+    if (
+      stage !== "differentialPairReroutingSolver" &&
+      stage !== "lengthMatchingSolver"
+    )
+      return
+    this.finishWithBestEffortOutput(
+      "PostProcessingSolver reached its iteration limit",
+      stage,
+    )
+  }
+
+  private isRecoverableOptimizationFailure(
+    error: unknown,
+    stage: string,
+  ): boolean {
+    if (
+      stage === "lengthMatchingSolver" &&
+      error instanceof LengthMatchingNoSolutionError
+    )
+      return true
+    if (
+      stage === "hdRouteReconstructionSolver" &&
+      error instanceof PostProcessingConstraintError
+    )
+      return true
+    return (
+      stage === "differentialPairReroutingSolver" &&
+      error instanceof DifferentialPairRoutingError &&
+      error.reason === "no-valid-candidate"
+    )
   }
 
   private createBestEffortOutput(): {
     output: PostProcessingSolverOutput
     source: PostProcessingError["returnedRouteSource"]
   } {
-    if (!this.model)
-      return {
-        output: { hdRoutes: structuredClone(this.inputProblem.hdRoutes) },
-        source: "input-hd-routes",
-      }
     let binding = this.lengthMatchingBinding
     if (!binding) {
       const simplified =
@@ -231,37 +255,18 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
       this.lengthMatchingSolver?.getBestEffortOutput() ?? {
         matchedHdRoutes: binding.solverParams.hdRoutes,
       }
-    try {
-      return {
-        output: reconstructHdRoutesFromMatchingOutput({
-          binding,
-          result: matched,
-          model: this.model,
-        }),
-        source: "best-effort-hd-routes",
-      }
-    } catch {
-      return {
-        output: reconstructHdRoutesFromMatchingOutput({
-          binding,
-          result: { matchedHdRoutes: binding.solverParams.hdRoutes },
-          model: this.model,
-        }),
-        source: "best-effort-hd-routes",
-      }
+    return {
+      output: reconstructHdRoutesFromMatchingOutput({
+        binding,
+        result: matched,
+        model: this.model,
+      }),
+      source: "best-effort-hd-routes",
     }
   }
 
   private finishWithBestEffortOutput(error: unknown, stage: string): void {
-    let bestEffort: ReturnType<PostProcessingSolver["createBestEffortOutput"]>
-    try {
-      bestEffort = this.createBestEffortOutput()
-    } catch {
-      bestEffort = {
-        output: { hdRoutes: structuredClone(this.inputProblem.hdRoutes) },
-        source: "input-hd-routes",
-      }
-    }
+    const bestEffort = this.createBestEffortOutput()
     let message = String(error)
     if (error instanceof Error) message = error.message
     const connectionName = message.match(

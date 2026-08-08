@@ -10,6 +10,7 @@ import { validateCandidateGeometry } from "../geometry/validateCandidateGeometry
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import type { FortyFiveDegreeSimplificationOutput } from "../solvers/FortyFiveDegreeSimplificationSolver"
 import type { InternalPostProcessingParams } from "../types"
+import { PostProcessingConstraintError } from "../errors/PostProcessingConstraintError"
 import type { LengthMatchingBinding } from "./createLengthMatchingBinding"
 
 /** Rebuild simplified traces and validate each complete length-matched pair. */
@@ -150,7 +151,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
       getSimplifiedTraceLength(first) - getSimplifiedTraceLength(second),
     )
     if (finalLengthDifference > pair.lengthTolerance + 1e-7)
-      throw new Error(
+      throw new PostProcessingConstraintError(
         `PostProcessingSolver: reconstructed pair ${pairName} exceeds length tolerance ${pair.lengthTolerance} with error ${finalLengthDifference}`,
       )
     const valid = validateCandidateGeometry(first, second, {
@@ -162,7 +163,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
       layerCount: simpleRouteJson.layerCount,
     })
     if (!valid)
-      throw new Error(
+      throw new PostProcessingConstraintError(
         `PostProcessingSolver: length matching produced invalid complete copper for pair ${pairName}`,
       )
   }
