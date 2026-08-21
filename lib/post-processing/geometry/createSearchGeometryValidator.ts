@@ -45,6 +45,7 @@ export const createSearchGeometryValidator = (input: {
     immutableSegments.push(...copper.segments)
     immutableVias.push(...copper.vias)
   }
+  // Group fixed copper once so each search edge checks only its own layer.
   const immutableSegmentsByLayer = Array.from(
     { length: input.layerCount },
     (): CopperSegment[] => [],
@@ -172,6 +173,7 @@ export const createSearchGeometryValidator = (input: {
     }
     for (const obstacle of input.obstacles) {
       if (!obstacleIsOnLayer(obstacle, segment.layer)) continue
+      // Reject distant obstacles with a rotation-safe bound before exact sampling.
       const obstacleHalfExtent = Math.hypot(
         obstacle.width / 2 + inflation,
         obstacle.height / 2 + inflation,
