@@ -1,10 +1,9 @@
+import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import type { Obstacle, SimplifiedPcbTrace } from "../../types"
 import type { CopperSegment, CopperVia, Point } from "../model/internal-types"
 import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
 import type { CoupledPathPoint } from "../routing/types"
-import { createCopperCollisionEntries } from "./createCopperCollisionEntries"
-import { createObstacleCollisionEntries } from "./createObstacleCollisionEntries"
 import { getLayerIndex } from "./getLayerIndex"
 import { getTransitionLayers } from "./getTransitionLayers"
 
@@ -46,15 +45,14 @@ export const createSearchGeometryValidator = (input: {
     immutableSegments.push(...copper.segments)
     immutableVias.push(...copper.vias)
   }
-  const obstacleCollisionEntries = createObstacleCollisionEntries({
-    obstacles: input.obstacles,
-    layerCount: input.layerCount,
-  })
-  const copperCollisionEntries = createCopperCollisionEntries({
-    segments: immutableSegments,
-    vias: immutableVias,
-    layerCount: input.layerCount,
-  })
+  const immutableSegmentsByLayer = Array.from(
+    { length: input.layerCount },
+    (): CopperSegment[] => [],
+  )
+  for (const segment of immutableSegments) {
+    const layerIndex = getLayerIndex(segment.layer, input.layerCount)
+    immutableSegmentsByLayer[layerIndex]!.push(segment)
+  }
   const samePoint = (left: Point, right: Point): boolean =>
     Math.hypot(left.x - right.x, left.y - right.y) <= 1e-8
   const pointToSegmentDistance = (
@@ -91,6 +89,10 @@ export const createSearchGeometryValidator = (input: {
       Math.abs(x) <= obstacle.width / 2 + inflation &&
       Math.abs(y) <= obstacle.height / 2 + inflation
     )
+  }
+  const obstacleIsOnLayer = (obstacle: Obstacle, layer: string): boolean => {
+    const z = getLayerIndex(layer, input.layerCount)
+    return getObstacleLayerIndexes(obstacle, input.layerCount).includes(z)
   }
   const laneSegments = (
     start: CoupledPathPoint,
@@ -155,10 +157,10 @@ export const createSearchGeometryValidator = (input: {
     const radius = segment.width / 2
     const inflation = radius + segment.width
     const layerIndex = getLayerIndex(segment.layer, input.layerCount)
-    const segmentMinX = Math.min(segment.start.x, segment.end.x) - inflation
-    const segmentMaxX = Math.max(segment.start.x, segment.end.x) + inflation
-    const segmentMinY = Math.min(segment.start.y, segment.end.y) - inflation
-    const segmentMaxY = Math.max(segment.start.y, segment.end.y) + inflation
+    const segmentMinX = Math.min(segment.start.x, segment.end.x)
+    const segmentMaxX = Math.max(segment.start.x, segment.end.x)
+    const segmentMinY = Math.min(segment.start.y, segment.end.y)
+    const segmentMaxY = Math.max(segment.start.y, segment.end.y)
     for (const point of [segment.start, segment.end]) {
       if (
         point.x - radius < input.bounds.minX ||
@@ -168,16 +170,19 @@ export const createSearchGeometryValidator = (input: {
       )
         return false
     }
-    for (const obstacleCollisionEntry of obstacleCollisionEntries) {
-      if (!obstacleCollisionEntry.layerIndexes.includes(layerIndex)) continue
+    for (const obstacle of input.obstacles) {
+      if (!obstacleIsOnLayer(obstacle, segment.layer)) continue
+      const obstacleHalfExtent = Math.hypot(
+        obstacle.width / 2 + inflation,
+        obstacle.height / 2 + inflation,
+      )
       if (
-        segmentMaxX < obstacleCollisionEntry.minX ||
-        segmentMinX > obstacleCollisionEntry.maxX ||
-        segmentMaxY < obstacleCollisionEntry.minY ||
-        segmentMinY > obstacleCollisionEntry.maxY
+        segmentMaxX < obstacle.center.x - obstacleHalfExtent ||
+        segmentMinX > obstacle.center.x + obstacleHalfExtent ||
+        segmentMaxY < obstacle.center.y - obstacleHalfExtent ||
+        segmentMinY > obstacle.center.y + obstacleHalfExtent
       )
         continue
-      const obstacle = obstacleCollisionEntry.obstacle
       const [startTerminal, endTerminal] =
         segment.connectionName === input.firstConnectionName
           ? [input.firstStartTerminal, input.firstEndTerminal]
@@ -239,19 +244,16 @@ export const createSearchGeometryValidator = (input: {
           return false
       }
     }
-    for (const copperCollisionEntry of copperCollisionEntries.segmentsByLayer[
-      layerIndex
-    ] ?? []) {
-      const other = copperCollisionEntry.segment
+    for (const other of immutableSegmentsByLayer[layerIndex]!) {
       const required =
         segment.width / 2 +
         other.width / 2 +
         Math.max(segment.width, other.width)
       if (
-        segmentMaxX + required < copperCollisionEntry.minX ||
-        segmentMinX - required > copperCollisionEntry.maxX ||
-        segmentMaxY + required < copperCollisionEntry.minY ||
-        segmentMinY - required > copperCollisionEntry.maxY
+        segmentMaxX + required < Math.min(other.start.x, other.end.x) ||
+        segmentMinX - required > Math.max(other.start.x, other.end.x) ||
+        segmentMaxY + required < Math.min(other.start.y, other.end.y) ||
+        segmentMinY - required > Math.max(other.start.y, other.end.y)
       )
         continue
       if (
@@ -264,29 +266,18 @@ export const createSearchGeometryValidator = (input: {
       )
         return false
     }
-    for (const copperCollisionEntry of copperCollisionEntries.viasByLayer[
-      layerIndex
-    ] ?? []) {
-      const via = copperCollisionEntry.via
-      const required = segment.width / 2 + via.diameter / 2 + segment.width
+    for (const via of immutableVias) {
+      if (!via.layers.includes(segment.layer)) continue
       if (
-        segmentMaxX + required < copperCollisionEntry.minX ||
-        segmentMinX - required > copperCollisionEntry.maxX ||
-        segmentMaxY + required < copperCollisionEntry.minY ||
-        segmentMinY - required > copperCollisionEntry.maxY
+        pointToSegmentDistance(via, segment.start, segment.end) <
+        segment.width / 2 + via.diameter / 2 + segment.width
       )
-        continue
-      if (pointToSegmentDistance(via, segment.start, segment.end) < required)
         return false
     }
     return true
   }
   const viaIsClear = (via: CopperVia): boolean => {
     const radius = via.diameter / 2
-    const inflation = radius + via.diameter
-    const layerIndexes = via.layers.map((layer) =>
-      getLayerIndex(layer, input.layerCount),
-    )
     if (
       via.x - radius < input.bounds.minX ||
       via.x + radius > input.bounds.maxX ||
@@ -294,58 +285,30 @@ export const createSearchGeometryValidator = (input: {
       via.y + radius > input.bounds.maxY
     )
       return false
-    for (const obstacleCollisionEntry of obstacleCollisionEntries) {
-      if (
-        !layerIndexes.some((layerIndex) =>
-          obstacleCollisionEntry.layerIndexes.includes(layerIndex),
-        )
-      )
+    for (const obstacle of input.obstacles) {
+      if (!via.layers.some((layer) => obstacleIsOnLayer(obstacle, layer)))
         continue
-      if (
-        via.x + inflation < obstacleCollisionEntry.minX ||
-        via.x - inflation > obstacleCollisionEntry.maxX ||
-        via.y + inflation < obstacleCollisionEntry.minY ||
-        via.y - inflation > obstacleCollisionEntry.maxY
-      )
-        continue
-      const obstacle = obstacleCollisionEntry.obstacle
       const exitsConnectedTerminal =
         via.terminal !== null &&
         obstacle.connectedTo.includes(via.connectionName) &&
         obstacleContains(via, obstacle, 0)
-      if (!exitsConnectedTerminal && obstacleContains(via, obstacle, inflation))
+      if (
+        !exitsConnectedTerminal &&
+        obstacleContains(via, obstacle, radius + via.diameter)
+      )
         return false
     }
-    for (const layerIndex of layerIndexes) {
-      for (const copperCollisionEntry of copperCollisionEntries.segmentsByLayer[
-        layerIndex
-      ] ?? []) {
-        const segment = copperCollisionEntry.segment
-        const required =
-          radius + segment.width / 2 + Math.max(via.diameter, segment.width)
-        if (
-          via.x + required < copperCollisionEntry.minX ||
-          via.x - required > copperCollisionEntry.maxX ||
-          via.y + required < copperCollisionEntry.minY ||
-          via.y - required > copperCollisionEntry.maxY
-        )
-          continue
-        if (pointToSegmentDistance(via, segment.start, segment.end) < required)
-          return false
-      }
+    for (const segment of immutableSegments) {
+      if (!via.layers.includes(segment.layer)) continue
+      const required =
+        radius + segment.width / 2 + Math.max(via.diameter, segment.width)
+      if (pointToSegmentDistance(via, segment.start, segment.end) < required)
+        return false
     }
-    for (const copperCollisionEntry of copperCollisionEntries.vias) {
-      const other = copperCollisionEntry.via
+    for (const other of immutableVias) {
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const required =
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)
-      if (
-        via.x + required < copperCollisionEntry.minX ||
-        via.x - required > copperCollisionEntry.maxX ||
-        via.y + required < copperCollisionEntry.minY ||
-        via.y - required > copperCollisionEntry.maxY
-      )
-        continue
       if (Math.hypot(via.x - other.x, via.y - other.y) < required) return false
     }
     return true
