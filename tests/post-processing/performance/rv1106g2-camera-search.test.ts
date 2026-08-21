@@ -6,7 +6,7 @@ import {
 
 const MAX_EXPECTED_SEARCH_TIME_MS = 45_000
 
-test("completes dense RV1106G2 camera pair collision checks", async () => {
+test("completes dense RV1106G2 camera search in under 45 seconds", async () => {
   const fixtureUrl = new URL(
     "../../../fixtures/rv1106g2-camera-post-processing/rv1106g2-camera-post-processing.json",
     import.meta.url,
