@@ -45,6 +45,15 @@ export const createSearchGeometryValidator = (input: {
     immutableSegments.push(...copper.segments)
     immutableVias.push(...copper.vias)
   }
+  // Group fixed copper once so each search edge checks only its own layer.
+  const immutableSegmentsByLayer = Array.from(
+    { length: input.layerCount },
+    (): CopperSegment[] => [],
+  )
+  for (const segment of immutableSegments) {
+    const layerIndex = getLayerIndex(segment.layer, input.layerCount)
+    immutableSegmentsByLayer[layerIndex]!.push(segment)
+  }
   const samePoint = (left: Point, right: Point): boolean =>
     Math.hypot(left.x - right.x, left.y - right.y) <= 1e-8
   const pointToSegmentDistance = (
@@ -147,6 +156,12 @@ export const createSearchGeometryValidator = (input: {
   }
   const segmentIsClear = (segment: CopperSegment): boolean => {
     const radius = segment.width / 2
+    const inflation = radius + segment.width
+    const layerIndex = getLayerIndex(segment.layer, input.layerCount)
+    const segmentMinX = Math.min(segment.start.x, segment.end.x)
+    const segmentMaxX = Math.max(segment.start.x, segment.end.x)
+    const segmentMinY = Math.min(segment.start.y, segment.end.y)
+    const segmentMaxY = Math.max(segment.start.y, segment.end.y)
     for (const point of [segment.start, segment.end]) {
       if (
         point.x - radius < input.bounds.minX ||
@@ -158,6 +173,18 @@ export const createSearchGeometryValidator = (input: {
     }
     for (const obstacle of input.obstacles) {
       if (!obstacleIsOnLayer(obstacle, segment.layer)) continue
+      // Reject distant obstacles with a rotation-safe bound before exact sampling.
+      const obstacleHalfExtent = Math.hypot(
+        obstacle.width / 2 + inflation,
+        obstacle.height / 2 + inflation,
+      )
+      if (
+        segmentMaxX < obstacle.center.x - obstacleHalfExtent ||
+        segmentMinX > obstacle.center.x + obstacleHalfExtent ||
+        segmentMaxY < obstacle.center.y - obstacleHalfExtent ||
+        segmentMinY > obstacle.center.y + obstacleHalfExtent
+      )
+        continue
       const [startTerminal, endTerminal] =
         segment.connectionName === input.firstConnectionName
           ? [input.firstStartTerminal, input.firstEndTerminal]
@@ -190,7 +217,6 @@ export const createSearchGeometryValidator = (input: {
         obstacle.connectedTo.includes(segment.connectionName) &&
         (progressesOutOfStart || progressesIntoEnd)
       if (exitsConnectedTerminal) continue
-      const inflation = radius + segment.width
       if (
         obstacleContains(segment.start, obstacle, inflation) ||
         obstacleContains(segment.end, obstacle, inflation)
@@ -220,12 +246,18 @@ export const createSearchGeometryValidator = (input: {
           return false
       }
     }
-    for (const other of immutableSegments) {
-      if (other.layer !== segment.layer) continue
+    for (const other of immutableSegmentsByLayer[layerIndex]!) {
       const required =
         segment.width / 2 +
         other.width / 2 +
         Math.max(segment.width, other.width)
+      if (
+        segmentMaxX + required < Math.min(other.start.x, other.end.x) ||
+        segmentMinX - required > Math.max(other.start.x, other.end.x) ||
+        segmentMaxY + required < Math.min(other.start.y, other.end.y) ||
+        segmentMinY - required > Math.max(other.start.y, other.end.y)
+      )
+        continue
       if (
         getMinimumSegmentDistance(
           segment.start,
