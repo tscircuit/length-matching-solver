@@ -1,0 +1,44 @@
+<svg width="640" height="640" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="white"/><g><polyline data-points="0,0 12,0" data-type="line" data-label="" points="59.31034482758622,329.6551724137931 291.0344827586207,329.6551724137931" fill="none" stroke="hsl(193.33333333333212, 100%, 50%)" stroke-width="2.896551724137931"/></g><g><polyline data-points="12,0 24,0" data-type="line" data-label="" points="291.0344827586207,329.6551724137931 522.7586206896551,329.6551724137931" fill="none" stroke="rgba(0,200,255,0.5)" stroke-width="2.896551724137931" stroke-dasharray="0.2 0.2"/></g><g><polyline data-points="0,2 27,2" data-type="line" data-label="" points="59.31034482758622,291.0344827586207 580.6896551724137,291.0344827586207" fill="none" stroke="rgba(0,255,26,0.5)" stroke-width="2.896551724137931" stroke-dasharray="0.2 0.2"/></g><g><polyline data-points="12,0 24,0" data-type="line" data-label="" points="291.0344827586207,329.6551724137931 522.7586206896551,329.6551724137931" fill="none" stroke="rgba(234, 179, 8, 0.6)" stroke-width="5.793103448275862" stroke-dasharray="0.1 0.1"/></g><g><rect data-type="rect" data-label="" data-x="13.5" data-y="0.5" x="40" y="233.10344827586206" width="560" height="173.79310344827587" fill="rgba(30,41,59,0.03)" stroke="rgba(30,41,59,0.55)" stroke-width="0.05178571428571429"/></g><circle data-type="circle" data-label="" data-x="12" data-y="0" cx="291.0344827586207" cy="329.6551724137931" r="5.793103448275862" fill="blue" stroke="none" stroke-width="0.05178571428571429"/><g id="crosshair" style="display: none"><line id="crosshair-h" y1="0" y2="640" stroke="#666" stroke-width="0.5"/><line id="crosshair-v" x1="0" x2="640" stroke="#666" stroke-width="0.5"/><text id="coordinates" font-family="monospace" font-size="12" fill="#666"></text></g><script><![CDATA[
+              document.currentScript.parentElement.addEventListener('mousemove', (e) => {
+                const svg = e.currentTarget;
+                const rect = svg.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const crosshair = svg.getElementById('crosshair');
+                const h = svg.getElementById('crosshair-h');
+                const v = svg.getElementById('crosshair-v');
+                const coords = svg.getElementById('coordinates');
+                
+                crosshair.style.display = 'block';
+                h.setAttribute('x1', '0');
+                h.setAttribute('x2', '640');
+                h.setAttribute('y1', y);
+                h.setAttribute('y2', y);
+                v.setAttribute('x1', x);
+                v.setAttribute('x2', x);
+                v.setAttribute('y1', '0');
+                v.setAttribute('y2', '640');
+
+                // Calculate real coordinates using inverse transformation
+                const matrix = {"a":19.310344827586206,"c":0,"e":59.31034482758622,"b":0,"d":-19.310344827586206,"f":329.6551724137931};
+                // Manually invert and apply the affine transform
+                // Since we only use translate and scale, we can directly compute:
+                // x' = (x - tx) / sx
+                // y' = (y - ty) / sy
+                const sx = matrix.a;
+                const sy = matrix.d;
+                const tx = matrix.e; 
+                const ty = matrix.f;
+                const realPoint = {
+                  x: (x - tx) / sx,
+                  y: (y - ty) / sy // Flip y back since we used negative scale
+                }
+                
+                coords.textContent = `(${realPoint.x.toFixed(2)}, ${realPoint.y.toFixed(2)})`;
+                coords.setAttribute('x', (x + 5).toString());
+                coords.setAttribute('y', (y - 5).toString());
+              });
+              document.currentScript.parentElement.addEventListener('mouseleave', () => {
+                document.currentScript.parentElement.getElementById('crosshair').style.display = 'none';
+              });
+            ]]></script></svg>
