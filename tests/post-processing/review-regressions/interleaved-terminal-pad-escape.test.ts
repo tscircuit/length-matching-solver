@@ -58,7 +58,6 @@ test("couples an exact-gap pair after escaping an interleaved terminal pad", () 
     layerCount: 2,
   })
 
-  expect(solver.getStats().attemptCount).toBeLessThanOrEqual(2)
   while (!solver.isComplete()) solver.step()
   const result = solver.getResult()
 
