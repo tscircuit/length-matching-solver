@@ -1,4 +1,5 @@
 import type {
+  DifferentialPair,
   HighDensityRoute,
   SimpleRouteConnection,
   SimplifiedPcbTraceViaRoutePoint,
@@ -9,6 +10,7 @@ import { getLayerIndex } from "../geometry/getLayerIndex"
 import { getTransitionLayers } from "../geometry/getTransitionLayers"
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createImmutableCollisionRoutes } from "./createImmutableCollisionRoutes"
+import { getLengthMatchingPairs } from "./getLengthMatchingPairs"
 import type { FortyFiveDegreeSimplificationOutput } from "../solvers/FortyFiveDegreeSimplificationSolver"
 import type { InternalPostProcessingParams } from "../types"
 
@@ -23,7 +25,9 @@ export type LengthMatchingTraceBinding = {
 }
 
 export type LengthMatchingBinding = {
-  solverParams: LengthMatchingSolverParams
+  solverParams: LengthMatchingSolverParams & {
+    differentialPairs: DifferentialPair[]
+  }
   traceBindings: LengthMatchingTraceBinding[]
   baseTraces: SimplifiedPcbTraces
 }
@@ -34,8 +38,14 @@ export const createLengthMatchingBinding = (input: {
   params: InternalPostProcessingParams
 }): LengthMatchingBinding => {
   const { simpleRouteJson } = input.params
+  const differentialPairs = getLengthMatchingPairs({
+    traces: input.result.traces,
+    declaredPairs: simpleRouteJson.differentialPairs,
+    reroutedPairs: input.result.reroutedPairs,
+    layerCount: simpleRouteJson.layerCount,
+  })
   const targetConnectionNames = new Set(
-    input.result.reroutedPairs.flatMap((pair) => pair.connectionNames),
+    differentialPairs.flatMap((pair) => pair.connectionNames),
   )
   const hdRoutes: HighDensityRoute[] = []
   const originalConnections: SimpleRouteConnection[] = []
@@ -202,7 +212,7 @@ export const createLengthMatchingBinding = (input: {
     solverParams: {
       hdRoutes,
       originalConnections,
-      differentialPairs: input.result.reroutedPairs,
+      differentialPairs,
       obstacles: simpleRouteJson.obstacles,
       bounds: simpleRouteJson.bounds,
       layerCount: simpleRouteJson.layerCount,
