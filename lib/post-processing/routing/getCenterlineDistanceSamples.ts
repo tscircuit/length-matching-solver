@@ -11,12 +11,6 @@ export const getCenterlineDistanceSamples = (input: {
   } = input
   if (minimum === undefined && maximum === undefined)
     return input.legacyCenterlineDistances
-  if (
-    minimum !== undefined &&
-    maximum !== undefined &&
-    Math.abs(minimum - maximum) < 1e-8
-  )
-    return minimum > input.minimumPhysicalDistance ? [minimum] : []
   const distanceSamples =
     minimum !== undefined && maximum !== undefined
       ? [

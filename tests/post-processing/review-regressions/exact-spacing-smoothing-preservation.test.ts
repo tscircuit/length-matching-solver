@@ -35,6 +35,7 @@ test("does not independently simplify members of an exact-spacing pair", () => {
       {
         connectionNames: ["P", "N"],
         lengthTolerance: 0.5,
+        maxUncoupledLength: 3,
         minimumCenterlineDistance: 0.3,
         maximumCenterlineDistance: 0.3,
       },

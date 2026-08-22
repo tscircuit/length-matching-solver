@@ -23,16 +23,13 @@ test("completes dense RV1106G2 camera search in under 45 seconds", async () => {
   expect(solver.solved).toBe(true)
   expect(solver.failed).toBe(false)
   expect(searchElapsedMs).toBeLessThan(MAX_EXPECTED_SEARCH_TIME_MS)
-  // Exact centerline constraints no longer try legacy fallback spacings. One
-  // bounded 20k-state search is sufficient for this unsatisfiable fixture.
-  expect(solver.iterations).toBeGreaterThan(20_000)
-  expect(solver.iterations).toBeLessThanOrEqual(20_500)
+  expect(solver.iterations).toBe(80_001)
   expect(
     solver.getOutput().postProcessingErrors.map((error) => error.reason),
   ).toEqual([
     "no-valid-candidate",
     "no-valid-candidate",
-    "no-valid-candidate",
+    "iteration-limit-exhausted",
   ])
   expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
 })

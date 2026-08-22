@@ -139,6 +139,7 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
       `FortyFiveDegreeSimplificationSolver: rerouted pair ${pairName} has invalid complete copper before simplification`,
     )
   const exactCenterlineSpacingIsRequired =
+    input.pair.maxUncoupledLength !== undefined &&
     input.pair.minimumCenterlineDistance !== undefined &&
     input.pair.maximumCenterlineDistance !== undefined &&
     Math.abs(
