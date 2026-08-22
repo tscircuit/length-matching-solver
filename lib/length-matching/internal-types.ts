@@ -21,8 +21,9 @@ type RegressionAttemptInvalidReason =
   | "below-minimum-height"
   | "target-error"
   | "invalid-geometry"
+  | "no-paired-same-layer-geometry"
 
-type RegressionAttemptOutcome =
+export type RegressionAttemptOutcome =
   | { valid: true; invalidReason: null }
   | { valid: false; invalidReason: RegressionAttemptInvalidReason }
 
@@ -43,7 +44,7 @@ export type RegressionAttempt = SegmentCandidate &
     resultingError: number
     testedSegment: [RoutePoint, RoutePoint]
     meanderPoints: RoutePoint[]
-    centerlineDistanceCost: number
+    centerlineDistanceCost: number | null
     qualityScore: number
   }
 
