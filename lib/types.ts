@@ -57,6 +57,8 @@ export type SimpleRouteConnection = {
 export type DifferentialPair = {
   connectionNames: [string, string]
   lengthTolerance: number
+  /** Maximum permitted terminal escape length before the members are coupled. */
+  maxUncoupledLength?: number
   /** Soft lower center-to-center spacing preference during rerouting and meander ranking. */
   minimumCenterlineDistance?: number
   /** Soft upper center-to-center spacing preference during rerouting and meander ranking. */

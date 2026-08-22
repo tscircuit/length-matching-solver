@@ -53,6 +53,9 @@ export function validatePostProcessingParams(
     throw new Error(
       "PostProcessingSolver: bounds must have finite positive extents",
     )
+  const activePairConnectionNames = new Set(
+    params.differentialPairs.flatMap((pair) => pair.connectionNames),
+  )
   for (const route of params.hdRoutes) {
     if (
       !route ||
@@ -66,6 +69,8 @@ export function validatePostProcessingParams(
       route.traceThickness <= 0 ||
       !Number.isFinite(route.viaDiameter) ||
       route.viaDiameter < 0 ||
+      (route.viaDiameter === 0 &&
+        activePairConnectionNames.has(route.connectionName)) ||
       !Array.isArray(route.route) ||
       !Array.isArray(route.vias) ||
       (route.jumpers !== undefined && !Array.isArray(route.jumpers))
@@ -163,6 +168,14 @@ export function validatePostProcessingParams(
         throw new Error(
           "PostProcessingSolver: differential pair centerline distances must be positive finite numbers",
         )
+    if (
+      pair.maxUncoupledLength !== undefined &&
+      (!Number.isFinite(pair.maxUncoupledLength) ||
+        pair.maxUncoupledLength < 0)
+    )
+      throw new Error(
+        "PostProcessingSolver: differential pair maxUncoupledLength must be a non-negative finite number",
+      )
     if (
       pair.minimumCenterlineDistance !== undefined &&
       pair.maximumCenterlineDistance !== undefined &&

@@ -17,6 +17,7 @@ import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
+import { resolveTerminalFanoutStation } from "./resolveTerminalFanoutStation"
 import type { CoupledPathPoint, CoupledPathSearchInput } from "./types"
 
 const EDGE_GAP_SAMPLES = [0.75, 0.5, 1, 0.25, 1.25]
@@ -271,35 +272,33 @@ export class DifferentialPairRoutingSession {
           (terminal.y - start.y) * spineDirection.y >
         1e-8,
     )
-    const createForwardEgressSearchStart = (
+    const createLegacyForwardEgressSearchStart = (
       centerlineSpacing: number,
       side: 1 | -1,
     ): CoupledPathPoint => {
       if (!terminalStartRequiresForwardEgress || terminalFanout) return start
-      const direction = spineDirection
       const terminalStations = [
         { terminal: firstStart, offset: (side * centerlineSpacing) / 2 },
         { terminal: secondStart, offset: (-side * centerlineSpacing) / 2 },
       ]
-      // A 125-degree interior corner permits at most a 55-degree change in
-      // travel direction between a terminal egress and the common spine.
       const tangentOfMaximumTurn = Math.tan((55 * Math.PI) / 180)
       const forwardDistance = Math.max(
         ...terminalStations.map(({ terminal, offset }) => {
           const parallel =
-            (terminal.x - start.x) * direction.x +
-            (terminal.y - start.y) * direction.y
+            (terminal.x - start.x) * spineDirection.x +
+            (terminal.y - start.y) * spineDirection.y
           const perpendicular =
             (terminal.x - start.x) * normal.x +
             (terminal.y - start.y) * normal.y
           return (
-            parallel + Math.abs(perpendicular - offset) / tangentOfMaximumTurn
+            parallel +
+            Math.abs(perpendicular - offset) / tangentOfMaximumTurn
           )
         }),
       )
       return {
-        x: start.x + direction.x * forwardDistance,
-        y: start.y + direction.y * forwardDistance,
+        x: start.x + spineDirection.x * forwardDistance,
+        y: start.y + spineDirection.y * forwardDistance,
         layer: start.layer,
       }
     }
@@ -322,51 +321,118 @@ export class DifferentialPairRoutingSession {
     })
     const attempts = centerlineDistanceSamples.flatMap((centerlineSpacing) => {
       const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
-      return ([preferredSide, preferredSide === 1 ? -1 : 1] as const).map(
+      return ([preferredSide, preferredSide === 1 ? -1 : 1] as const).flatMap(
         (side) => {
-          const forwardEgressStart = createForwardEgressSearchStart(
-            centerlineSpacing,
-            side,
-          )
-          const validator = createSearchGeometryValidator({
-            ...context,
-            start: forwardEgressStart,
-            end,
-            firstConnectionName: first.source.connection_name,
-            secondConnectionName: second.source.connection_name,
-            firstStartTerminal: firstStart,
-            firstEndTerminal: firstEnd,
-            secondStartTerminal: secondStart,
-            secondEndTerminal: secondEnd,
-            firstWidth: first.width,
-            secondWidth: second.width,
-            firstViaDiameter:
-              first.transitions[0]?.via_diameter ?? first.viaDiameter,
-            secondViaDiameter:
-              second.transitions[0]?.via_diameter ?? second.viaDiameter,
-            centerlineSpacing,
-            side,
-            terminalFanout,
+          const grid = resolvePostProcessingGridConfig({
+            config: this.input.routingGrid,
+            bounds: this.input.bounds,
+            defaultInnerGridStep: Math.max(
+              0.25,
+              Math.min(0.5, centerlineSpacing / 2),
+            ),
           })
-          return {
+          const createValidator = (
+            searchStart: CoupledPathPoint,
+            searchEnd: CoupledPathPoint,
+          ) =>
+            createSearchGeometryValidator({
+              ...context,
+              start: searchStart,
+              end: searchEnd,
+              firstConnectionName: first.source.connection_name,
+              secondConnectionName: second.source.connection_name,
+              firstStartTerminal: firstStart,
+              firstEndTerminal: firstEnd,
+              secondStartTerminal: secondStart,
+              secondEndTerminal: secondEnd,
+              firstWidth: first.width,
+              secondWidth: second.width,
+              firstViaDiameter:
+                first.transitions[0]?.via_diameter ?? first.viaDiameter,
+              secondViaDiameter:
+                second.transitions[0]?.via_diameter ?? second.viaDiameter,
+              centerlineSpacing,
+              side,
+              terminalFanout,
+              terminalMiterMargin:
+                this.input.pair.maxUncoupledLength === undefined
+                  ? undefined
+                  : centerlineSpacing / 2,
+            })
+          let searchStart =
+            this.input.pair.maxUncoupledLength === undefined
+              ? createLegacyForwardEgressSearchStart(centerlineSpacing, side)
+              : start
+          let searchEnd = end
+          if (
+            !terminalFanout &&
+            this.input.pair.maxUncoupledLength !== undefined
+          ) {
+            const terminalValidator = createValidator(start, end)
+            const resolvedStart = resolveTerminalFanoutStation({
+              anchor: start,
+              escapeDirection: spineDirection,
+              pathDirection: spineDirection,
+              centerlineSpacing,
+              side,
+              lanes: [
+                { point: firstStart, polarity: 1 },
+                { point: secondStart, polarity: -1 },
+              ],
+              maxUncoupledLength: this.input.pair.maxUncoupledLength,
+              maximumTurnDegrees: 55,
+              searchStep: grid.innerGridStep,
+              isValid: (station) =>
+                terminalValidator.isTerminalFanoutValid(
+                  station,
+                  spineDirection,
+                  "start",
+                ),
+            })
+            const resolvedEnd = resolveTerminalFanoutStation({
+              anchor: end,
+              escapeDirection: {
+                x: -spineDirection.x,
+                y: -spineDirection.y,
+              },
+              pathDirection: spineDirection,
+              centerlineSpacing,
+              side,
+              lanes: [
+                { point: firstEnd, polarity: 1 },
+                { point: secondEnd, polarity: -1 },
+              ],
+              maxUncoupledLength: this.input.pair.maxUncoupledLength,
+              maximumTurnDegrees: 45,
+              searchStep: grid.innerGridStep,
+              isValid: (station) =>
+                terminalValidator.isTerminalFanoutValid(
+                  station,
+                  spineDirection,
+                  "end",
+                ),
+            })
+            if (!resolvedStart || !resolvedEnd) return []
+            searchStart = resolvedStart
+            searchEnd = resolvedEnd
+            const coupledTravel =
+              (searchEnd.x - searchStart.x) * spineDirection.x +
+              (searchEnd.y - searchStart.y) * spineDirection.y
+            if (coupledTravel <= grid.innerGridStep) return []
+          }
+          const validator = createValidator(searchStart, searchEnd)
+          return [{
             edgeGap,
             side,
             input: {
-              start: forwardEgressStart,
-              end,
+              start: searchStart,
+              end: searchEnd,
               bounds: this.input.bounds,
               layerCount: this.input.layerCount,
-              grid: resolvePostProcessingGridConfig({
-                config: this.input.routingGrid,
-                bounds: this.input.bounds,
-                defaultInnerGridStep: Math.max(
-                  0.25,
-                  Math.min(0.5, centerlineSpacing / 2),
-                ),
-              }),
+              grid,
               ...validator,
             },
-          }
+          }]
         },
       )
     })

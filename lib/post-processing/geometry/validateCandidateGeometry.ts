@@ -9,6 +9,7 @@ import type {
 } from "../model/internal-types"
 import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
 import { getLayerIndex } from "./getLayerIndex"
+import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle"
 
 export type CandidateGeometryContext = {
   immutableTraces: SimplifiedPcbTrace[]
@@ -33,37 +34,6 @@ export const validateCandidateGeometry = (
       x: dx * Math.cos(radians) - dy * Math.sin(radians),
       y: dx * Math.sin(radians) + dy * Math.cos(radians),
     }
-  }
-
-  const segmentTouchesInflatedObstacle = (
-    segment: CopperSegment,
-    obstacle: Obstacle,
-    inflation: number,
-  ): boolean => {
-    const start = rotateIntoObstacle(segment.start, obstacle)
-    const end = rotateIntoObstacle(segment.end, obstacle)
-    const halfWidth = obstacle.width / 2 + inflation
-    const halfHeight = obstacle.height / 2 + inflation
-    if (
-      (Math.abs(start.x) <= halfWidth && Math.abs(start.y) <= halfHeight) ||
-      (Math.abs(end.x) <= halfWidth && Math.abs(end.y) <= halfHeight)
-    )
-      return true
-    const corners = [
-      { x: -halfWidth, y: -halfHeight },
-      { x: halfWidth, y: -halfHeight },
-      { x: halfWidth, y: halfHeight },
-      { x: -halfWidth, y: halfHeight },
-    ]
-    return corners.some(
-      (corner, index) =>
-        getMinimumSegmentDistance(
-          start,
-          end,
-          corner,
-          corners[(index + 1) % corners.length]!,
-        ) <= EPSILON,
-    )
   }
 
   const pointToSegmentDistance = (
