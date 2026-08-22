@@ -71,5 +71,5 @@ test("shows the terminal escape spacing failure for an interleaved pad", () => {
   expect(
     solver.getOutput().postProcessingErrors.map((error) => error.reason),
   ).toEqual(["no-valid-candidate"])
-  expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
+  expect(solver.finalVisualize()).toMatchGraphicsSvg(import.meta.path)
 })
