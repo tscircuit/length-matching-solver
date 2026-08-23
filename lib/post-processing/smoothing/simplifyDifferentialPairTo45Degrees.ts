@@ -138,6 +138,18 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
     throw new Error(
       `FortyFiveDegreeSimplificationSolver: rerouted pair ${pairName} has invalid complete copper before simplification`,
     )
+  const exactCenterlineSpacingIsRequired =
+    input.pair.maxUncoupledLength !== undefined &&
+    input.pair.minimumCenterlineDistance !== undefined &&
+    input.pair.maximumCenterlineDistance !== undefined &&
+    Math.abs(
+      input.pair.minimumCenterlineDistance -
+        input.pair.maximumCenterlineDistance,
+    ) <= EPSILON
+  // Independent 45-degree span replacement can retain minimum clearance while
+  // separating the members across the middle of a long segment. Keep the
+  // coupled rerouter's geometry when the caller requested one exact spacing.
+  if (exactCenterlineSpacingIsRequired) return output
 
   const initialFirst = parseSimplifiedPcbTrace(
     output[firstIndex]!,

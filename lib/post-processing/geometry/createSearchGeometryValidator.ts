@@ -6,9 +6,15 @@ import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
 import type { CoupledPathPoint } from "../routing/types"
 import { getLayerIndex } from "./getLayerIndex"
 import { getTransitionLayers } from "./getTransitionLayers"
+import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle"
 
 export type SearchGeometryValidator = {
   isEdgeValid: (start: CoupledPathPoint, end: CoupledPathPoint) => boolean
+  isTerminalFanoutValid: (
+    station: CoupledPathPoint,
+    direction: Point,
+    terminal: "start" | "end",
+  ) => boolean
   isViaValid: (
     point: CoupledPathPoint,
     toLayer: string,
@@ -37,6 +43,7 @@ export const createSearchGeometryValidator = (input: {
   centerlineSpacing: number
   side: 1 | -1
   terminalFanout?: boolean
+  terminalMiterMargin?: number
 }): SearchGeometryValidator => {
   const immutableSegments: CopperSegment[] = []
   const immutableVias: CopperVia[] = []
@@ -112,7 +119,9 @@ export const createSearchGeometryValidator = (input: {
     const isStartTerminal = samePoint(start, input.start)
     const isEndTerminal = samePoint(end, input.end)
     const terminal: CopperSegment["terminal"] =
-      isStartTerminal && isEndTerminal
+      !input.terminalFanout
+        ? null
+        : isStartTerminal && isEndTerminal
         ? "both"
         : isStartTerminal
           ? "start"
@@ -153,6 +162,85 @@ export const createSearchGeometryValidator = (input: {
         terminal,
       },
     ]
+  }
+  const terminalFanoutSegments = (
+    station: CoupledPathPoint,
+    direction: Point,
+    terminal: "start" | "end",
+  ): [CopperSegment, CopperSegment] => {
+    const directionLength = Math.hypot(direction.x, direction.y)
+    if (directionLength <= 1e-10)
+      throw new Error(
+        "PostProcessingSolver: cannot orient terminal fanout on a zero-length spine",
+      )
+    const normal = {
+      x:
+        ((-direction.y / directionLength) *
+          input.side *
+          input.centerlineSpacing) /
+        2,
+      y:
+        ((direction.x / directionLength) *
+          input.side *
+          input.centerlineSpacing) /
+        2,
+    }
+    const terminals =
+      terminal === "start"
+        ? [input.firstStartTerminal, input.secondStartTerminal]
+        : [input.firstEndTerminal, input.secondEndTerminal]
+    const widths = [input.firstWidth, input.secondWidth]
+    const connectionNames = [
+      input.firstConnectionName,
+      input.secondConnectionName,
+    ]
+    return terminals.map((terminalPoint, lane) => {
+      const polarity = lane === 0 ? 1 : -1
+      const lanePoint = {
+        x: station.x + normal.x * polarity,
+        y: station.y + normal.y * polarity,
+      }
+      return {
+        start: terminal === "start" ? terminalPoint : lanePoint,
+        end: terminal === "start" ? lanePoint : terminalPoint,
+        layer: station.layer,
+        width: widths[lane]!,
+        connectionName: connectionNames[lane]!,
+        terminal,
+      }
+    }) as [CopperSegment, CopperSegment]
+  }
+  const terminalFanoutIsClear = (
+    station: CoupledPathPoint,
+    direction: Point,
+    terminal: "start" | "end",
+  ): boolean => {
+    const segments = terminalFanoutSegments(station, direction, terminal)
+    const stationPoints = segments.map((segment) =>
+      terminal === "start" ? segment.end : segment.start,
+    )
+    return (
+      segments.every(segmentIsClear) &&
+      stationPoints.every((point, lane) =>
+        input.obstacles.every(
+          (obstacle) =>
+            !obstacleIsOnLayer(obstacle, station.layer) ||
+            !obstacleContains(
+              point,
+              obstacle,
+              segments[lane]!.width * 1.5 +
+                (input.terminalMiterMargin ?? 0),
+            ),
+        ),
+      ) &&
+      getMinimumSegmentDistance(
+        segments[0].start,
+        segments[0].end,
+        segments[1].start,
+        segments[1].end,
+      ) >=
+        segments[0].width / 2 + segments[1].width / 2 - 1e-7
+    )
   }
   const segmentIsClear = (segment: CopperSegment): boolean => {
     const radius = segment.width / 2
@@ -218,33 +306,13 @@ export const createSearchGeometryValidator = (input: {
         (progressesOutOfStart || progressesIntoEnd)
       if (exitsConnectedTerminal) continue
       if (
-        obstacleContains(segment.start, obstacle, inflation) ||
-        obstacleContains(segment.end, obstacle, inflation)
+        segmentTouchesInflatedObstacle(
+          segment,
+          obstacle,
+          radius + segment.width,
+        )
       )
         return false
-      const sampleCount = Math.max(
-        2,
-        Math.ceil(
-          Math.hypot(
-            segment.end.x - segment.start.x,
-            segment.end.y - segment.start.y,
-          ) / 0.2,
-        ),
-      )
-      for (let index = 1; index < sampleCount; index++) {
-        const t = index / sampleCount
-        if (
-          obstacleContains(
-            {
-              x: segment.start.x + (segment.end.x - segment.start.x) * t,
-              y: segment.start.y + (segment.end.y - segment.start.y) * t,
-            },
-            obstacle,
-            inflation,
-          )
-        )
-          return false
-      }
     }
     for (const other of immutableSegmentsByLayer[layerIndex]!) {
       const required =
@@ -317,9 +385,31 @@ export const createSearchGeometryValidator = (input: {
   }
 
   return {
-    isEdgeValid: (start, end) =>
-      start.layer === end.layer &&
-      laneSegments(start, end).every(segmentIsClear),
+    isEdgeValid: (start, end) => {
+      if (
+        start.layer !== end.layer ||
+        !laneSegments(start, end).every(segmentIsClear)
+      )
+        return false
+      if (
+        input.terminalFanout ||
+        input.terminalMiterMargin === undefined
+      )
+        return true
+      const direction = { x: end.x - start.x, y: end.y - start.y }
+      if (
+        samePoint(start, input.start) &&
+        !terminalFanoutIsClear(start, direction, "start")
+      )
+        return false
+      if (
+        samePoint(end, input.end) &&
+        !terminalFanoutIsClear(end, direction, "end")
+      )
+        return false
+      return true
+    },
+    isTerminalFanoutValid: terminalFanoutIsClear,
     isViaValid: (point, toLayer, direction) => {
       const directionLength = Math.hypot(direction.x, direction.y)
       if (directionLength <= 1e-10)

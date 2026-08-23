@@ -6,7 +6,7 @@ import {
 } from "../../../lib"
 import { createPostProcessingParamsFromSimpleRouteJson } from "../../../fixtures/createPostProcessingParamsFromSimpleRouteJson"
 
-test("shows the terminal escape spacing failure for an interleaved pad", () => {
+test("escapes an interleaved terminal pad before coupling the pair", () => {
   const createTrace = (
     connectionName: string,
     y: number,
@@ -22,14 +22,13 @@ test("shows the terminal escape spacing failure for an interleaved pad", () => {
       layer: "top",
     })),
   })
-  // Keep the runtime input in the repro before the public type exposes this constraint.
-  const differentialPair = {
+  const differentialPair: DifferentialPair = {
     connectionNames: ["P", "N"],
     lengthTolerance: 0.1,
     minimumCenterlineDistance: 0.3,
     maximumCenterlineDistance: 0.3,
     maxUncoupledLength: 3,
-  } as DifferentialPair
+  }
   const solver = new PostProcessingSolver(
     createPostProcessingParamsFromSimpleRouteJson({
       traces: [createTrace("P", 0.5), createTrace("N", -0.5)],
@@ -70,6 +69,6 @@ test("shows the terminal escape spacing failure for an interleaved pad", () => {
   expect(solver.solved).toBe(true)
   expect(
     solver.getOutput().postProcessingErrors.map((error) => error.reason),
-  ).toEqual(["no-valid-candidate"])
+  ).toEqual([])
   expect(solver.finalVisualize()).toMatchGraphicsSvg(import.meta.path)
 })
