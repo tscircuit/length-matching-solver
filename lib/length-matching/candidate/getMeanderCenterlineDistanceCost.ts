@@ -7,7 +7,7 @@ export const getMeanderCenterlineDistanceCost = (input: {
   pairedRoutes: HighDensityRoute[]
   minimumCenterlineDistance?: number
   maximumCenterlineDistance?: number
-}): number => {
+}): number | null => {
   const sampleCount = 4
   let totalSegmentLength = 0
   let weightedDistanceCost = 0
@@ -22,18 +22,22 @@ export const getMeanderCenterlineDistanceCost = (input: {
         x: start.x + (end.x - start.x) * progress,
         y: start.y + (end.y - start.y) * progress,
       }
-      const centerlineDistances = input.pairedRoutes.flatMap((route) =>
-        route.route.slice(0, -1).flatMap((otherStart, otherIndex) => {
+      const centerlineDistances: number[] = []
+      for (const route of input.pairedRoutes) {
+        for (
+          let otherIndex = 0;
+          otherIndex < route.route.length - 1;
+          otherIndex++
+        ) {
+          const otherStart = route.route[otherIndex]!
           const otherEnd = route.route[otherIndex + 1]!
-          return start.z === otherStart.z && start.z === otherEnd.z
-            ? [getMinimumSegmentDistance(point, point, otherStart, otherEnd)]
-            : []
-        }),
-      )
-      if (centerlineDistances.length === 0)
-        throw new Error(
-          "LengthMatchingSolver: cannot measure meander centerline distance without paired same-layer geometry",
-        )
+          if (start.z !== otherStart.z || start.z !== otherEnd.z) continue
+          centerlineDistances.push(
+            getMinimumSegmentDistance(point, point, otherStart, otherEnd),
+          )
+        }
+      }
+      if (centerlineDistances.length === 0) return null
       const nearestDistance = Math.min(...centerlineDistances)
       const distanceCost = Math.max(
         0,
