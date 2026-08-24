@@ -17,6 +17,7 @@ export const getMeanderQualityScore = (
     | "centerlineDistanceCost"
   >,
 ): number => {
+  if (input.centerlineDistanceCost === null) return 0
   const activeToothIndexes = input.predictedToothDepths.flatMap(
     (depth, toothIndex) => (depth > 0 ? [toothIndex] : []),
   )
