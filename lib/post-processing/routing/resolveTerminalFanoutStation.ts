@@ -40,13 +40,10 @@ export const resolveTerminalFanoutStation = (
       const longitudinal =
         terminalDelta.x * input.escapeDirection.x +
         terminalDelta.y * input.escapeDirection.y
-      const transverse =
-        terminalDelta.x * normal.x + terminalDelta.y * normal.y
-      const laneOffset =
-        (polarity * input.side * input.centerlineSpacing) / 2
+      const transverse = terminalDelta.x * normal.x + terminalDelta.y * normal.y
+      const laneOffset = (polarity * input.side * input.centerlineSpacing) / 2
       return (
-        longitudinal +
-        Math.abs(transverse - laneOffset) / tangentOfMaximumTurn
+        longitudinal + Math.abs(transverse - laneOffset) / tangentOfMaximumTurn
       )
     }),
   )
@@ -56,8 +53,7 @@ export const resolveTerminalFanoutStation = (
   const increment = Math.max(0.05, Math.min(0.25, input.searchStep / 2))
   const attemptCount = Math.max(
     1,
-    Math.ceil((maximumTravelDistance - minimumTravelDistance) / increment) +
-      1,
+    Math.ceil((maximumTravelDistance - minimumTravelDistance) / increment) + 1,
   )
   for (let attemptIndex = 0; attemptIndex < attemptCount; attemptIndex++) {
     const travelDistance = Math.min(
@@ -70,8 +66,7 @@ export const resolveTerminalFanoutStation = (
       layer: input.anchor.layer,
     }
     const fanoutLengthsAreValid = input.lanes.every(({ point, polarity }) => {
-      const laneOffset =
-        (polarity * input.side * input.centerlineSpacing) / 2
+      const laneOffset = (polarity * input.side * input.centerlineSpacing) / 2
       const lanePoint = {
         x: station.x + normal.x * laneOffset,
         y: station.y + normal.y * laneOffset,

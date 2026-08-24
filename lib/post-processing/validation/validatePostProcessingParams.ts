@@ -170,8 +170,7 @@ export function validatePostProcessingParams(
         )
     if (
       pair.maxUncoupledLength !== undefined &&
-      (!Number.isFinite(pair.maxUncoupledLength) ||
-        pair.maxUncoupledLength < 0)
+      (!Number.isFinite(pair.maxUncoupledLength) || pair.maxUncoupledLength < 0)
     )
       throw new Error(
         "PostProcessingSolver: differential pair maxUncoupledLength must be a non-negative finite number",

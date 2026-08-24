@@ -67,5 +67,7 @@ test("couples an exact-gap pair after escaping an interleaved terminal pad", () 
   if (firstCoupledPoint?.route_type !== "wire")
     throw new Error("Expected the first coupled point to be wire geometry")
   expect(firstCoupledPoint.x).toBeGreaterThan(0.5)
-  expect(Math.hypot(firstCoupledPoint.x, firstCoupledPoint.y - 0.5)).toBeLessThanOrEqual(3)
+  expect(
+    Math.hypot(firstCoupledPoint.x, firstCoupledPoint.y - 0.5),
+  ).toBeLessThanOrEqual(3)
 })

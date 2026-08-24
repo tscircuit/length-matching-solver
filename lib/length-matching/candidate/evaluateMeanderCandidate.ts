@@ -3,6 +3,7 @@ import type { HighDensityRoute, RoutePoint } from "../../types"
 import type {
   MeanderHeightProfile,
   RegressionAttempt,
+  RegressionAttemptOutcome,
   SegmentCandidate,
 } from "../internal-types"
 import { getMeanderQualityScore } from "../meander-quality"
@@ -19,7 +20,7 @@ export const evaluateMeanderCandidate = (input: {
   targetAddedLength: number
   lengthTolerance: number
   isGeometryValid: (meanderPoints: RoutePoint[]) => boolean
-  getCenterlineDistanceCost?: (meanderPoints: RoutePoint[]) => number
+  getCenterlineDistanceCost?: (meanderPoints: RoutePoint[]) => number | null
 }): RegressionAttempt => {
   const getToothHeightWeights = (profile: {
     toothCount: number
@@ -202,10 +203,13 @@ export const evaluateMeanderCandidate = (input: {
     route: input.route,
     toothDepths: predictedToothDepths,
   })
-  const centerlineDistanceCost = input.getCenterlineDistanceCost
-    ? input.getCenterlineDistanceCost(meanderPoints)
-    : 0
-  if (!Number.isFinite(centerlineDistanceCost) || centerlineDistanceCost < 0)
+  let centerlineDistanceCost: number | null = 0
+  if (input.getCenterlineDistanceCost)
+    centerlineDistanceCost = input.getCenterlineDistanceCost(meanderPoints)
+  if (
+    centerlineDistanceCost !== null &&
+    (!Number.isFinite(centerlineDistanceCost) || centerlineDistanceCost < 0)
+  )
     throw new Error(
       "LengthMatchingSolver: meander centerline distance cost must be a non-negative finite number",
     )
@@ -218,18 +222,17 @@ export const evaluateMeanderCandidate = (input: {
       toothDepth === 0 || toothDepth >= input.candidate.minimumHeight,
   )
   const geometryIsValid = input.isGeometryValid(meanderPoints)
-  const invalidReason: RegressionAttempt["invalidReason"] = !scaleIsValid
-    ? "invalid-scale"
-    : resultingError > input.lengthTolerance
-      ? "target-error"
-      : !geometryIsValid
-        ? "invalid-geometry"
-        : !minimumHeightIsValid
-          ? "below-minimum-height"
-          : null
-  const outcome = invalidReason
-    ? { valid: false as const, invalidReason }
-    : { valid: true as const, invalidReason: null }
+  let invalidReason: RegressionAttempt["invalidReason"] = null
+  if (centerlineDistanceCost === null)
+    invalidReason = "no-paired-same-layer-geometry"
+  else if (!scaleIsValid) invalidReason = "invalid-scale"
+  else if (resultingError > input.lengthTolerance)
+    invalidReason = "target-error"
+  else if (!geometryIsValid) invalidReason = "invalid-geometry"
+  else if (!minimumHeightIsValid) invalidReason = "below-minimum-height"
+  let outcome: RegressionAttemptOutcome
+  if (invalidReason) outcome = { valid: false, invalidReason }
+  else outcome = { valid: true, invalidReason: null }
   const attempt: RegressionAttempt = {
     ...input.candidate,
     connectionName: input.connectionName,
