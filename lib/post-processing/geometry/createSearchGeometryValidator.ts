@@ -118,10 +118,9 @@ export const createSearchGeometryValidator = (input: {
     }
     const isStartTerminal = samePoint(start, input.start)
     const isEndTerminal = samePoint(end, input.end)
-    const terminal: CopperSegment["terminal"] =
-      !input.terminalFanout
-        ? null
-        : isStartTerminal && isEndTerminal
+    const terminal: CopperSegment["terminal"] = !input.terminalFanout
+      ? null
+      : isStartTerminal && isEndTerminal
         ? "both"
         : isStartTerminal
           ? "start"
@@ -228,8 +227,7 @@ export const createSearchGeometryValidator = (input: {
             !obstacleContains(
               point,
               obstacle,
-              segments[lane]!.width * 1.5 +
-                (input.terminalMiterMargin ?? 0),
+              segments[lane]!.width * 1.5 + (input.terminalMiterMargin ?? 0),
             ),
         ),
       ) &&
@@ -391,10 +389,7 @@ export const createSearchGeometryValidator = (input: {
         !laneSegments(start, end).every(segmentIsClear)
       )
         return false
-      if (
-        input.terminalFanout ||
-        input.terminalMiterMargin === undefined
-      )
+      if (input.terminalFanout || input.terminalMiterMargin === undefined)
         return true
       const direction = { x: end.x - start.x, y: end.y - start.y }
       if (

@@ -291,8 +291,7 @@ export class DifferentialPairRoutingSession {
             (terminal.x - start.x) * normal.x +
             (terminal.y - start.y) * normal.y
           return (
-            parallel +
-            Math.abs(perpendicular - offset) / tangentOfMaximumTurn
+            parallel + Math.abs(perpendicular - offset) / tangentOfMaximumTurn
           )
         }),
       )
@@ -421,18 +420,20 @@ export class DifferentialPairRoutingSession {
             if (coupledTravel <= grid.innerGridStep) return []
           }
           const validator = createValidator(searchStart, searchEnd)
-          return [{
-            edgeGap,
-            side,
-            input: {
-              start: searchStart,
-              end: searchEnd,
-              bounds: this.input.bounds,
-              layerCount: this.input.layerCount,
-              grid,
-              ...validator,
+          return [
+            {
+              edgeGap,
+              side,
+              input: {
+                start: searchStart,
+                end: searchEnd,
+                bounds: this.input.bounds,
+                layerCount: this.input.layerCount,
+                grid,
+                ...validator,
+              },
             },
-          }]
+          ]
         },
       )
     })
