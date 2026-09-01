@@ -4,7 +4,7 @@ import {
   type PostProcessingSolverParams,
 } from "../../../lib"
 
-test("reproduces the RV1106G2 reversing differential-pair spine crash", async () => {
+test("handles an RV1106G2 reversing differential-pair spine", async () => {
   const fixtureUrl = new URL(
     "../../../fixtures/rv1106g2-reversing-spine/rv1106g2-reversing-spine.json",
     import.meta.url,
@@ -14,8 +14,9 @@ test("reproduces the RV1106G2 reversing differential-pair spine crash", async ()
   ) as PostProcessingSolverParams
   const solver = new PostProcessingSolver(params)
 
-  expect(() => solver.solve()).toThrow(
-    "PostProcessingSolver: cannot offset a reversing spine corner",
-  )
+  solver.solve()
+
+  expect(solver.solved).toBe(true)
+  expect(solver.failed).toBe(false)
   expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
 })
