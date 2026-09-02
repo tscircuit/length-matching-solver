@@ -122,6 +122,7 @@ test("maintains lane offsets through composite-grid and via-adjacent miters", ()
       side: 1,
       layerCount: 2,
     })
+    if (!candidate) throw new Error("Expected an offsettable coupled path")
     const firstWires = candidate.first.route.filter(
       (entry) => entry.route_type === "wire",
     )

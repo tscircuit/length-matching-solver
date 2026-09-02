@@ -132,6 +132,7 @@ export class DifferentialPairRoutingSession {
       layerCount: this.input.layerCount,
       terminalFanout: prepared.terminalFanout,
     })
+    if (!candidate) return
     if (
       !validateCandidateGeometry(
         candidate.firstParsed,

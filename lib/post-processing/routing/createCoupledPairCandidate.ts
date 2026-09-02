@@ -18,7 +18,7 @@ export const createCoupledPairCandidate = (input: {
   side: 1 | -1
   layerCount: number
   terminalFanout?: boolean
-}): PairCandidate => {
+}): PairCandidate | null => {
   const samePoint = (left: Point, right: Point): boolean =>
     Math.hypot(left.x - right.x, left.y - right.y) <= 1e-8
   if (input.path.length < 2)
@@ -39,7 +39,7 @@ export const createCoupledPairCandidate = (input: {
     }
     return null
   }
-  const getOffset = (index: number): Point => {
+  const getOffset = (index: number): Point | null => {
     const point = input.path[index]!
     const previous = getSpatialNeighbor(index, -1)
     const next = getSpatialNeighbor(index, 1)
@@ -71,10 +71,7 @@ export const createCoupledPairCandidate = (input: {
       y: incomingNormal.y + outgoingNormal.y,
     }
     const bisectorLength = Math.hypot(bisector.x, bisector.y)
-    if (bisectorLength <= 1e-10)
-      throw new Error(
-        "PostProcessingSolver: cannot offset a reversing spine corner",
-      )
+    if (bisectorLength <= 1e-10) return null
     const unitBisector = {
       x: bisector.x / bisectorLength,
       y: bisector.y / bisectorLength,
@@ -134,6 +131,7 @@ export const createCoupledPairCandidate = (input: {
   for (let index = routeStartIndex; index < routeEndIndex; index++) {
     const station = input.path[index]!
     const offset = getOffset(index)
+    if (!offset) return null
     for (const lane of [0, 1] as const) {
       const polarity = lane === 0 ? 1 : -1
       const point = {
