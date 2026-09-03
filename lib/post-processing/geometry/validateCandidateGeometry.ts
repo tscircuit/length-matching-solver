@@ -126,7 +126,12 @@ export const validateCandidateGeometry = (
         segmentTouchesInflatedObstacle(
           segment,
           obstacle,
-          radius + segment.width,
+          // Same-net copper still must not shortcut a meander through its pad,
+          // but the extra clearance for unrelated copper does not apply to it.
+          radius +
+            (obstacle.connectedTo.includes(segment.connectionName)
+              ? 0
+              : segment.width),
         )
       )
         return false
