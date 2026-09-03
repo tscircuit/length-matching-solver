@@ -16,13 +16,13 @@ test("allows clearance to a connected pad without allowing copper overlap or unr
   }
   const second = parseSimplifiedPcbTrace(
     {
-    type: "pcb_trace",
-    pcb_trace_id: "negative",
-    connection_name: "negative",
-    route: [
-      { route_type: "wire", x: -3, y: -2, width: 0.2, layer: "top" },
-      { route_type: "wire", x: 3, y: -2, width: 0.2, layer: "top" },
-    ],
+      type: "pcb_trace",
+      pcb_trace_id: "negative",
+      connection_name: "negative",
+      route: [
+        { route_type: "wire", x: -3, y: -2, width: 0.2, layer: "top" },
+        { route_type: "wire", x: 3, y: -2, width: 0.2, layer: "top" },
+      ],
     },
     2,
   )
@@ -41,7 +41,11 @@ test("allows clearance to a connected pad without allowing copper overlap or unr
     layerCount: 2,
   }
   expect(
-    validateCandidateGeometry(parseSimplifiedPcbTrace(first, 2), second, context),
+    validateCandidateGeometry(
+      parseSimplifiedPcbTrace(first, 2),
+      second,
+      context,
+    ),
   ).toBe(true)
 
   const overlapping = structuredClone(first)
