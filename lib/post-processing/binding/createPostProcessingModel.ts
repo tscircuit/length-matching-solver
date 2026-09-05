@@ -200,6 +200,7 @@ export const createPostProcessingModel = (
         obstacles,
         bounds: structuredClone(params.bounds),
         layerCount: params.layerCount,
+        minTraceToPadEdgeClearance: params.minTraceToPadEdgeClearance,
       },
       ...(params.routingGrid
         ? { routingGrid: structuredClone(params.routingGrid) }

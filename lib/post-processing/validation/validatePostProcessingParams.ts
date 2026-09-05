@@ -14,6 +14,14 @@ export function validatePostProcessingParams(
     throw new Error("PostProcessingSolver: differentialPairs must be an array")
   if (!Array.isArray(params.obstacles))
     throw new Error("PostProcessingSolver: obstacles must be an array")
+  if (
+    params.minTraceToPadEdgeClearance !== undefined &&
+    (!Number.isFinite(params.minTraceToPadEdgeClearance) ||
+      params.minTraceToPadEdgeClearance < 0)
+  )
+    throw new Error(
+      "PostProcessingSolver: minTraceToPadEdgeClearance must be finite and nonnegative",
+    )
   if (!Number.isInteger(params.layerCount) || params.layerCount < 1)
     throw new Error(
       "PostProcessingSolver: layerCount must be a positive integer",

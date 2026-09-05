@@ -163,6 +163,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
       obstacles: simpleRouteJson.obstacles,
       bounds: simpleRouteJson.bounds,
       layerCount: simpleRouteJson.layerCount,
+      minTraceToPadEdgeClearance: simpleRouteJson.minTraceToPadEdgeClearance,
     })
     if (!valid)
       throw new PostProcessingConstraintError({

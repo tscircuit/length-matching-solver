@@ -42,6 +42,7 @@ export type DifferentialPairRoutingInput = {
   obstacles: CandidateGeometryContext["obstacles"]
   bounds: CandidateGeometryContext["bounds"]
   layerCount: number
+  minTraceToPadEdgeClearance?: number
   routingGrid?: PostProcessingGridConfig
 }
 
@@ -310,6 +311,7 @@ export class DifferentialPairRoutingSession {
       obstacles: this.input.obstacles,
       bounds: this.input.bounds,
       layerCount: this.input.layerCount,
+      minTraceToPadEdgeClearance: this.input.minTraceToPadEdgeClearance,
     }
     const centerlineDistanceSamples = getCenterlineDistanceSamples({
       minimumCenterlineDistance: this.input.pair.minimumCenterlineDistance,

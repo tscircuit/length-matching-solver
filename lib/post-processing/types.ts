@@ -20,6 +20,8 @@ export type PostProcessingSolverParams = {
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
+  /** Board-declared trace-to-pad edge clearance in mm; defaults to trace width. */
+  minTraceToPadEdgeClearance?: number
   routingGrid?: PostProcessingGridConfig
 }
 
@@ -43,6 +45,7 @@ export type PostProcessingError = {
 export type InternalPostProcessingParams = {
   simpleRouteJson: {
     layerCount: number
+    minTraceToPadEdgeClearance?: number
     obstacles: Obstacle[]
     bounds: { minX: number; maxX: number; minY: number; maxY: number }
     differentialPairs: DifferentialPair[]

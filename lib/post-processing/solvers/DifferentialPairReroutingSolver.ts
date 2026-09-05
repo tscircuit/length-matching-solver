@@ -58,6 +58,8 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
           obstacles: this.params.simpleRouteJson.obstacles,
           bounds: this.params.simpleRouteJson.bounds,
           layerCount: this.params.simpleRouteJson.layerCount,
+          minTraceToPadEdgeClearance:
+            this.params.simpleRouteJson.minTraceToPadEdgeClearance,
           routingGrid: this.params.routingGrid,
         })
         this.stats = this.activeSession.getStats()

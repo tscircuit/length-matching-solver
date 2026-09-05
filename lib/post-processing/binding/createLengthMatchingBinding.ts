@@ -202,12 +202,14 @@ export const createLengthMatchingBinding = (input: {
       ...createImmutableCollisionRoutes(trace, simpleRouteJson.layerCount),
     )
   }
-  const obstacleMargin = Math.max(
-    0,
-    ...hdRoutes
-      .filter((route) => route.route.length >= 2)
-      .map((route) => route.traceThickness),
-  )
+  const obstacleMargin =
+    simpleRouteJson.minTraceToPadEdgeClearance ??
+    Math.max(
+      0,
+      ...hdRoutes
+        .filter((route) => route.route.length >= 2)
+        .map((route) => route.traceThickness),
+    )
   return {
     solverParams: {
       hdRoutes,
