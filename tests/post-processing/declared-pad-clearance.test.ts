@@ -2,8 +2,9 @@ import { expect, test } from "bun:test"
 import { PostProcessingSolver } from "../../lib/PostProcessingSolver"
 import type { PostProcessingSolverParams } from "../../lib/post-processing/types"
 import fixture from "./fixtures/core-declared-pad-clearance.json"
+import { createDeclaredPadClearanceComparison } from "./fixtures/createDeclaredPadClearanceComparison"
 
-test("post-processing honors declared pad clearance without changing legacy defaults", () => {
+test("post-processing honors declared pad clearance without changing legacy defaults", async () => {
   const params = fixture as unknown as PostProcessingSolverParams
   const legacySolver = new PostProcessingSolver(params)
   legacySolver.solve()
@@ -38,6 +39,13 @@ test("post-processing honors declared pad clearance without changing legacy defa
     }, 0)
   })
   expect(Math.abs(lengths[0]! - lengths[1]!)).toBeLessThanOrEqual(0.05)
+  await expect(
+    createDeclaredPadClearanceComparison(
+      params,
+      legacySolver.getOutput(),
+      output,
+    ),
+  ).toMatchGraphicsSvg(import.meta.path, { backgroundColor: "white" })
   for (const clearance of [-0.1, Number.NaN, Number.POSITIVE_INFINITY]) {
     expect(
       () =>
