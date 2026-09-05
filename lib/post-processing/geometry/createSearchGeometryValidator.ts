@@ -28,6 +28,7 @@ export const createSearchGeometryValidator = (input: {
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
+  minTraceToPadEdgeClearance?: number
   start: CoupledPathPoint
   end: CoupledPathPoint
   firstConnectionName: string
@@ -242,7 +243,8 @@ export const createSearchGeometryValidator = (input: {
   }
   const segmentIsClear = (segment: CopperSegment): boolean => {
     const radius = segment.width / 2
-    const inflation = radius + segment.width
+    const inflation =
+      radius + (input.minTraceToPadEdgeClearance ?? segment.width)
     const layerIndex = getLayerIndex(segment.layer, input.layerCount)
     const segmentMinX = Math.min(segment.start.x, segment.end.x)
     const segmentMaxX = Math.max(segment.start.x, segment.end.x)
@@ -277,8 +279,8 @@ export const createSearchGeometryValidator = (input: {
           : [input.secondStartTerminal, input.secondEndTerminal]
       const progressesOutOfStart =
         obstacleContains(startTerminal, obstacle, 0) &&
-        (obstacleContains(segment.start, obstacle, radius + segment.width) ||
-          obstacleContains(segment.end, obstacle, radius + segment.width)) &&
+        (obstacleContains(segment.start, obstacle, inflation) ||
+          obstacleContains(segment.end, obstacle, inflation)) &&
         Math.hypot(
           segment.end.x - startTerminal.x,
           segment.end.y - startTerminal.y,
@@ -289,8 +291,8 @@ export const createSearchGeometryValidator = (input: {
           )
       const progressesIntoEnd =
         obstacleContains(endTerminal, obstacle, 0) &&
-        (obstacleContains(segment.start, obstacle, radius + segment.width) ||
-          obstacleContains(segment.end, obstacle, radius + segment.width)) &&
+        (obstacleContains(segment.start, obstacle, inflation) ||
+          obstacleContains(segment.end, obstacle, inflation)) &&
         Math.hypot(
           segment.end.x - endTerminal.x,
           segment.end.y - endTerminal.y,
@@ -303,13 +305,7 @@ export const createSearchGeometryValidator = (input: {
         obstacle.connectedTo.includes(segment.connectionName) &&
         (progressesOutOfStart || progressesIntoEnd)
       if (exitsConnectedTerminal) continue
-      if (
-        segmentTouchesInflatedObstacle(
-          segment,
-          obstacle,
-          radius + segment.width,
-        )
-      )
+      if (segmentTouchesInflatedObstacle(segment, obstacle, inflation))
         return false
     }
     for (const other of immutableSegmentsByLayer[layerIndex]!) {

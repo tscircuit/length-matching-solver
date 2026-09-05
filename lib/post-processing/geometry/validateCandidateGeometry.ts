@@ -16,6 +16,7 @@ export type CandidateGeometryContext = {
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
+  minTraceToPadEdgeClearance?: number
 }
 
 /** Validate complete replacement copper against bounds, obstacles, and immutable copper. */
@@ -126,7 +127,7 @@ export const validateCandidateGeometry = (
         segmentTouchesInflatedObstacle(
           segment,
           obstacle,
-          radius + segment.width,
+          radius + (context.minTraceToPadEdgeClearance ?? segment.width),
         )
       )
         return false

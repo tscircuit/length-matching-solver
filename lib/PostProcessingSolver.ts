@@ -69,9 +69,17 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
           throw new Error(
             "PostProcessingSolver: rerouting stage completed without output",
           )
-        const { obstacles, bounds, layerCount } =
+        const { obstacles, bounds, layerCount, minTraceToPadEdgeClearance } =
           pipeline.model.params.simpleRouteJson
-        return [{ ...rerouted, obstacles, bounds, layerCount }]
+        return [
+          {
+            ...rerouted,
+            obstacles,
+            bounds,
+            layerCount,
+            minTraceToPadEdgeClearance,
+          },
+        ]
       },
     ),
     definePipelineStep(
