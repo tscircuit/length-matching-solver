@@ -41,7 +41,10 @@ test("length matching rejects a legal meander beside existing terminal fanout", 
     ),
   ).toBe(true)
   const graphics: LengthMatchingGraphics = {
-    lines: [], points: [], circles: [], rects: [],
+    lines: [],
+    points: [],
+    circles: [],
+    rects: [],
   }
   const theme = createLengthMatchingColorTheme({
     source_net_0: "#dc2626",
@@ -55,7 +58,8 @@ test("length matching rejects a legal meander beside existing terminal fanout", 
     texts: [
       { x: 0, y: 14, text: "USB length matching", fontSize: 0.7 },
       {
-        x: 0, y: 12.8,
+        x: 0,
+        y: 12.8,
         text: `${getPairSkew(output.hdRoutes).toFixed(3)} mm skew / 0.500 mm limit`,
         fontSize: 0.6,
       },
