@@ -4,7 +4,10 @@ import type {
   PostProcessingSolverOutput,
   PostProcessingSolverParams,
 } from "../../lib/post-processing/types"
-import { createExistingTerminalClearanceComparison } from "./fixtures/createExistingTerminalClearanceComparison"
+import { buildObstacleGraphics } from "../../lib/length-matching/visualization/build-obstacle-graphics"
+import { buildRouteGraphics } from "../../lib/length-matching/visualization/build-route-graphics"
+import { createLengthMatchingColorTheme } from "../../lib/length-matching/visualization/color-theme"
+import type { LengthMatchingGraphics } from "../../lib/length-matching/visualization/types"
 
 const getPairSkew = (
   routes: PostProcessingSolverOutput["hdRoutes"],
@@ -37,7 +40,25 @@ test("length matching rejects a legal meander beside existing terminal fanout", 
       (error) => error.reason === "invalid-final-copper",
     ),
   ).toBe(true)
-  await expect(
-    createExistingTerminalClearanceComparison(params, output),
-  ).toMatchGraphicsSvg(import.meta.path, { backgroundColor: "white" })
+  const graphics: LengthMatchingGraphics = {
+    lines: [], points: [], circles: [], rects: [],
+  }
+  const theme = createLengthMatchingColorTheme({
+    source_net_0: "#dc2626",
+    source_net_1: "#2563eb",
+  })
+  buildObstacleGraphics({ graphics, theme, ...params })
+  buildRouteGraphics({ graphics, theme, routes: output.hdRoutes })
+  await expect({
+    ...graphics,
+    coordinateSystem: "cartesian",
+    texts: [
+      { x: 0, y: 14, text: "USB length matching", fontSize: 0.7 },
+      {
+        x: 0, y: 12.8,
+        text: `${getPairSkew(output.hdRoutes).toFixed(3)} mm skew / 0.500 mm limit`,
+        fontSize: 0.6,
+      },
+    ],
+  }).toMatchGraphicsSvg(import.meta.path, { backgroundColor: "white" })
 })
