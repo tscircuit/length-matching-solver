@@ -41,11 +41,13 @@ export const createExistingTerminalClearanceComparison = (
       }, 0),
     )
     const skew = Math.abs(lengths[0]! - lengths[1]!)
-    let title = "INPUT: USB PAIR EXCEEDS THE LENGTH-SKEW LIMIT"
+    let title = "BEFORE: unchanged routes rejected the new meander"
     let status = `FAIL: ${skew.toFixed(3)} mm skew / 0.500 mm limit`
     let statusColor = "#b91c1c"
     if (panelIndex === 1) {
-      title = "CURRENT OUTPUT: LEGAL MEANDER IS REJECTED"
+      title = "AFTER: validate changed copper against the original pair"
+      status = `PASS: ${skew.toFixed(3)} mm skew / 0.500 mm limit`
+      statusColor = "#15803d"
     }
     panels.push({
       ...graphics,

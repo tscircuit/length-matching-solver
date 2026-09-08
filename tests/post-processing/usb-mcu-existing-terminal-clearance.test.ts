@@ -18,7 +18,7 @@ const getPairSkew = (
   return Math.abs(lengths[0]! - lengths[1]!)
 }
 
-test("length matching rejects a legal meander beside existing terminal fanout", async () => {
+test("length matching accepts a legal meander beside existing terminal fanout", async () => {
   const fixtureUrl = new URL(
     "./fixtures/usb-mcu-existing-terminal-clearance.json",
     import.meta.url,
@@ -31,12 +31,12 @@ test("length matching rejects a legal meander beside existing terminal fanout", 
 
   expect(solver.solved).toBe(true)
   const output = solver.getOutput()
-  expect(getPairSkew(output.hdRoutes)).toBeGreaterThan(0.5)
+  expect(getPairSkew(output.hdRoutes)).toBeLessThanOrEqual(0.5)
   expect(
     output.postProcessingErrors.some(
       (error) => error.reason === "invalid-final-copper",
     ),
-  ).toBe(true)
+  ).toBe(false)
   await expect(
     createExistingTerminalClearanceComparison(params, output),
   ).toMatchGraphicsSvg(import.meta.path, { backgroundColor: "white" })
