@@ -4,6 +4,7 @@ import type {
   SimplifiedPcbTraceWireRoutePoint,
   SimplifiedPcbTraces,
 } from "../../types"
+import { getAddedPairCopper } from "../geometry/getAddedPairCopper"
 import { getLayerName } from "../geometry/getLayerName"
 import { getSimplifiedTraceLength } from "../length-matching/getSimplifiedTraceLength"
 import { validateCandidateGeometry } from "../geometry/validateCandidateGeometry"
@@ -139,12 +140,30 @@ export const reconstructSimplifiedPcbTraces = (input: {
       )
     const firstMatch = matches[0]![0]!
     const secondMatch = matches[1]![0]!
+    const originalTraces = pair.connectionNames.map((connectionName) => {
+      const matches = input.binding.baseTraces.filter(
+        (trace) => trace.connection_name === connectionName,
+      )
+      if (matches.length !== 1)
+        throw new Error(
+          `PostProcessingSolver: original pair ${pairName} does not resolve to complete copper`,
+        )
+      return matches[0]!
+    })
     const first = parseSimplifiedPcbTrace(
       firstMatch.trace,
       simpleRouteJson.layerCount,
     )
     const second = parseSimplifiedPcbTrace(
       secondMatch.trace,
+      simpleRouteJson.layerCount,
+    )
+    const originalFirst = parseSimplifiedPcbTrace(
+      originalTraces[0]!,
+      simpleRouteJson.layerCount,
+    )
+    const originalSecond = parseSimplifiedPcbTrace(
+      originalTraces[1]!,
       simpleRouteJson.layerCount,
     )
     const finalLengthDifference = Math.abs(
@@ -156,7 +175,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
         connectionNames: [...pair.connectionNames],
         reason: "length-tolerance-unsatisfied",
       })
-    const valid = validateCandidateGeometry(first, second, {
+    const validationContext = {
       immutableTraces: traces.filter(
         (_, index) => index !== firstMatch.index && index !== secondMatch.index,
       ),
@@ -164,8 +183,24 @@ export const reconstructSimplifiedPcbTraces = (input: {
       bounds: simpleRouteJson.bounds,
       layerCount: simpleRouteJson.layerCount,
       minTraceToPadEdgeClearance: simpleRouteJson.minTraceToPadEdgeClearance,
+    }
+    const completePairIsValid = validateCandidateGeometry(first, second, {
+      ...validationContext,
+      obstacles: [],
     })
-    if (!valid)
+    const addedPairCopper = getAddedPairCopper({
+      candidatePair: [first, second],
+      originalPair: [originalFirst, originalSecond],
+    })
+    const addedPairCopperIsValid = validateCandidateGeometry(
+      addedPairCopper[0],
+      addedPairCopper[1],
+      {
+        ...validationContext,
+        immutableTraces: [],
+      },
+    )
+    if (!completePairIsValid || !addedPairCopperIsValid)
       throw new PostProcessingConstraintError({
         message: `PostProcessingSolver: length matching produced invalid complete copper for pair ${pairName}`,
         connectionNames: [...pair.connectionNames],
