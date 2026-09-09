@@ -140,15 +140,16 @@ export const reconstructSimplifiedPcbTraces = (input: {
       )
     const firstMatch = matches[0]![0]!
     const secondMatch = matches[1]![0]!
-    const originalMatches = pair.connectionNames.map((connectionName) =>
-      input.binding.baseTraces.filter(
+    const originalTraces = pair.connectionNames.map((connectionName) => {
+      const matches = input.binding.baseTraces.filter(
         (trace) => trace.connection_name === connectionName,
-      ),
-    )
-    if (originalMatches[0]!.length !== 1 || originalMatches[1]!.length !== 1)
-      throw new Error(
-        `PostProcessingSolver: original pair ${pairName} does not resolve to complete copper`,
       )
+      if (matches.length !== 1)
+        throw new Error(
+          `PostProcessingSolver: original pair ${pairName} does not resolve to complete copper`,
+        )
+      return matches[0]!
+    })
     const first = parseSimplifiedPcbTrace(
       firstMatch.trace,
       simpleRouteJson.layerCount,
@@ -158,11 +159,11 @@ export const reconstructSimplifiedPcbTraces = (input: {
       simpleRouteJson.layerCount,
     )
     const originalFirst = parseSimplifiedPcbTrace(
-      originalMatches[0]![0]!,
+      originalTraces[0]!,
       simpleRouteJson.layerCount,
     )
     const originalSecond = parseSimplifiedPcbTrace(
-      originalMatches[1]![0]!,
+      originalTraces[1]!,
       simpleRouteJson.layerCount,
     )
     const finalLengthDifference = Math.abs(
