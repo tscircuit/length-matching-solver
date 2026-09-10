@@ -78,11 +78,12 @@ export class LengthMatchingSolver extends BaseSolver {
       throw new Error(
         `LengthMatchingSolver: differential pair ${pair.connectionNames.join("/")} has routed geometry for only one connection`,
       )
-    const firstLength = getConnectionLength(this.matchedHdRoutes, firstIndexes)
-    const secondLength = getConnectionLength(
-      this.matchedHdRoutes,
-      secondIndexes,
-    )
+    const firstLength =
+      getConnectionLength(this.matchedHdRoutes, firstIndexes) +
+      (this.params.connectionLengthOffsets?.[pair.connectionNames[0]] ?? 0)
+    const secondLength =
+      getConnectionLength(this.matchedHdRoutes, secondIndexes) +
+      (this.params.connectionLengthOffsets?.[pair.connectionNames[1]] ?? 0)
     const difference = Math.abs(firstLength - secondLength)
     if (difference <= pair.lengthTolerance) return
     const firstIsShorter = firstLength < secondLength

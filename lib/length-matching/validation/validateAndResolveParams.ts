@@ -54,6 +54,14 @@ export const validateAndResolveParams = (
       "LengthMatchingSolver: maxToothCount must be a positive finite integer",
     )
   }
+  for (const [connectionName, offset] of Object.entries(
+    params.connectionLengthOffsets ?? {},
+  )) {
+    if (!Number.isFinite(offset) || offset < 0)
+      throw new Error(
+        `LengthMatchingSolver: connection length offset for "${connectionName}" must be a non-negative finite number`,
+      )
+  }
   return {
     maximumMeanderDepth,
     minimumToothPitch: params.minimumToothPitch,

@@ -8,6 +8,7 @@ export const getLengthMatchingPairs = (input: {
   declaredPairs: DifferentialPair[]
   reroutedPairs: DifferentialPair[]
   layerCount: number
+  connectionLengthOffsets?: Record<string, number>
 }): DifferentialPair[] => {
   const reroutedPairKeys = new Set(
     input.reroutedPairs.map((pair) => pair.connectionNames.join("\u0000")),
@@ -34,10 +35,11 @@ export const getLengthMatchingPairs = (input: {
         )
       )
         return false
-      const lengths = traces.map((trace) =>
-        getSimplifiedTraceLength(
-          parseSimplifiedPcbTrace(trace, input.layerCount),
-        ),
+      const lengths = traces.map(
+        (trace) =>
+          getSimplifiedTraceLength(
+            parseSimplifiedPcbTrace(trace, input.layerCount),
+          ) + (input.connectionLengthOffsets?.[trace.connection_name] ?? 0),
       )
       return Math.abs(lengths[0]! - lengths[1]!) > pair.lengthTolerance + 1e-7
     })

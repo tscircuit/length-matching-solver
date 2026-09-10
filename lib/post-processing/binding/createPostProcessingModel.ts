@@ -197,6 +197,9 @@ export const createPostProcessingModel = (
       simpleRouteJson: {
         traces,
         differentialPairs: structuredClone(params.differentialPairs),
+        connectionLengthOffsets: structuredClone(
+          params.connectionLengthOffsets,
+        ),
         obstacles,
         bounds: structuredClone(params.bounds),
         layerCount: params.layerCount,
