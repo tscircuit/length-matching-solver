@@ -10,6 +10,11 @@ export type LengthMatchingSolverParams = {
   hdRoutes: HighDensityRoute[]
   originalConnections: SimpleRouteConnection[]
   differentialPairs?: DifferentialPair[]
+  /**
+   * Immutable routed length outside hdRoutes, keyed by logical connection.
+   * The matcher includes this copper when choosing which mutable route to tune.
+   */
+  connectionLengthOffsets?: Record<string, number>
   maximumMeanderDepth?: number
   minimumToothPitch?: number
   /**

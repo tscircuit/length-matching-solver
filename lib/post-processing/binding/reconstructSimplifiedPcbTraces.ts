@@ -167,7 +167,12 @@ export const reconstructSimplifiedPcbTraces = (input: {
       simpleRouteJson.layerCount,
     )
     const finalLengthDifference = Math.abs(
-      getSimplifiedTraceLength(first) - getSimplifiedTraceLength(second),
+      getSimplifiedTraceLength(first) +
+        (simpleRouteJson.connectionLengthOffsets?.[pair.connectionNames[0]] ??
+          0) -
+        getSimplifiedTraceLength(second) -
+        (simpleRouteJson.connectionLengthOffsets?.[pair.connectionNames[1]] ??
+          0),
     )
     if (finalLengthDifference > pair.lengthTolerance + 1e-7)
       throw new PostProcessingConstraintError({

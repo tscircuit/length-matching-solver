@@ -43,6 +43,7 @@ export const createLengthMatchingBinding = (input: {
     declaredPairs: simpleRouteJson.differentialPairs,
     reroutedPairs: input.result.reroutedPairs,
     layerCount: simpleRouteJson.layerCount,
+    connectionLengthOffsets: simpleRouteJson.connectionLengthOffsets,
   })
   const targetConnectionNames = new Set(
     differentialPairs.flatMap((pair) => pair.connectionNames),
@@ -215,6 +216,7 @@ export const createLengthMatchingBinding = (input: {
       hdRoutes,
       originalConnections,
       differentialPairs,
+      connectionLengthOffsets: simpleRouteJson.connectionLengthOffsets,
       obstacles: simpleRouteJson.obstacles,
       bounds: simpleRouteJson.bounds,
       layerCount: simpleRouteJson.layerCount,

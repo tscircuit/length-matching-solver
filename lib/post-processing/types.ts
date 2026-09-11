@@ -17,6 +17,11 @@ export type PostProcessingGridConfig = {
 export type PostProcessingSolverParams = {
   hdRoutes: HighDensityRoute[]
   differentialPairs: DifferentialPair[]
+  /**
+   * Immutable routed length outside hdRoutes, keyed by logical connection.
+   * Post-processing includes this copper when matching effective route lengths.
+   */
+  connectionLengthOffsets?: Record<string, number>
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -49,6 +54,7 @@ export type InternalPostProcessingParams = {
     obstacles: Obstacle[]
     bounds: { minX: number; maxX: number; minY: number; maxY: number }
     differentialPairs: DifferentialPair[]
+    connectionLengthOffsets?: Record<string, number>
     traces: SimplifiedPcbTraces
   }
   routingGrid?: PostProcessingGridConfig

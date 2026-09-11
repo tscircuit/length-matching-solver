@@ -14,6 +14,14 @@ export function validatePostProcessingParams(
     throw new Error("PostProcessingSolver: differentialPairs must be an array")
   if (!Array.isArray(params.obstacles))
     throw new Error("PostProcessingSolver: obstacles must be an array")
+  for (const [connectionName, offset] of Object.entries(
+    params.connectionLengthOffsets ?? {},
+  )) {
+    if (!Number.isFinite(offset) || offset < 0)
+      throw new Error(
+        `PostProcessingSolver: connection length offset for "${connectionName}" must be finite and nonnegative`,
+      )
+  }
   if (
     params.minTraceToPadEdgeClearance !== undefined &&
     (!Number.isFinite(params.minTraceToPadEdgeClearance) ||

@@ -3,6 +3,8 @@ import { getMeanderPlanQualityScore } from "./getMeanderPlanQualityScore"
 import { getPlannedAttemptTargets } from "./getPlannedAttemptTargets"
 import { getRegressionAttemptKey } from "./getRegressionAttemptKey"
 
+const EPSILON = 1e-9
+
 /** A quality-ranked selection of same-style meander segments. */
 export type PartialMeanderPlan = {
   attempts: RegressionAttempt[]
@@ -74,7 +76,7 @@ export const selectPartialMeanderPlan = (input: {
           )
         const feasibleAttempts = options.attempts.filter(
           (attempt) =>
-            attempt.addedLength + input.lengthTolerance >=
+            attempt.addedLength + EPSILON >=
             maximumCapacityTarget.targetAddedLength,
         )
         if (feasibleAttempts.length === 0)
