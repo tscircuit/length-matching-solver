@@ -1,6 +1,6 @@
-# AM3352 DDR_D0 exhausted-search reproduction
+# AM3352 DDR_D0 retained-lead regression
 
-This fixture captures an observed `LengthMatchingNoSolutionError` in the AM3352 development board's byte-bus matching. It is a reproduction, not a solver fix or proof that a valid meander exists within these constraints.
+This fixture originally reproduced `LengthMatchingNoSolutionError` in the AM3352 development board's byte-bus matching. The regression now requires successful matching while preserving endpoints, vias, and unrelated routes.
 
 Run from the repository root:
 
@@ -9,7 +9,7 @@ bun install
 RUN_AM3352_DDR_REPRO=1 bun test tests/repros/am3352-ddr-d0.test.ts --timeout 9999999
 ```
 
-The test is deliberately opt-in because the exhausted-search path is slow. A passing test confirms the **existing failure**: `meander-search-exhausted` for `source_net_70` (`DDR_D0`), with `required 9.9183mm` in the message. It must be revised when that behavior changes. Normal `bun test` skips it.
+The test remains opt-in because the fixture is large. It checks successful completion, a maximum 0.635 mm length difference between DDR_D0 and DDR_D5, unchanged endpoints/vias/unrelated routes, and the final visualization. Normal `bun test` skips it.
 
 ## Provenance
 
@@ -33,14 +33,14 @@ gzip -dc fixtures/am3352-ddr-d0/input.json.gz > /tmp/am3352-ddr-d0.json
 SHA-256 of decompressed UTF-8 JSON (including final newline):
 `7849a1472a4903e38f9da40ce00590bbfdc55050befda898149dcfd315b7705c`.
 
-The input has not been established to be globally DRC-clean or physically feasible. This PR records solver search behavior without implying that failure is necessarily incorrect. No production code or tolerances are changed.
+The input has not been established to be globally DRC-clean or physically feasible. This PR records solver search behavior without implying that failure is necessarily incorrect. The fix preserves the clearance state of unchanged lead segments when checking a replacement that introduces new copper. New meander segments still undergo bounds, obstacle, via, and foreign-trace checks; this is not whole-board DRC signoff. Tolerances are unchanged.
 
 ## Verified replay
 
-On Bun 1.3.2, macOS arm64, at the commit above, the standalone opt-in test passed all nine assertions in **178.616 seconds / 59 solver iterations**, reproducing the exact error and required added length. Runtime is informational, not an assertion. Typecheck, build, and structural checks also passed (structural checks retain existing repository warnings); the default test invocation skips this reproduction.
+The original failure reproduced in 178.616 seconds / 59 iterations. With retained-lead validation corrected, the captured case passes in about 26 seconds / 62 iterations, including 199 assertions and snapshot verification. Runtime is informational.
 
-## Final failed visualization
+## Final successful visualization
 
-The opt-in test snapshots `solver.visualize()` after the expected exception, preserving the final failed-candidate state. The SVG is in `tests/repros/__snapshots__/am3352-ddr-d0.snap.svg`; the PNG below is rendered from that SVG. All layers are overlaid in the native view, including plane obstacles.
+The test snapshots the final `solver.visualize()` after a successful solve. The SVG is in `tests/repros/__snapshots__/am3352-ddr-d0.snap.svg`; this PNG is rendered from that SVG. All layers are overlaid in the native view, including plane obstacles.
 
-![Final solver visualization after the reproduced failure](./final-visualization.png)
+![Final solver visualization after successful matching](./final-visualization.png)
