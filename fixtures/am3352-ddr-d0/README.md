@@ -38,3 +38,9 @@ The input has not been established to be globally DRC-clean or physically feasib
 ## Verified replay
 
 On Bun 1.3.2, macOS arm64, at the commit above, the standalone opt-in test passed all nine assertions in **178.616 seconds / 59 solver iterations**, reproducing the exact error and required added length. Runtime is informational, not an assertion. Typecheck, build, and structural checks also passed (structural checks retain existing repository warnings); the default test invocation skips this reproduction.
+
+## Final failed visualization
+
+The opt-in test snapshots `solver.visualize()` after the expected exception, preserving the final failed-candidate state. The SVG is in `tests/repros/__snapshots__/am3352-ddr-d0.snap.svg`; the PNG below is rendered from that SVG. All layers are overlaid in the native view, including plane obstacles.
+
+![Final solver visualization after the reproduced failure](./final-visualization.png)

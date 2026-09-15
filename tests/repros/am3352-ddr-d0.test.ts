@@ -39,4 +39,5 @@ reproTest("AM3352 DDR_D0 exhausts the captured byte-bus matching search", () => 
   expect((failure as Error).message).toContain("required 9.9183mm")
   expect(solver.failed).toBe(true)
   expect(solver.solved).toBe(false)
+  expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
 })
