@@ -82,11 +82,32 @@ export const isCandidateGeometryValid = (input: {
       point.y - (start.y + progress * dy),
     )
   }
+  const hasNewGeometry = input.meanderPoints.some((point) =>
+    !input.route.route.slice(1).some((end, i): boolean => {
+      const start = input.route.route[i]!
+      return (
+        start.z === point.z && end.z === point.z &&
+        pointToSegmentDistance(point, start, end) <= 1e-9
+      )
+    }),
+  )
   const connectionName = getLogicalConnectionName(input.route)
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
   for (let index = 0; index < input.meanderPoints.length - 1; index++) {
     const start = input.meanderPoints[index]!
     const end = input.meanderPoints[index + 1]!
+    // A replacement includes unchanged straight leads. Preserve their existing
+    // clearance state; only newly introduced copper is subject to this check.
+    const isRetainedSegment = input.route.route.slice(1).some((originalEnd, i): boolean => {
+      const originalStart = input.route.route[i]!
+      return (
+        start.z === end.z && originalStart.z === start.z &&
+        originalEnd.z === end.z &&
+        pointToSegmentDistance(start, originalStart, originalEnd) <= 1e-9 &&
+        pointToSegmentDistance(end, originalStart, originalEnd) <= 1e-9
+      )
+    })
+    if (hasNewGeometry && isRetainedSegment) continue
     for (const obstacle of input.obstacles) {
       if (
         !getObstacleLayerIndexes(obstacle, input.layerCount).includes(start.z)
