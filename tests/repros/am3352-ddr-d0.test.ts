@@ -1,17 +1,17 @@
 import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { gunzipSync } from "node:zlib"
+import { getConnectionLength, findConnectionRouteIndexes } from "../../lib/length-matching/connection-routes"
 import {
-  LengthMatchingNoSolutionError,
   LengthMatchingSolver,
   type LengthMatchingSolverParams,
 } from "../../lib"
 
-// This is an observed-failure reproduction, not a claim of geometric feasibility.
-// Opt in because the exhausted-search path can take several minutes.
+// Captured byte-bus regression; opt in for the large geometry fixture.
+// Run with the command-level timeout documented alongside the fixture.
 const reproTest = process.env.RUN_AM3352_DDR_REPRO === "1" ? test : test.skip
 
-reproTest("AM3352 DDR_D0 exhausts the captured byte-bus matching search", () => {
+reproTest("AM3352 DDR_D0 matches while preserving existing terminal leads", () => {
   const params: LengthMatchingSolverParams = JSON.parse(
     gunzipSync(readFileSync(
       new URL("../../fixtures/am3352-ddr-d0/input.json.gz", import.meta.url),
@@ -24,20 +24,22 @@ reproTest("AM3352 DDR_D0 exhausts the captured byte-bus matching search", () => 
 
   const solver = new LengthMatchingSolver(params)
   const start = performance.now()
-  let failure: unknown
-  try {
-    solver.solve()
-  } catch (error) {
-    failure = error
-  }
+  solver.solve()
   console.info(`AM3352 DDR_D0 reproduction: ${((performance.now() - start) / 1000).toFixed(3)}s, ${solver.iterations} iterations`)
-  expect(failure).toBeInstanceOf(LengthMatchingNoSolutionError)
-  expect(failure).toMatchObject({
-    connectionName: "source_net_70",
-    reason: "meander-search-exhausted",
-  })
-  expect((failure as Error).message).toContain("required 9.9183mm")
-  expect(solver.failed).toBe(true)
-  expect(solver.solved).toBe(false)
+  expect(solver.failed).toBe(false)
+  expect(solver.solved).toBe(true)
+  const output = solver.getOutput().matchedHdRoutes
+  const lengths = ["source_net_70", "source_net_87"].map((name) =>
+    getConnectionLength(output, findConnectionRouteIndexes(output, name)),
+  )
+  expect(Math.abs(lengths[0]! - lengths[1]!)).toBeLessThanOrEqual(0.635)
+  for (let i = 0; i < params.hdRoutes.length; i++) {
+    const original = params.hdRoutes[i]!
+    const result = output[i]!
+    expect(result.route[0]).toEqual(original.route[0])
+    expect(result.route.at(-1)).toEqual(original.route.at(-1))
+    expect(result.vias).toEqual(original.vias)
+    if (original.connectionName !== "source_net_70") expect(result).toEqual(original)
+  }
   expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
 })
