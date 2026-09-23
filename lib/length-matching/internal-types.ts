@@ -1,6 +1,6 @@
 import type {
   DifferentialPair,
-  HighDensityRoute,
+  SimplifiedPcbTraces,
   Obstacle,
   RoutePoint,
 } from "../types"
@@ -84,7 +84,7 @@ export type LengthMatchingConfig = {
   minMeanderGap?: number
   minMeanderHeight?: number
   maxToothCount: number
-  hdRoutesFromTraces: HighDensityRoute[]
+  traces: SimplifiedPcbTraces
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   obstacleMargin: number

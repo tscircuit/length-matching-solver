@@ -1,5 +1,4 @@
-import { createImmutableCollisionRoutes } from "../../post-processing/binding/createImmutableCollisionRoutes"
-import type { HighDensityRoute } from "../../types"
+import { getTraceCopperGeometry } from "../../post-processing/model/getTraceCopperGeometry"
 import type { LengthMatchingConfig } from "../internal-types"
 import type { LengthMatchingSolverParams } from "../types"
 
@@ -56,16 +55,16 @@ export const validateAndResolveParams = (
       "LengthMatchingSolver: maxToothCount must be a positive finite integer",
     )
   }
+  for (const trace of params.traces ?? []) {
+    getTraceCopperGeometry(trace, params.layerCount ?? 2)
+  }
   return {
     maximumMeanderDepth,
     minimumToothPitch: params.minimumToothPitch,
     minMeanderGap: params.minMeanderGap,
     minMeanderHeight: params.minMeanderHeight,
     maxToothCount,
-    hdRoutesFromTraces: (params.traces ?? []).flatMap(
-      (trace): HighDensityRoute[] =>
-        createImmutableCollisionRoutes(trace, params.layerCount ?? 2),
-    ),
+    traces: params.traces ?? [],
     obstacles: params.obstacles ?? [],
     bounds: params.bounds,
     obstacleMargin: params.obstacleMargin ?? 0.15,

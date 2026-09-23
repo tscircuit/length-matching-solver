@@ -1,6 +1,13 @@
+import { getTraceCopperGeometry } from "../../post-processing/model/getTraceCopperGeometry"
+import { getLayerName } from "../../post-processing/geometry/getLayerName"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
-import type { HighDensityRoute, Obstacle, RoutePoint } from "../../types"
+import type {
+  HighDensityRoute,
+  Obstacle,
+  RoutePoint,
+  SimplifiedPcbTraces,
+} from "../../types"
 import { getLogicalConnectionName } from "../connection-routes"
 
 /** Check candidate bounds, obstacle clearance, and clearance from other connections. */
@@ -8,7 +15,7 @@ export const isCandidateGeometryValid = (input: {
   route: HighDensityRoute
   meanderPoints: RoutePoint[]
   routedRoutes: HighDensityRoute[]
-  hdRoutesFromTraces?: HighDensityRoute[]
+  traces?: SimplifiedPcbTraces
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -94,6 +101,9 @@ export const isCandidateGeometryValid = (input: {
         )
       }),
   )
+  const traceCopperGeometry = (input.traces ?? []).map((trace) =>
+    getTraceCopperGeometry(trace, input.layerCount),
+  )
   const connectionName = getLogicalConnectionName(input.route)
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
   for (let index = 0; index < input.meanderPoints.length - 1; index++) {
@@ -126,12 +136,27 @@ export const isCandidateGeometryValid = (input: {
       if (segmentTouchesInflatedObstacle(start, end, obstacle, obstacleMargin))
         return false
     }
-    for (const otherRoute of [
-      ...input.routedRoutes,
-      ...(input.hdRoutesFromTraces ?? []),
-    ]) {
+    const layer = getLayerName(start.z, input.layerCount)
+    for (const { segments, vias } of traceCopperGeometry) {
+      for (const segment of segments) {
+        if (segment.layer !== layer) continue
+        if (
+          getMinimumSegmentDistance(start, end, segment.start, segment.end) <
+          obstacleMargin + segment.width / 2
+        )
+          return false
+      }
+      for (const via of vias) {
+        if (!via.layers.includes(layer)) continue
+        if (
+          pointToSegmentDistance(via, start, end) <
+          obstacleMargin + via.diameter / 2
+        )
+          return false
+      }
+    }
+    for (const otherRoute of input.routedRoutes) {
       const sameConnection =
-        !input.hdRoutesFromTraces?.includes(otherRoute) &&
         getLogicalConnectionName(otherRoute) === connectionName
       for (const via of otherRoute.vias) {
         if (via.zLayers && !via.zLayers.includes(start.z)) continue

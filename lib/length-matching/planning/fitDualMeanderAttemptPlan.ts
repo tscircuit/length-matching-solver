@@ -21,7 +21,7 @@ export const fitDualMeanderAttemptPlan = (input: {
   config: Pick<
     DualMeanderPlanInput,
     | "lengthTolerance"
-    | "hdRoutesFromTraces"
+    | "traces"
     | "obstacles"
     | "bounds"
     | "layerCount"

@@ -1,4 +1,9 @@
-import type { HighDensityRoute, Obstacle, RoutePoint } from "../types"
+import type {
+  HighDensityRoute,
+  Obstacle,
+  RoutePoint,
+  SimplifiedPcbTraces,
+} from "../types"
 import {
   findConnectionRouteIndexes,
   getConnectionLength,
@@ -36,7 +41,7 @@ export type DualMeanderPlanInput = {
   lengthTolerance: number
   longerCandidates: SegmentCandidate[]
   shorterCandidates: SegmentCandidate[]
-  hdRoutesFromTraces?: HighDensityRoute[]
+  traces?: SimplifiedPcbTraces
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -190,11 +195,7 @@ export const selectDualMeanderPlan = (
     routes: HighDensityRoute[]
     config: Pick<
       DualMeanderPlanInput,
-      | "hdRoutesFromTraces"
-      | "obstacles"
-      | "bounds"
-      | "layerCount"
-      | "obstacleMargin"
+      "traces" | "obstacles" | "bounds" | "layerCount" | "obstacleMargin"
     >
   }): boolean => {
     const route = input.routes[input.attempt.routeIndex]
@@ -218,7 +219,7 @@ export const selectDualMeanderPlan = (
     config: Pick<
       DualMeanderPlanInput,
       | "lengthTolerance"
-      | "hdRoutesFromTraces"
+      | "traces"
       | "obstacles"
       | "bounds"
       | "layerCount"
@@ -255,7 +256,7 @@ export const selectDualMeanderPlan = (
   }
 
   const config = {
-    hdRoutesFromTraces: input.hdRoutesFromTraces,
+    traces: input.traces,
     obstacles: input.obstacles,
     bounds: input.bounds,
     layerCount: input.layerCount,
