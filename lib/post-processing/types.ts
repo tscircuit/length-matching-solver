@@ -17,6 +17,8 @@ export type PostProcessingGridConfig = {
 export type PostProcessingSolverParams = {
   hdRoutes: HighDensityRoute[]
   differentialPairs: DifferentialPair[]
+  /** Fixed SRJ copper preserved throughout rerouting and length matching. */
+  traces?: SimplifiedPcbTraces
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number

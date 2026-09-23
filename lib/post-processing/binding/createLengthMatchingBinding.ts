@@ -9,7 +9,7 @@ import type { LengthMatchingSolverParams } from "../../length-matching/types"
 import { getLayerIndex } from "../geometry/getLayerIndex"
 import { getTransitionLayers } from "../geometry/getTransitionLayers"
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
-import { createImmutableCollisionRoutes } from "./createImmutableCollisionRoutes"
+import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
 import { getLengthMatchingPairs } from "./getLengthMatchingPairs"
 import type { FortyFiveDegreeSimplificationOutput } from "../solvers/FortyFiveDegreeSimplificationSolver"
 import type { InternalPostProcessingParams } from "../types"
@@ -196,12 +196,9 @@ export const createLengthMatchingBinding = (input: {
       )
   }
 
-  for (const trace of input.result.traces) {
-    if (targetConnectionNames.has(trace.connection_name)) continue
-    hdRoutes.push(
-      ...createImmutableCollisionRoutes(trace, simpleRouteJson.layerCount),
-    )
-  }
+  const traces = input.result.traces.filter(
+    (trace): boolean => !targetConnectionNames.has(trace.connection_name),
+  )
   const obstacleMargin =
     simpleRouteJson.minTraceToPadEdgeClearance ??
     Math.max(
@@ -209,10 +206,16 @@ export const createLengthMatchingBinding = (input: {
       ...hdRoutes
         .filter((route) => route.route.length >= 2)
         .map((route) => route.traceThickness),
+      ...traces.flatMap((trace): number[] =>
+        getTraceCopperGeometry(trace, simpleRouteJson.layerCount).segments.map(
+          (segment): number => segment.width,
+        ),
+      ),
     )
   return {
     solverParams: {
       hdRoutes,
+      traces,
       originalConnections,
       differentialPairs,
       obstacles: simpleRouteJson.obstacles,

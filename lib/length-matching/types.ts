@@ -2,6 +2,7 @@ import type {
   DifferentialPair,
   HighDensityRoute,
   Obstacle,
+  SimplifiedPcbTraces,
   SimpleRouteConnection,
 } from "../types"
 
@@ -23,6 +24,8 @@ export type LengthMatchingSolverParams = {
    */
   minMeanderHeight?: number
   maxToothCount?: number
+  /** Fixed SRJ copper used for clearance only; never tuned or returned. */
+  traces?: SimplifiedPcbTraces
   obstacles?: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   obstacleMargin?: number

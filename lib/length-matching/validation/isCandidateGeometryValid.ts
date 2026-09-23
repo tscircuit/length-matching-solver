@@ -1,6 +1,13 @@
+import { getTraceCopperGeometry } from "../../post-processing/model/getTraceCopperGeometry"
+import { getLayerName } from "../../post-processing/geometry/getLayerName"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
-import type { HighDensityRoute, Obstacle, RoutePoint } from "../../types"
+import type {
+  HighDensityRoute,
+  Obstacle,
+  RoutePoint,
+  SimplifiedPcbTraces,
+} from "../../types"
 import { getLogicalConnectionName } from "../connection-routes"
 
 /** Check candidate bounds, obstacle clearance, and clearance from other connections. */
@@ -8,6 +15,7 @@ export const isCandidateGeometryValid = (input: {
   route: HighDensityRoute
   meanderPoints: RoutePoint[]
   routedRoutes: HighDensityRoute[]
+  traces?: SimplifiedPcbTraces
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -82,14 +90,19 @@ export const isCandidateGeometryValid = (input: {
       point.y - (start.y + progress * dy),
     )
   }
-  const hasNewGeometry = input.meanderPoints.some((point) =>
-    !input.route.route.slice(1).some((end, i): boolean => {
-      const start = input.route.route[i]!
-      return (
-        start.z === point.z && end.z === point.z &&
-        pointToSegmentDistance(point, start, end) <= 1e-9
-      )
-    }),
+  const hasNewGeometry = input.meanderPoints.some(
+    (point) =>
+      !input.route.route.slice(1).some((end, i): boolean => {
+        const start = input.route.route[i]!
+        return (
+          start.z === point.z &&
+          end.z === point.z &&
+          pointToSegmentDistance(point, start, end) <= 1e-9
+        )
+      }),
+  )
+  const traceCopperGeometry = (input.traces ?? []).map((trace) =>
+    getTraceCopperGeometry(trace, input.layerCount),
   )
   const connectionName = getLogicalConnectionName(input.route)
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
@@ -98,15 +111,18 @@ export const isCandidateGeometryValid = (input: {
     const end = input.meanderPoints[index + 1]!
     // A replacement includes unchanged straight leads. Preserve their existing
     // clearance state; only newly introduced copper is subject to this check.
-    const isRetainedSegment = input.route.route.slice(1).some((originalEnd, i): boolean => {
-      const originalStart = input.route.route[i]!
-      return (
-        start.z === end.z && originalStart.z === start.z &&
-        originalEnd.z === end.z &&
-        pointToSegmentDistance(start, originalStart, originalEnd) <= 1e-9 &&
-        pointToSegmentDistance(end, originalStart, originalEnd) <= 1e-9
-      )
-    })
+    const isRetainedSegment = input.route.route
+      .slice(1)
+      .some((originalEnd, i): boolean => {
+        const originalStart = input.route.route[i]!
+        return (
+          start.z === end.z &&
+          originalStart.z === start.z &&
+          originalEnd.z === end.z &&
+          pointToSegmentDistance(start, originalStart, originalEnd) <= 1e-9 &&
+          pointToSegmentDistance(end, originalStart, originalEnd) <= 1e-9
+        )
+      })
     if (hasNewGeometry && isRetainedSegment) continue
     for (const obstacle of input.obstacles) {
       if (
@@ -119,6 +135,25 @@ export const isCandidateGeometryValid = (input: {
         continue
       if (segmentTouchesInflatedObstacle(start, end, obstacle, obstacleMargin))
         return false
+    }
+    const layer = getLayerName(start.z, input.layerCount)
+    for (const { segments, vias } of traceCopperGeometry) {
+      for (const segment of segments) {
+        if (segment.layer !== layer) continue
+        if (
+          getMinimumSegmentDistance(start, end, segment.start, segment.end) <
+          obstacleMargin + segment.width / 2
+        )
+          return false
+      }
+      for (const via of vias) {
+        if (!via.layers.includes(layer)) continue
+        if (
+          pointToSegmentDistance(via, start, end) <
+          obstacleMargin + via.diameter / 2
+        )
+          return false
+      }
     }
     for (const otherRoute of input.routedRoutes) {
       const sameConnection =

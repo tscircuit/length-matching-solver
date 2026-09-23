@@ -1,4 +1,9 @@
-import type { DifferentialPair, Obstacle, RoutePoint } from "../types"
+import type {
+  DifferentialPair,
+  SimplifiedPcbTraces,
+  Obstacle,
+  RoutePoint,
+} from "../types"
 
 export type MeanderPlacement = "balanced" | "negative" | "positive"
 export type MeanderHeightProfile = "tapered" | "uniform"
@@ -79,6 +84,7 @@ export type LengthMatchingConfig = {
   minMeanderGap?: number
   minMeanderHeight?: number
   maxToothCount: number
+  traces: SimplifiedPcbTraces
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   obstacleMargin: number

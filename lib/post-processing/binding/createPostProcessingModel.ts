@@ -169,6 +169,20 @@ export const createPostProcessingModel = (
       }
     },
   )
+  // Fixed copper must never be selected as a pair member, even when its
+  // public connection name matches a route that is being tuned.
+  const connectionNames = new Set(
+    traces.map((trace): string => trace.connection_name),
+  )
+  for (const [index, trace] of (params.traces ?? []).entries()) {
+    let connection_name = `post_processing_fixed_trace_${index}`
+    while (connectionNames.has(connection_name)) connection_name += "_"
+    connectionNames.add(connection_name)
+    traces.push({
+      ...structuredClone(trace),
+      connection_name,
+    })
+  }
   const obstacles = structuredClone(params.obstacles)
   for (
     let hdRouteIndex = 0;

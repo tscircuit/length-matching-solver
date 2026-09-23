@@ -58,16 +58,8 @@ test("binds untargeted and special traces as collision-only immutable copper", (
 
   expect(binding.traceBindings).toHaveLength(2)
   expect(binding.solverParams.originalConnections).toHaveLength(2)
-  expect(
-    binding.solverParams.hdRoutes.some(
-      (route) => route.rootConnectionName === "UNTARGETED_P",
-    ),
-  ).toBe(true)
-  expect(
-    binding.solverParams.hdRoutes.some(
-      (route) =>
-        route.rootConnectionName === "SPECIAL" && route.traceThickness === 1.8,
-    ),
-  ).toBe(true)
+  expect(binding.solverParams.hdRoutes).toHaveLength(2)
+  expect(binding.solverParams.traces).toEqual(traces.slice(2))
+  expect(binding.solverParams.traces![2]).toBe(specialTrace)
   expect(binding.solverParams.obstacleMargin).toBe(1.8)
 })

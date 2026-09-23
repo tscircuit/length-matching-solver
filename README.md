@@ -93,3 +93,12 @@ bun run build
 
 `bun run start` opens the interactive React Cosmos fixture playground at
 `http://localhost:5000`.
+
+### Fixed SRJ traces
+
+Both `LengthMatchingSolver` and `PostProcessingSolver` accept optional `traces`
+containing fixed SRJ `SimplifiedPcbTraces`. They participate in clearance checks
+using layer-aware wire segments and via diameters, without rectangle conversion.
+Fixed traces are never tuned, counted toward matching lengths, or included in the
+returned HD routes; the caller retains them in its SRJ. `obstacleMargin` (or
+`minTraceToPadEdgeClearance` for post-processing) sets the edge clearance.
