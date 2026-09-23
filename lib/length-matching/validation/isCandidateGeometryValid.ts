@@ -8,6 +8,7 @@ export const isCandidateGeometryValid = (input: {
   route: HighDensityRoute
   meanderPoints: RoutePoint[]
   routedRoutes: HighDensityRoute[]
+  fixedRoutes?: HighDensityRoute[]
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -120,8 +121,9 @@ export const isCandidateGeometryValid = (input: {
       if (segmentTouchesInflatedObstacle(start, end, obstacle, obstacleMargin))
         return false
     }
-    for (const otherRoute of input.routedRoutes) {
+    for (const otherRoute of [...input.routedRoutes, ...(input.fixedRoutes ?? [])]) {
       const sameConnection =
+        !input.fixedRoutes?.includes(otherRoute) &&
         getLogicalConnectionName(otherRoute) === connectionName
       for (const via of otherRoute.vias) {
         if (via.zLayers && !via.zLayers.includes(start.z)) continue

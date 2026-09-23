@@ -1,3 +1,5 @@
+import { createImmutableCollisionRoutes } from "../../post-processing/binding/createImmutableCollisionRoutes"
+import type { HighDensityRoute } from "../../types"
 import type { LengthMatchingConfig } from "../internal-types"
 import type { LengthMatchingSolverParams } from "../types"
 
@@ -60,6 +62,9 @@ export const validateAndResolveParams = (
     minMeanderGap: params.minMeanderGap,
     minMeanderHeight: params.minMeanderHeight,
     maxToothCount,
+    fixedRoutes: (params.traces ?? []).flatMap((trace): HighDensityRoute[] =>
+      createImmutableCollisionRoutes(trace, params.layerCount ?? 2),
+    ),
     obstacles: params.obstacles ?? [],
     bounds: params.bounds,
     obstacleMargin: params.obstacleMargin ?? 0.15,

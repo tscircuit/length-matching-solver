@@ -1,4 +1,4 @@
-import type { DifferentialPair, Obstacle, RoutePoint } from "../types"
+import type { DifferentialPair, HighDensityRoute, Obstacle, RoutePoint } from "../types"
 
 export type MeanderPlacement = "balanced" | "negative" | "positive"
 export type MeanderHeightProfile = "tapered" | "uniform"
@@ -79,6 +79,7 @@ export type LengthMatchingConfig = {
   minMeanderGap?: number
   minMeanderHeight?: number
   maxToothCount: number
+  fixedRoutes: HighDensityRoute[]
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   obstacleMargin: number
