@@ -20,7 +20,12 @@ export const fitDualMeanderAttemptPlan = (input: {
   excludedConnectionName?: string
   config: Pick<
     DualMeanderPlanInput,
-    "lengthTolerance" | "fixedRoutes" | "obstacles" | "bounds" | "layerCount" | "obstacleMargin"
+    | "lengthTolerance"
+    | "hdRoutesFromTraces"
+    | "obstacles"
+    | "bounds"
+    | "layerCount"
+    | "obstacleMargin"
   >
 }): FittedAttemptPlan | null => {
   const distributeAttemptTargets = (): number[] | null => {

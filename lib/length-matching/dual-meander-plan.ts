@@ -36,7 +36,7 @@ export type DualMeanderPlanInput = {
   lengthTolerance: number
   longerCandidates: SegmentCandidate[]
   shorterCandidates: SegmentCandidate[]
-  fixedRoutes?: HighDensityRoute[]
+  hdRoutesFromTraces?: HighDensityRoute[]
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -190,7 +190,11 @@ export const selectDualMeanderPlan = (
     routes: HighDensityRoute[]
     config: Pick<
       DualMeanderPlanInput,
-      "fixedRoutes" | "obstacles" | "bounds" | "layerCount" | "obstacleMargin"
+      | "hdRoutesFromTraces"
+      | "obstacles"
+      | "bounds"
+      | "layerCount"
+      | "obstacleMargin"
     >
   }): boolean => {
     const route = input.routes[input.attempt.routeIndex]
@@ -214,7 +218,7 @@ export const selectDualMeanderPlan = (
     config: Pick<
       DualMeanderPlanInput,
       | "lengthTolerance"
-      | "fixedRoutes"
+      | "hdRoutesFromTraces"
       | "obstacles"
       | "bounds"
       | "layerCount"
@@ -251,7 +255,7 @@ export const selectDualMeanderPlan = (
   }
 
   const config = {
-    fixedRoutes: input.fixedRoutes,
+    hdRoutesFromTraces: input.hdRoutesFromTraces,
     obstacles: input.obstacles,
     bounds: input.bounds,
     layerCount: input.layerCount,

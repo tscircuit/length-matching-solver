@@ -4,7 +4,7 @@ import { getMinimumSegmentDistance } from "../../lib/route-geometry"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
 test("detours around native fixed traces without tuning or returning them", (): void => {
-  const blocker: SimplifiedPcbTrace = {
+  const trace: SimplifiedPcbTrace = {
     type: "pcb_trace",
     pcb_trace_id: "fixed",
     connection_name: "P",
@@ -13,12 +13,11 @@ test("detours around native fixed traces without tuning or returning them", (): 
       { route_type: "wire", x: 7.5, y: 3.5, layer: "top", width: 0.2 },
     ],
   }
-  const { simpleRouteJson: _fixture, ...params } =
-    createPostProcessingTestParams()
-  const originalBlocker = structuredClone(blocker)
+  const { simpleRouteJson, ...params } = createPostProcessingTestParams()
+  const originalTrace = structuredClone(trace)
   const solver = new PostProcessingSolver({
     ...params,
-    traces: [blocker],
+    traces: [trace],
     obstacles: [
       {
         type: "rect",
@@ -33,7 +32,7 @@ test("detours around native fixed traces without tuning or returning them", (): 
   solver.solve()
   const { hdRoutes } = solver.getOutput()
   expect(hdRoutes).toHaveLength(2)
-  expect(blocker).toEqual(originalBlocker)
+  expect(trace).toEqual(originalTrace)
   expect(solver.getOutput().postProcessingErrors).toEqual([])
   for (const hdRoute of hdRoutes.slice(0, 2)) {
     for (let index = 0; index < hdRoute.route.length - 1; index++) {

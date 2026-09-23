@@ -62,8 +62,9 @@ export const validateAndResolveParams = (
     minMeanderGap: params.minMeanderGap,
     minMeanderHeight: params.minMeanderHeight,
     maxToothCount,
-    fixedRoutes: (params.traces ?? []).flatMap((trace): HighDensityRoute[] =>
-      createImmutableCollisionRoutes(trace, params.layerCount ?? 2),
+    hdRoutesFromTraces: (params.traces ?? []).flatMap(
+      (trace): HighDensityRoute[] =>
+        createImmutableCollisionRoutes(trace, params.layerCount ?? 2),
     ),
     obstacles: params.obstacles ?? [],
     bounds: params.bounds,

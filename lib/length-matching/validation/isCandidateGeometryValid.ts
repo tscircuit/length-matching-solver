@@ -8,7 +8,7 @@ export const isCandidateGeometryValid = (input: {
   route: HighDensityRoute
   meanderPoints: RoutePoint[]
   routedRoutes: HighDensityRoute[]
-  fixedRoutes?: HighDensityRoute[]
+  hdRoutesFromTraces?: HighDensityRoute[]
   obstacles: Obstacle[]
   bounds?: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -83,14 +83,16 @@ export const isCandidateGeometryValid = (input: {
       point.y - (start.y + progress * dy),
     )
   }
-  const hasNewGeometry = input.meanderPoints.some((point) =>
-    !input.route.route.slice(1).some((end, i): boolean => {
-      const start = input.route.route[i]!
-      return (
-        start.z === point.z && end.z === point.z &&
-        pointToSegmentDistance(point, start, end) <= 1e-9
-      )
-    }),
+  const hasNewGeometry = input.meanderPoints.some(
+    (point) =>
+      !input.route.route.slice(1).some((end, i): boolean => {
+        const start = input.route.route[i]!
+        return (
+          start.z === point.z &&
+          end.z === point.z &&
+          pointToSegmentDistance(point, start, end) <= 1e-9
+        )
+      }),
   )
   const connectionName = getLogicalConnectionName(input.route)
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
@@ -99,15 +101,18 @@ export const isCandidateGeometryValid = (input: {
     const end = input.meanderPoints[index + 1]!
     // A replacement includes unchanged straight leads. Preserve their existing
     // clearance state; only newly introduced copper is subject to this check.
-    const isRetainedSegment = input.route.route.slice(1).some((originalEnd, i): boolean => {
-      const originalStart = input.route.route[i]!
-      return (
-        start.z === end.z && originalStart.z === start.z &&
-        originalEnd.z === end.z &&
-        pointToSegmentDistance(start, originalStart, originalEnd) <= 1e-9 &&
-        pointToSegmentDistance(end, originalStart, originalEnd) <= 1e-9
-      )
-    })
+    const isRetainedSegment = input.route.route
+      .slice(1)
+      .some((originalEnd, i): boolean => {
+        const originalStart = input.route.route[i]!
+        return (
+          start.z === end.z &&
+          originalStart.z === start.z &&
+          originalEnd.z === end.z &&
+          pointToSegmentDistance(start, originalStart, originalEnd) <= 1e-9 &&
+          pointToSegmentDistance(end, originalStart, originalEnd) <= 1e-9
+        )
+      })
     if (hasNewGeometry && isRetainedSegment) continue
     for (const obstacle of input.obstacles) {
       if (
@@ -121,9 +126,12 @@ export const isCandidateGeometryValid = (input: {
       if (segmentTouchesInflatedObstacle(start, end, obstacle, obstacleMargin))
         return false
     }
-    for (const otherRoute of [...input.routedRoutes, ...(input.fixedRoutes ?? [])]) {
+    for (const otherRoute of [
+      ...input.routedRoutes,
+      ...(input.hdRoutesFromTraces ?? []),
+    ]) {
       const sameConnection =
-        !input.fixedRoutes?.includes(otherRoute) &&
+        !input.hdRoutesFromTraces?.includes(otherRoute) &&
         getLogicalConnectionName(otherRoute) === connectionName
       for (const via of otherRoute.vias) {
         if (via.zLayers && !via.zLayers.includes(start.z)) continue
