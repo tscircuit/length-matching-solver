@@ -108,6 +108,22 @@ export class CompositeRoutingGrid {
     return stateCount
   }
 
+  getQueuePushCountUpperBound(layerCount: number): number {
+    // The search heuristic is consistent, so each directional state (plus the
+    // start state) expands once and queues its planar neighbors and two vias.
+    const pushCount = this.nodes.reduce(
+      (count, node) =>
+        count +
+        (node.neighborIds.size + 1) * layerCount * (node.neighborIds.size + 2),
+      1,
+    )
+    if (!Number.isSafeInteger(pushCount))
+      throw new Error(
+        "PostProcessingSolver: composite-grid queue bound exceeds the safe integer range",
+      )
+    return pushCount
+  }
+
   private createAxis(
     minimum: number,
     maximum: number,
