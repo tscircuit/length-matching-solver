@@ -11,12 +11,14 @@ import type {
   PairCandidate,
   PairSolveResult,
   ParsedTrace,
+  Point,
 } from "../model/internal-types"
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
+import { shouldReversePairTerminals } from "./shouldReversePairTerminals"
 import { resolveTerminalFanoutStation } from "./resolveTerminalFanoutStation"
 import type { CoupledPathPoint, CoupledPathSearchInput } from "./types"
 
@@ -36,6 +38,15 @@ type PreparedPair = {
   }>
 }
 
+export type TerminalFanoutGeometry = {
+  /** Both directions face forward along the coupled route. */
+  startDirection: Point
+  endDirection: Point
+  maximumStartTurnDegrees: number
+  maximumEndTurnDegrees: number
+  maximumTravelDistance: number
+}
+
 export type DifferentialPairRoutingInput = {
   pair: DifferentialPair
   traces: SimplifiedPcbTrace[]
@@ -44,6 +55,7 @@ export type DifferentialPairRoutingInput = {
   layerCount: number
   minTraceToPadEdgeClearance?: number
   routingGrid?: PostProcessingGridConfig
+  terminalFanoutGeometry?: TerminalFanoutGeometry
 }
 
 /** Incrementally explores and scores coupled route candidates for one differential pair. */
@@ -192,25 +204,12 @@ export class DifferentialPairRoutingSession {
     }
     const firstStart = first.points[0]!
     const firstEnd = first.points.at(-1)!
-    const normalSecondCost =
-      Math.hypot(
-        firstStart.x - second.points[0]!.x,
-        firstStart.y - second.points[0]!.y,
-      ) +
-      Math.hypot(
-        firstEnd.x - second.points.at(-1)!.x,
-        firstEnd.y - second.points.at(-1)!.y,
-      )
-    const reversedSecondCost =
-      Math.hypot(
-        firstStart.x - second.points.at(-1)!.x,
-        firstStart.y - second.points.at(-1)!.y,
-      ) +
-      Math.hypot(
-        firstEnd.x - second.points[0]!.x,
-        firstEnd.y - second.points[0]!.y,
-      )
-    const reverseSecond = reversedSecondCost + 1e-8 < normalSecondCost
+    const reverseSecond = shouldReversePairTerminals({
+      firstStart,
+      firstEnd,
+      secondStart: second.points[0]!,
+      secondEnd: second.points.at(-1)!,
+    })
     const secondStart = reverseSecond
       ? second.points.at(-1)!
       : second.points[0]!
@@ -357,24 +356,30 @@ export class DifferentialPairRoutingSession {
               side,
               terminalFanout,
               terminalMiterMargin:
-                this.input.pair.maxUncoupledLength === undefined
+                this.input.pair.maxUncoupledLength === undefined &&
+                this.input.terminalFanoutGeometry === undefined
                   ? undefined
                   : centerlineSpacing / 2,
             })
           let searchStart =
-            this.input.pair.maxUncoupledLength === undefined
+            this.input.pair.maxUncoupledLength === undefined &&
+            this.input.terminalFanoutGeometry === undefined
               ? createLegacyForwardEgressSearchStart(centerlineSpacing, side)
               : start
           let searchEnd = end
           if (
             !terminalFanout &&
-            this.input.pair.maxUncoupledLength !== undefined
+            (this.input.pair.maxUncoupledLength !== undefined ||
+              this.input.terminalFanoutGeometry !== undefined)
           ) {
+            const geometry = this.input.terminalFanoutGeometry
+            const startDirection = geometry?.startDirection ?? spineDirection
+            const endDirection = geometry?.endDirection ?? spineDirection
             const terminalValidator = createValidator(start, end)
             const resolvedStart = resolveTerminalFanoutStation({
               anchor: start,
-              escapeDirection: spineDirection,
-              pathDirection: spineDirection,
+              escapeDirection: startDirection,
+              pathDirection: startDirection,
               centerlineSpacing,
               side,
               lanes: [
@@ -382,22 +387,23 @@ export class DifferentialPairRoutingSession {
                 { point: secondStart, polarity: -1 },
               ],
               maxUncoupledLength: this.input.pair.maxUncoupledLength,
-              maximumTurnDegrees: 55,
+              maximumTurnDegrees: geometry?.maximumStartTurnDegrees ?? 55,
+              maximumTravelDistance: geometry?.maximumTravelDistance,
               searchStep: grid.innerGridStep,
               isValid: (station) =>
                 terminalValidator.isTerminalFanoutValid(
                   station,
-                  spineDirection,
+                  startDirection,
                   "start",
                 ),
             })
             const resolvedEnd = resolveTerminalFanoutStation({
               anchor: end,
               escapeDirection: {
-                x: -spineDirection.x,
-                y: -spineDirection.y,
+                x: -endDirection.x,
+                y: -endDirection.y,
               },
-              pathDirection: spineDirection,
+              pathDirection: endDirection,
               centerlineSpacing,
               side,
               lanes: [
@@ -405,12 +411,13 @@ export class DifferentialPairRoutingSession {
                 { point: secondEnd, polarity: -1 },
               ],
               maxUncoupledLength: this.input.pair.maxUncoupledLength,
-              maximumTurnDegrees: 45,
+              maximumTurnDegrees: geometry?.maximumEndTurnDegrees ?? 45,
+              maximumTravelDistance: geometry?.maximumTravelDistance,
               searchStep: grid.innerGridStep,
               isValid: (station) =>
                 terminalValidator.isTerminalFanoutValid(
                   station,
-                  spineDirection,
+                  endDirection,
                   "end",
                 ),
             })
