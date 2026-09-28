@@ -15,6 +15,8 @@ export type CoupledPathSearchInput = {
   layerCount: number
   grid: CompositeGridConfig
   isEdgeValid: (start: CoupledPathPoint, end: CoupledPathPoint) => boolean
+  /** Extra nonnegative cost for a valid edge; absent means no penalty. */
+  getEdgePenalty?: (start: CoupledPathPoint, end: CoupledPathPoint) => number
   isViaValid: (
     point: CoupledPathPoint,
     toLayer: string,

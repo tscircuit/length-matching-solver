@@ -255,7 +255,8 @@ export class IncrementalCoupledPathSearch {
       const cost =
         current.cost +
         Math.hypot(next.x - current.point.x, next.y - current.point.y) +
-        bendCost
+        bendCost +
+        (this.input.getEdgePenalty?.(current.point, next) ?? 0)
       const key = this.keyFor(next, direction)
       if ((this.bestCosts.get(key) ?? Number.POSITIVE_INFINITY) <= cost)
         continue
