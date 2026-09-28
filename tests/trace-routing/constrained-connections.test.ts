@@ -8,14 +8,16 @@ test("routes constrained connections around fixed copper and joins same-net copp
     { x: 10, y: 0, id: "a_1" },
     { x: 0, y: 3, id: "b_0" },
     { x: 12, y: 3, id: "b_1" },
-  ].map(({ x, y, id }): Obstacle => ({
-    type: "rect",
-    layers: ["top"],
-    center: { x, y },
-    width: 0.2,
-    height: 0.2,
-    connectedTo: [id],
-  }))
+  ].map(
+    ({ x, y, id }): Obstacle => ({
+      type: "rect",
+      layers: ["top"],
+      center: { x, y },
+      width: 0.2,
+      height: 0.2,
+      connectedTo: [id],
+    }),
+  )
   const wall: Obstacle = {
     type: "rect",
     layers: ["top"],
