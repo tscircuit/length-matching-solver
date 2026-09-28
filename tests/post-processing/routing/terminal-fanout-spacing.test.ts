@@ -77,7 +77,10 @@ test("preserves signed pair spacing at terminal fanout and paired vias", (): voi
                 })
                 const orientedRoute: SimplifiedPcbTrace["route"] = route.map(
                   (point) => {
-                    if (point.route_type !== "wire" && point.route_type !== "via")
+                    if (
+                      point.route_type !== "wire" &&
+                      point.route_type !== "via"
+                    )
                       throw new Error("Expected only wire and via geometry")
                     return {
                       ...point,
@@ -179,7 +182,9 @@ test("preserves signed pair spacing at terminal fanout and paired vias", (): voi
               }
             }
             expect(candidate.first.route[0]).toMatchObject(traces[0]!.route[0]!)
-            expect(candidate.second.route[0]).toMatchObject(traces[1]!.route[0]!)
+            expect(candidate.second.route[0]).toMatchObject(
+              traces[1]!.route[0]!,
+            )
           }
         }
       }
