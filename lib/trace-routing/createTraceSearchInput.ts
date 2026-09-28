@@ -104,6 +104,8 @@ export const createTraceSearchInput = (input: {
       bounds: input.bounds,
       defaultInnerGridStep: TRACE_ROUTING_INNER_GRID_STEP,
     }),
+    // Initial routing must find a path whenever the grid has one.
+    exploreEntireGraph: true,
     isEdgeValid: validator.isEdgeValid,
     getEdgePenalty: (edgeStart, edgeEnd) =>
       meanderRoomValidator.isEdgeValid(edgeStart, edgeEnd)

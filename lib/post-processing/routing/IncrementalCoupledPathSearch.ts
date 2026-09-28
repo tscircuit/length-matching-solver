@@ -38,10 +38,9 @@ export class IncrementalCoupledPathSearch {
     this.maxSearchStates = this.grid.getSearchStateCountUpperBound(
       input.layerCount,
     )
-    this.exploredStateLimit = Math.min(
-      this.maxSearchStates,
-      MAXIMUM_EXPLORED_STATES_PER_ATTEMPT,
-    )
+    this.exploredStateLimit = input.exploreEntireGraph
+      ? this.maxSearchStates
+      : Math.min(this.maxSearchStates, MAXIMUM_EXPLORED_STATES_PER_ATTEMPT)
     if (this.startLayer < 0 || this.endLayer < 0) {
       this.queue = []
       this.status = "exhausted"
@@ -82,6 +81,11 @@ export class IncrementalCoupledPathSearch {
 
   getGridNodeCount(): number {
     return this.grid.getNodeCount()
+  }
+
+  /** Each step pops one queued state; the last may only find an empty queue. */
+  getStepCountUpperBound(): number {
+    return this.grid.getQueuePushCountUpperBound(this.input.layerCount) + 1
   }
 
   step(): void {

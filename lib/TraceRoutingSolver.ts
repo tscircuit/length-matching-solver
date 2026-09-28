@@ -10,10 +10,6 @@ import type {
 } from "./trace-routing/types"
 import type { HighDensityRoute, SimplifiedPcbTrace } from "./types"
 
-// The search explores at most 20,000 states per connection; each explored
-// state can queue a bounded number of neighbors that are later popped as stale.
-const MAXIMUM_STEPS_PER_CONNECTION = 500_000
-
 /** Routes unrouted two-terminal connections one at a time on the composite grid. */
 export class TraceRoutingSolver extends BaseSolver {
   private readonly hdRoutes: HighDensityRoute[] = []
@@ -41,8 +37,9 @@ export class TraceRoutingSolver extends BaseSolver {
         )
     }
     this.fixedTraces = structuredClone(params.traces ?? [])
-    this.MAX_ITERATIONS =
-      params.connections.length * MAXIMUM_STEPS_PER_CONNECTION + 1
+    // One search-creation step per connection plus the final step; each search
+    // adds its own step bound once its grid exists.
+    this.MAX_ITERATIONS = params.connections.length + 1
   }
 
   override getSolverName(): string {
@@ -71,6 +68,7 @@ export class TraceRoutingSolver extends BaseSolver {
           routingGrid: this.params.routingGrid,
         }),
       )
+      this.MAX_ITERATIONS += this.search.getStepCountUpperBound()
       return
     }
     this.search.step()
@@ -84,7 +82,7 @@ export class TraceRoutingSolver extends BaseSolver {
     const path = this.search.getPath()
     if (!path)
       throw new Error(
-        `TraceRoutingSolver: connection "${connection.connectionName}" has no clear path after exploring ${this.search.getExploredCount()} grid states`,
+        `TraceRoutingSolver: connection "${connection.connectionName}" has no clear path; all ${this.search.getExploredCount()} reachable grid states were explored`,
       )
     const routed = createRoutedTrace({
       connection,
