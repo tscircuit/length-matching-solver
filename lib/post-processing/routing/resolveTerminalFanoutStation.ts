@@ -49,7 +49,9 @@ export const resolveTerminalFanoutStation = (
     }),
   )
   const maximumTravelDistance =
-    input.maxUncoupledLength ?? input.maximumTravelDistance ?? minimumTravelDistance
+    input.maxUncoupledLength ??
+    input.maximumTravelDistance ??
+    minimumTravelDistance
   if (minimumTravelDistance > maximumTravelDistance + 1e-8) return null
   const increment = Math.max(0.05, Math.min(0.25, input.searchStep / 2))
   const attemptCount = Math.max(

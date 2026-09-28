@@ -23,10 +23,12 @@ test("routes staggered terminal pairs without a terminal escape limit", () => {
         ],
       },
     ],
-    differentialPairs: [{
-      connectionNames: ["positive", "negative"],
-      lengthTolerance: 0.05,
-    }],
+    differentialPairs: [
+      {
+        connectionNames: ["positive", "negative"],
+        lengthTolerance: 0.05,
+      },
+    ],
   })
   solver.solve()
   expect(solver.solved).toBe(true)

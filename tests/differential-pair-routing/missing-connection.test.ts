@@ -8,7 +8,9 @@ test("fails instead of returning incomplete differential-pair geometry", () => {
     minTraceWidth: 0.15,
     obstacles: [],
     connections: [],
-    differentialPairs: [{ connectionNames: ["missing", "other"], lengthTolerance: 0.1 }],
+    differentialPairs: [
+      { connectionNames: ["missing", "other"], lengthTolerance: 0.1 },
+    ],
   })
   expect(() => solver.solve()).toThrow('missing connection "missing"')
   expect(solver.solved).toBe(false)

@@ -2,7 +2,10 @@ import type { Point } from "../model/internal-types"
 
 /** Approach each terminal pair along its own perpendicular, facing the route. */
 export function getTerminalPairRoutingDirection(
-  { firstTerminal, secondTerminal }: {
+  {
+    firstTerminal,
+    secondTerminal,
+  }: {
     firstTerminal: Point
     secondTerminal: Point
   },

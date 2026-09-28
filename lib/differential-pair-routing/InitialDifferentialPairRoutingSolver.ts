@@ -49,14 +49,17 @@ export class InitialDifferentialPairRoutingSolver extends BaseSolver {
       }
       this.pair = { ...declaredPair }
       if (declaredPair.traceGap !== undefined) {
-        const centerlineDistance = declaredPair.traceGap + connections.reduce(
-          (total, connection) => total + (
-            connection.nominalTraceWidth ??
-            this.srj.nominalTraceWidth ??
-            this.srj.minTraceWidth
-          ) / 2,
-          0,
-        )
+        const centerlineDistance =
+          declaredPair.traceGap +
+          connections.reduce(
+            (total, connection) =>
+              total +
+              (connection.nominalTraceWidth ??
+                this.srj.nominalTraceWidth ??
+                this.srj.minTraceWidth) /
+                2,
+            0,
+          )
         this.pair.minimumCenterlineDistance = centerlineDistance
         this.pair.maximumCenterlineDistance = centerlineDistance
       }

@@ -16,15 +16,19 @@ test("preserves board via pad and drill dimensions in native traces", () => {
         { x: 4, y: index * 1.2, layer: "bottom" },
       ],
     })),
-    differentialPairs: [{
-      connectionNames: ["net_0", "net_1"],
-      lengthTolerance: 0.1,
-    }],
+    differentialPairs: [
+      {
+        connectionNames: ["net_0", "net_1"],
+        lengthTolerance: 0.1,
+      },
+    ],
   })
   solver.solve()
-  const vias = solver.getOutput().routedTraces.flatMap((trace) =>
-    trace.route.filter((point) => point.route_type === "via"),
-  )
+  const vias = solver
+    .getOutput()
+    .routedTraces.flatMap((trace) =>
+      trace.route.filter((point) => point.route_type === "via"),
+    )
   expect(vias).toHaveLength(2)
   for (const via of vias) {
     expect(via.via_diameter).toBe(0.5)

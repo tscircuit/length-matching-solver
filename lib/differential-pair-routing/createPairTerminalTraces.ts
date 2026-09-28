@@ -1,7 +1,4 @@
-import type {
-  SimplifiedPcbTrace,
-  SimplifiedPcbTraces,
-} from "../types"
+import type { SimplifiedPcbTrace, SimplifiedPcbTraces } from "../types"
 import type { DifferentialPairRoutingSrj } from "./types"
 
 /** Endpoint scaffolds provide terminal geometry to the coupled path search. */
@@ -44,14 +41,16 @@ export function createPairTerminalTraces(
         ]),
       ].filter((name): name is string => name !== undefined),
       __postProcessingViaDiameter: viaDiameter,
-      route: [{
-        route_type: "wire",
-        x: start!.x,
-        y: start!.y,
-        layer: startLayer,
-        width,
-        start_pcb_port_id: start!.pcb_port_id,
-      }],
+      route: [
+        {
+          route_type: "wire",
+          x: start!.x,
+          y: start!.y,
+          layer: startLayer,
+          width,
+          start_pcb_port_id: start!.pcb_port_id,
+        },
+      ],
     }
     if (startLayer !== endLayer)
       trace.route.push({

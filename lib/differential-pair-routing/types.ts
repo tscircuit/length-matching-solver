@@ -18,10 +18,12 @@ export type DifferentialPairRoutingSrj = {
   minTraceToPadEdgeClearance?: number
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   obstacles: Obstacle[]
-  connections: Array<SimpleRouteConnection & {
-    __rootConnectionNames?: string[]
-    __netConnectionName?: string
-  }>
+  connections: Array<
+    SimpleRouteConnection & {
+      __rootConnectionNames?: string[]
+      __netConnectionName?: string
+    }
+  >
   differentialPairs?: Array<DifferentialPair & { traceGap?: number }>
   traces?: SimplifiedPcbTraces
 }

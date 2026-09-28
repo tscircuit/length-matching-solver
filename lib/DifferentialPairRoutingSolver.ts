@@ -42,10 +42,12 @@ export class DifferentialPairRoutingSolver<
     definePipelineStep(
       "simplificationSolver",
       FortyFiveDegreeSimplificationSolver,
-      (pipeline: DifferentialPairRoutingSolver) => [{
-        ...pipeline.inputProblem,
-        ...pipeline.initialRoutingSolver!.getOutput(),
-      }],
+      (pipeline: DifferentialPairRoutingSolver) => [
+        {
+          ...pipeline.inputProblem,
+          ...pipeline.initialRoutingSolver!.getOutput(),
+        },
+      ],
     ),
     definePipelineStep(
       "lengthMatchingSolver",
@@ -71,7 +73,8 @@ export class DifferentialPairRoutingSolver<
         differentialPairs: srj.differentialPairs ?? [],
       },
     }
-    this.MAX_ITERATIONS = (srj.differentialPairs?.length ?? 0) * 75_001 + 100_010
+    this.MAX_ITERATIONS =
+      (srj.differentialPairs?.length ?? 0) * 75_001 + 100_010
     if (!srj.differentialPairs?.length) {
       this.output = { srj: this.inputProblem, routedTraces: [] }
       this.solved = true
