@@ -453,7 +453,8 @@ export class DifferentialPairRoutingSession {
               side,
               input: {
                 ...input,
-                startDirection: this.input.terminalFanoutGeometry.startDirection,
+                startDirection:
+                  this.input.terminalFanoutGeometry.startDirection,
               },
             },
           ]
@@ -479,5 +480,4 @@ export class DifferentialPairRoutingSession {
     )
     this.result = { status: "accepted", candidate: this.candidates[0]! }
   }
-
 }

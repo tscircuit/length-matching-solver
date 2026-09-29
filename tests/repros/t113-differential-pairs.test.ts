@@ -11,7 +11,10 @@ test("routes all four T113 pairs without blocking later terminal fanouts", (): v
   const input: DifferentialPairRoutingSrj = JSON.parse(
     gunzipSync(
       readFileSync(
-        new URL("./assets/t113-differential-pairs.srj.json.gz", import.meta.url),
+        new URL(
+          "./assets/t113-differential-pairs.srj.json.gz",
+          import.meta.url,
+        ),
       ),
     ).toString(),
   )

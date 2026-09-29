@@ -383,8 +383,7 @@ export const createSearchGeometryValidator = (input: {
     }
     for (const segment of immutableSegments) {
       if (!via.layers.includes(segment.layer)) continue
-      const required =
-        radius + segment.width / 2 + segment.width
+      const required = radius + segment.width / 2 + segment.width
       if (pointToSegmentDistance(via, segment.start, segment.end) < required)
         return false
     }
