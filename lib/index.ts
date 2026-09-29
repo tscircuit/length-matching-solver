@@ -55,3 +55,5 @@ export type {
   SimplifiedPcbTraceViaRoutePoint,
   SimplifiedPcbTraceWireRoutePoint,
 } from "./types"
+export { DifferentialPairRoutingSolver } from "./DifferentialPairRoutingSolver"
+export type { DifferentialPairRoutingSrj } from "./differential-pair-routing/types"

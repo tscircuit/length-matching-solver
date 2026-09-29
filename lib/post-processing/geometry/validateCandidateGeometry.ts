@@ -197,8 +197,7 @@ export const validateCandidateGeometry = (
     }
     for (const segment of immutableCopper.segments) {
       if (!via.layers.includes(segment.layer)) continue
-      const requiredDistance =
-        radius + segment.width / 2 + Math.max(via.diameter, segment.width)
+      const requiredDistance = radius + segment.width / 2 + segment.width
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
         requiredDistance - EPSILON
