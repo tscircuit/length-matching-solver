@@ -1,5 +1,6 @@
 import { BaseSolver } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
+import { DifferentialPairRoutingError } from "../post-processing/errors/DifferentialPairRoutingError"
 import { DifferentialPairRoutingSession } from "../post-processing/routing/DifferentialPairRoutingSession"
 import type { FortyFiveDegreeSimplificationOutput } from "../post-processing/solvers/FortyFiveDegreeSimplificationSolver"
 import { createPostProcessingVisualization } from "../post-processing/visualization/createPostProcessingVisualization"
@@ -8,10 +9,16 @@ import { getInitialTerminalFanoutGeometry } from "./getInitialTerminalFanoutGeom
 import { createPairTerminalTraces } from "./createPairTerminalTraces"
 import type { DifferentialPairRoutingSrj } from "./types"
 
-/** Routes each pair together; completed pairs become fixed copper for the next. */
+type PairRoutingChoice = {
+  pair: DifferentialPair
+  session: DifferentialPairRoutingSession
+}
+
+/** Search compatible coupled routes; each selected pair becomes fixed copper. */
 export class InitialDifferentialPairRoutingSolver extends BaseSolver {
   private readonly traces: SimplifiedPcbTraces
   private readonly reroutedPairs: DifferentialPair[] = []
+  private readonly choices: PairRoutingChoice[] = []
   private session: DifferentialPairRoutingSession | null = null
   private pair: DifferentialPair | null = null
 
@@ -66,21 +73,35 @@ export class InitialDifferentialPairRoutingSolver extends BaseSolver {
       this.session = new DifferentialPairRoutingSession({
         ...this.srj,
         pair: this.pair,
-        terminalFanoutGeometry: getInitialTerminalFanoutGeometry(
-          connections,
-          declaredPair.maxUncoupledLength,
-        ),
+        terminalFanoutGeometry: getInitialTerminalFanoutGeometry(connections),
         traces: [...this.traces, ...terminalTraces],
       })
       return
     }
-    this.session.step()
+    const candidate = this.session.advanceCandidateSearch()
     this.stats = this.session.getStats()
-    if (!this.session.isComplete()) return
-    const { candidate } = this.session.getResult()
-    this.traces.push(candidate.first, candidate.second)
-    this.reroutedPairs.push(this.pair!)
-    this.session = null
+    if (candidate === "searching") return
+    if (candidate !== "exhausted") {
+      this.choices.push({ pair: this.pair!, session: this.session })
+      this.traces.push(candidate.first, candidate.second)
+      this.reroutedPairs.push(this.pair!)
+      this.session = null
+      return
+    }
+    const choice = this.choices.pop()
+    if (choice) {
+      this.traces.splice(-2)
+      this.reroutedPairs.pop()
+      this.pair = choice.pair
+      this.session = choice.session
+      return
+    }
+    throw new DifferentialPairRoutingError({
+      connectionNames: this.pair!.connectionNames,
+      reason: "no-valid-candidate",
+      message:
+        "has no compatible coupled routes after searching earlier pair candidates",
+    })
   }
 
   override getConstructorParams(): [DifferentialPairRoutingSrj] {

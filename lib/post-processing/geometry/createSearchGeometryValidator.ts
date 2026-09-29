@@ -8,6 +8,12 @@ import { getLayerIndex } from "./getLayerIndex"
 import { getTransitionLayers } from "./getTransitionLayers"
 import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle"
 
+type ObstacleGeometry = {
+  cosine: number
+  sine: number
+  layers: Set<number>
+}
+
 export type SearchGeometryValidator = {
   isEdgeValid: (start: CoupledPathPoint, end: CoupledPathPoint) => boolean
   isTerminalFanoutValid: (
@@ -62,6 +68,19 @@ export const createSearchGeometryValidator = (input: {
     const layerIndex = getLayerIndex(segment.layer, input.layerCount)
     immutableSegmentsByLayer[layerIndex]!.push(segment)
   }
+  const obstacleGeometry = new Map(
+    input.obstacles.map((obstacle): [Obstacle, ObstacleGeometry] => {
+      const radians = (-(obstacle.ccwRotationDegrees ?? 0) * Math.PI) / 180
+      return [
+        obstacle,
+        {
+          cosine: Math.cos(radians),
+          sine: Math.sin(radians),
+          layers: new Set(getObstacleLayerIndexes(obstacle, input.layerCount)),
+        },
+      ]
+    }),
+  )
   const samePoint = (left: Point, right: Point): boolean =>
     Math.hypot(left.x - right.x, left.y - right.y) <= 1e-8
   const pointToSegmentDistance = (
@@ -89,11 +108,11 @@ export const createSearchGeometryValidator = (input: {
     obstacle: Obstacle,
     inflation: number,
   ): boolean => {
-    const radians = (-(obstacle.ccwRotationDegrees ?? 0) * Math.PI) / 180
+    const { cosine, sine } = obstacleGeometry.get(obstacle)!
     const dx = point.x - obstacle.center.x
     const dy = point.y - obstacle.center.y
-    const x = dx * Math.cos(radians) - dy * Math.sin(radians)
-    const y = dx * Math.sin(radians) + dy * Math.cos(radians)
+    const x = dx * cosine - dy * sine
+    const y = dx * sine + dy * cosine
     return (
       Math.abs(x) <= obstacle.width / 2 + inflation &&
       Math.abs(y) <= obstacle.height / 2 + inflation
@@ -101,7 +120,7 @@ export const createSearchGeometryValidator = (input: {
   }
   const obstacleIsOnLayer = (obstacle: Obstacle, layer: string): boolean => {
     const z = getLayerIndex(layer, input.layerCount)
-    return getObstacleLayerIndexes(obstacle, input.layerCount).includes(z)
+    return obstacleGeometry.get(obstacle)!.layers.has(z)
   }
   const laneSegments = (
     start: CoupledPathPoint,
@@ -365,7 +384,7 @@ export const createSearchGeometryValidator = (input: {
     for (const segment of immutableSegments) {
       if (!via.layers.includes(segment.layer)) continue
       const required =
-        radius + segment.width / 2 + Math.max(via.diameter, segment.width)
+        radius + segment.width / 2 + segment.width
       if (pointToSegmentDistance(via, segment.start, segment.end) < required)
         return false
     }

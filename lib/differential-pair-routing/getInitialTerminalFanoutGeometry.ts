@@ -3,10 +3,9 @@ import { shouldReversePairTerminals } from "../post-processing/routing/shouldRev
 import type { TerminalFanoutGeometry } from "../post-processing/routing/DifferentialPairRoutingSession"
 import type { SimpleRouteConnection } from "../types"
 
-/** Prepare endpoint-only routing without imposing turn limits on constrained fanout. */
+/** Prepare endpoint-only routing using each terminal pair’s perpendicular. */
 export function getInitialTerminalFanoutGeometry(
   connections: SimpleRouteConnection[],
-  maxUncoupledLength: number | undefined,
 ): TerminalFanoutGeometry {
   const [firstConnection, secondConnection] = connections
   const [firstStart, firstEnd] = firstConnection!.pointsToConnect
@@ -28,14 +27,6 @@ export function getInitialTerminalFanoutGeometry(
     x: dx / (2 * spineLength),
     y: dy / (2 * spineLength),
   }
-  if (maxUncoupledLength === undefined)
-    return {
-      startDirection: spineDirection,
-      endDirection: spineDirection,
-      maximumStartTurnDegrees: 55,
-      maximumEndTurnDegrees: 45,
-      maximumTravelDistance: spineLength,
-    }
   return {
     startDirection: getTerminalPairRoutingDirection(
       { firstTerminal: firstStart!, secondTerminal: alignedSecondStart },
