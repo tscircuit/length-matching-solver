@@ -133,6 +133,7 @@ export const validateCandidateGeometry = (
         return false
     }
     for (const other of immutableCopper.segments) {
+      if (segment.connectionName === other.connectionName) continue
       if (other.layer !== segment.layer) continue
       const requiredDistance =
         segment.width / 2 +
@@ -150,6 +151,7 @@ export const validateCandidateGeometry = (
         return false
     }
     for (const via of immutableCopper.vias) {
+      if (segment.connectionName === via.connectionName) continue
       if (!via.layers.includes(segment.layer)) continue
       const requiredDistance =
         segment.width / 2 + via.diameter / 2 + segment.width
@@ -196,6 +198,7 @@ export const validateCandidateGeometry = (
         return false
     }
     for (const segment of immutableCopper.segments) {
+      if (via.connectionName === segment.connectionName) continue
       if (!via.layers.includes(segment.layer)) continue
       const requiredDistance = radius + segment.width / 2 + segment.width
       if (
@@ -205,6 +208,7 @@ export const validateCandidateGeometry = (
         return false
     }
     for (const other of immutableCopper.vias) {
+      if (via.connectionName === other.connectionName) continue
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const requiredDistance =
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)

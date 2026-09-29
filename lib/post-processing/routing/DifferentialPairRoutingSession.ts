@@ -47,6 +47,7 @@ export type TerminalFanoutGeometry = {
 export type DifferentialPairRoutingInput = {
   pair: DifferentialPair
   traces: SimplifiedPcbTrace[]
+  fixedTraceIds?: ReadonlySet<string>
   obstacles: CandidateGeometryContext["obstacles"]
   bounds: CandidateGeometryContext["bounds"]
   layerCount: number
@@ -164,18 +165,15 @@ export class DifferentialPairRoutingSession {
   }
 
   private prepare(): PreparedPair {
-    const firstMatches = this.input.traces
+    const routableTraces = this.input.traces
       .map((trace, index) => ({ trace, index }))
-      .filter(
-        ({ trace }) =>
-          trace.connection_name === this.input.pair.connectionNames[0],
-      )
-    const secondMatches = this.input.traces
-      .map((trace, index) => ({ trace, index }))
-      .filter(
-        ({ trace }) =>
-          trace.connection_name === this.input.pair.connectionNames[1],
-      )
+      .filter(({ trace }) => !this.input.fixedTraceIds?.has(trace.pcb_trace_id))
+    const firstMatches = routableTraces.filter(
+      ({ trace }) => trace.connection_name === this.input.pair.connectionNames[0],
+    )
+    const secondMatches = routableTraces.filter(
+      ({ trace }) => trace.connection_name === this.input.pair.connectionNames[1],
+    )
     if (firstMatches.length !== 1 || secondMatches.length !== 1)
       throw new DifferentialPairRoutingError({
         connectionNames: this.input.pair.connectionNames,

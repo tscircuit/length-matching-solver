@@ -132,7 +132,10 @@ export const reconstructSimplifiedPcbTraces = (input: {
     const matches = pair.connectionNames.map((connectionName) =>
       traces
         .map((trace, index) => ({ trace, index }))
-        .filter(({ trace }) => trace.connection_name === connectionName),
+        .filter(({ trace }) =>
+          trace.connection_name === connectionName &&
+          !input.simplified.fixedTraceIds?.has(trace.pcb_trace_id),
+        ),
     )
     if (matches[0]!.length !== 1 || matches[1]!.length !== 1)
       throw new Error(
@@ -142,7 +145,8 @@ export const reconstructSimplifiedPcbTraces = (input: {
     const secondMatch = matches[1]![0]!
     const originalTraces = pair.connectionNames.map((connectionName) => {
       const matches = input.binding.baseTraces.filter(
-        (trace) => trace.connection_name === connectionName,
+        (trace) => trace.connection_name === connectionName &&
+          !input.simplified.fixedTraceIds?.has(trace.pcb_trace_id),
       )
       if (matches.length !== 1)
         throw new Error(
