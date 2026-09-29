@@ -328,6 +328,7 @@ export const createSearchGeometryValidator = (input: {
         return false
     }
     for (const other of immutableSegmentsByLayer[layerIndex]!) {
+      if (segment.connectionName === other.connectionName) continue
       const required =
         segment.width / 2 +
         other.width / 2 +
@@ -350,6 +351,7 @@ export const createSearchGeometryValidator = (input: {
         return false
     }
     for (const via of immutableVias) {
+      if (segment.connectionName === via.connectionName) continue
       if (!via.layers.includes(segment.layer)) continue
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
@@ -382,12 +384,14 @@ export const createSearchGeometryValidator = (input: {
         return false
     }
     for (const segment of immutableSegments) {
+      if (via.connectionName === segment.connectionName) continue
       if (!via.layers.includes(segment.layer)) continue
       const required = radius + segment.width / 2 + segment.width
       if (pointToSegmentDistance(via, segment.start, segment.end) < required)
         return false
     }
     for (const other of immutableVias) {
+      if (via.connectionName === other.connectionName) continue
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const required =
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)

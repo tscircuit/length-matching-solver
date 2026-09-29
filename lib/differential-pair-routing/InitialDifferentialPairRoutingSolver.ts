@@ -73,6 +73,7 @@ export class InitialDifferentialPairRoutingSolver extends BaseSolver {
       this.session = new DifferentialPairRoutingSession({
         ...this.srj,
         pair: this.pair,
+        fixedTraceIds: new Set(this.srj.traces?.map((trace) => trace.pcb_trace_id)),
         terminalFanoutGeometry: getInitialTerminalFanoutGeometry(connections),
         traces: [...this.traces, ...terminalTraces],
       })
@@ -111,7 +112,11 @@ export class InitialDifferentialPairRoutingSolver extends BaseSolver {
   override getOutput(): FortyFiveDegreeSimplificationOutput {
     if (!this.solved)
       throw new Error("DifferentialPairRoutingSolver: routing is not complete")
-    return { traces: this.traces, reroutedPairs: this.reroutedPairs }
+    return {
+      traces: this.traces,
+      reroutedPairs: this.reroutedPairs,
+      fixedTraceIds: new Set(this.srj.traces?.map((trace) => trace.pcb_trace_id)),
+    }
   }
 
   override visualize(): GraphicsObject {

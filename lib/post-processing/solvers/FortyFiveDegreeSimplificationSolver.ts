@@ -11,11 +11,14 @@ export type FortyFiveDegreeSimplificationInput = Pick<
   InternalPostProcessingParams["simpleRouteJson"],
   "obstacles" | "bounds" | "layerCount" | "minTraceToPadEdgeClearance"
 > &
-  Omit<DifferentialPairReroutingOutput, "failures">
+  Omit<DifferentialPairReroutingOutput, "failures"> & {
+    fixedTraceIds?: ReadonlySet<string>
+  }
 
 export type FortyFiveDegreeSimplificationOutput = {
   traces: SimplifiedPcbTraces
   reroutedPairs: DifferentialPair[]
+  fixedTraceIds?: ReadonlySet<string>
 }
 
 /** Simplifies each successfully rerouted pair without changing layers or vias. */
@@ -45,6 +48,7 @@ export class FortyFiveDegreeSimplificationSolver extends BaseSolver {
     }
     this.traces = simplifyDifferentialPairTo45Degrees({
       traces: this.traces,
+      fixedTraceIds: this.input.fixedTraceIds,
       pair,
       obstacles: this.input.obstacles,
       bounds: this.input.bounds,
@@ -76,6 +80,7 @@ export class FortyFiveDegreeSimplificationSolver extends BaseSolver {
   getBestEffortOutput(): FortyFiveDegreeSimplificationOutput {
     return {
       traces: cloneSimplifiedPcbTraces(this.traces),
+      fixedTraceIds: this.input.fixedTraceIds,
       reroutedPairs: this.input.reroutedPairs.map((pair) => ({
         ...pair,
         connectionNames: [...pair.connectionNames],

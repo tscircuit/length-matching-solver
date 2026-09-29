@@ -23,6 +23,7 @@ type Span = { startIndex: number; endIndex: number; skippedPointCount: number }
 /** Greedily replace the farthest valid same-layer spans with 45-degree paths. */
 export const simplifyDifferentialPairTo45Degrees = (input: {
   traces: SimplifiedPcbTraces
+  fixedTraceIds?: ReadonlySet<string>
   pair: DifferentialPair
   obstacles: Parameters<typeof validateCandidateGeometry>[2]["obstacles"]
   bounds: Parameters<typeof validateCandidateGeometry>[2]["bounds"]
@@ -33,7 +34,10 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
   const indexes = input.pair.connectionNames.map((connectionName) =>
     input.traces
       .map((trace, index) => ({ trace, index }))
-      .filter(({ trace }) => trace.connection_name === connectionName),
+      .filter(({ trace }) =>
+        trace.connection_name === connectionName &&
+        !input.fixedTraceIds?.has(trace.pcb_trace_id),
+      ),
   )
   if (indexes[0]!.length !== 1 || indexes[1]!.length !== 1)
     throw new Error(

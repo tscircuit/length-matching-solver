@@ -39,7 +39,9 @@ export const createLengthMatchingBinding = (input: {
 }): LengthMatchingBinding => {
   const { simpleRouteJson } = input.params
   const differentialPairs = getLengthMatchingPairs({
-    traces: input.result.traces,
+    traces: input.result.traces.filter(
+      (trace) => !input.result.fixedTraceIds?.has(trace.pcb_trace_id),
+    ),
     declaredPairs: simpleRouteJson.differentialPairs,
     reroutedPairs: input.result.reroutedPairs,
     layerCount: simpleRouteJson.layerCount,
@@ -58,7 +60,10 @@ export const createLengthMatchingBinding = (input: {
     traceIndex++
   ) {
     const trace = input.result.traces[traceIndex]!
-    if (!targetConnectionNames.has(trace.connection_name)) continue
+    if (
+      !targetConnectionNames.has(trace.connection_name) ||
+      input.result.fixedTraceIds?.has(trace.pcb_trace_id)
+    ) continue
     const onlyWireAndVia = trace.route.every(
       (entry) => entry.route_type === "wire" || entry.route_type === "via",
     )
@@ -197,7 +202,9 @@ export const createLengthMatchingBinding = (input: {
   }
 
   const traces = input.result.traces.filter(
-    (trace): boolean => !targetConnectionNames.has(trace.connection_name),
+    (trace): boolean =>
+      !targetConnectionNames.has(trace.connection_name) ||
+      input.result.fixedTraceIds?.has(trace.pcb_trace_id) === true,
   )
   const obstacleMargin =
     simpleRouteJson.minTraceToPadEdgeClearance ??
