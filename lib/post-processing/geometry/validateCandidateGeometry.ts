@@ -1,3 +1,7 @@
+import {
+  canJoinAtSharedTerminal,
+  type ConnectionRoots,
+} from "./canJoinAtSharedTerminal"
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import type { Obstacle, SimplifiedPcbTrace } from "../../types"
@@ -13,6 +17,7 @@ import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle
 
 export type CandidateGeometryContext = {
   immutableTraces: SimplifiedPcbTrace[]
+  connectionRoots?: ConnectionRoots
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -133,6 +138,8 @@ export const validateCandidateGeometry = (
         return false
     }
     for (const other of immutableCopper.segments) {
+      if (canJoinAtSharedTerminal([segment, other], context.connectionRoots))
+        continue
       if (other.layer !== segment.layer) continue
       const requiredDistance =
         segment.width / 2 +
@@ -150,6 +157,8 @@ export const validateCandidateGeometry = (
         return false
     }
     for (const via of immutableCopper.vias) {
+      if (canJoinAtSharedTerminal([segment, via], context.connectionRoots))
+        continue
       if (!via.layers.includes(segment.layer)) continue
       const requiredDistance =
         segment.width / 2 + via.diameter / 2 + segment.width
@@ -196,6 +205,8 @@ export const validateCandidateGeometry = (
         return false
     }
     for (const segment of immutableCopper.segments) {
+      if (canJoinAtSharedTerminal([via, segment], context.connectionRoots))
+        continue
       if (!via.layers.includes(segment.layer)) continue
       const requiredDistance =
         radius + segment.width / 2 + Math.max(via.diameter, segment.width)
@@ -206,6 +217,8 @@ export const validateCandidateGeometry = (
         return false
     }
     for (const other of immutableCopper.vias) {
+      if (canJoinAtSharedTerminal([via, other], context.connectionRoots))
+        continue
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const requiredDistance =
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)

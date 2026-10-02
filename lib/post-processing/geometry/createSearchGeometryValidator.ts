@@ -1,3 +1,7 @@
+import {
+  canJoinAtSharedTerminal,
+  type ConnectionRoots,
+} from "./canJoinAtSharedTerminal"
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import type { Obstacle, SimplifiedPcbTrace } from "../../types"
@@ -25,6 +29,7 @@ export type SearchGeometryValidator = {
 /** Build a conservative, reusable collision checker for coupled spine search. */
 export const createSearchGeometryValidator = (input: {
   immutableTraces: SimplifiedPcbTrace[]
+  connectionRoots?: ConnectionRoots
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -309,6 +314,8 @@ export const createSearchGeometryValidator = (input: {
         return false
     }
     for (const other of immutableSegmentsByLayer[layerIndex]!) {
+      if (canJoinAtSharedTerminal([segment, other], input.connectionRoots))
+        continue
       const required =
         segment.width / 2 +
         other.width / 2 +
@@ -331,6 +338,8 @@ export const createSearchGeometryValidator = (input: {
         return false
     }
     for (const via of immutableVias) {
+      if (canJoinAtSharedTerminal([segment, via], input.connectionRoots))
+        continue
       if (!via.layers.includes(segment.layer)) continue
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
@@ -363,6 +372,8 @@ export const createSearchGeometryValidator = (input: {
         return false
     }
     for (const segment of immutableSegments) {
+      if (canJoinAtSharedTerminal([via, segment], input.connectionRoots))
+        continue
       if (!via.layers.includes(segment.layer)) continue
       const required =
         radius + segment.width / 2 + Math.max(via.diameter, segment.width)
@@ -370,6 +381,7 @@ export const createSearchGeometryValidator = (input: {
         return false
     }
     for (const other of immutableVias) {
+      if (canJoinAtSharedTerminal([via, other], input.connectionRoots)) continue
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const required =
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)
