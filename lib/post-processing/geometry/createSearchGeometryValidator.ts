@@ -1,3 +1,7 @@
+import {
+  canJoinAtSharedTerminal,
+  type ConnectionRoots,
+} from "./canJoinAtSharedTerminal"
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import type { Obstacle, SimplifiedPcbTrace } from "../../types"
@@ -25,6 +29,7 @@ export type SearchGeometryValidator = {
 /** Build a conservative, reusable collision checker for coupled spine search. */
 export const createSearchGeometryValidator = (input: {
   immutableTraces: SimplifiedPcbTrace[]
+  connectionRoots?: ConnectionRoots
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -326,7 +331,8 @@ export const createSearchGeometryValidator = (input: {
           segment.end,
           other.start,
           other.end,
-        ) < required
+        ) < required &&
+        !canJoinAtSharedTerminal([segment, other], input.connectionRoots)
       )
         return false
     }
@@ -334,7 +340,8 @@ export const createSearchGeometryValidator = (input: {
       if (!via.layers.includes(segment.layer)) continue
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
-        segment.width / 2 + via.diameter / 2 + segment.width
+          segment.width / 2 + via.diameter / 2 + segment.width &&
+        !canJoinAtSharedTerminal([segment, via], input.connectionRoots)
       )
         return false
     }
@@ -366,14 +373,21 @@ export const createSearchGeometryValidator = (input: {
       if (!via.layers.includes(segment.layer)) continue
       const required =
         radius + segment.width / 2 + Math.max(via.diameter, segment.width)
-      if (pointToSegmentDistance(via, segment.start, segment.end) < required)
+      if (
+        pointToSegmentDistance(via, segment.start, segment.end) < required &&
+        !canJoinAtSharedTerminal([via, segment], input.connectionRoots)
+      )
         return false
     }
     for (const other of immutableVias) {
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const required =
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)
-      if (Math.hypot(via.x - other.x, via.y - other.y) < required) return false
+      if (
+        Math.hypot(via.x - other.x, via.y - other.y) < required &&
+        !canJoinAtSharedTerminal([via, other], input.connectionRoots)
+      )
+        return false
     }
     return true
   }
