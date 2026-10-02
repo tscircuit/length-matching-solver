@@ -314,8 +314,6 @@ export const createSearchGeometryValidator = (input: {
         return false
     }
     for (const other of immutableSegmentsByLayer[layerIndex]!) {
-      if (canJoinAtSharedTerminal([segment, other], input.connectionRoots))
-        continue
       const required =
         segment.width / 2 +
         other.width / 2 +
@@ -333,17 +331,17 @@ export const createSearchGeometryValidator = (input: {
           segment.end,
           other.start,
           other.end,
-        ) < required
+        ) < required &&
+        !canJoinAtSharedTerminal([segment, other], input.connectionRoots)
       )
         return false
     }
     for (const via of immutableVias) {
-      if (canJoinAtSharedTerminal([segment, via], input.connectionRoots))
-        continue
       if (!via.layers.includes(segment.layer)) continue
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
-        segment.width / 2 + via.diameter / 2 + segment.width
+          segment.width / 2 + via.diameter / 2 + segment.width &&
+        !canJoinAtSharedTerminal([segment, via], input.connectionRoots)
       )
         return false
     }
@@ -372,20 +370,24 @@ export const createSearchGeometryValidator = (input: {
         return false
     }
     for (const segment of immutableSegments) {
-      if (canJoinAtSharedTerminal([via, segment], input.connectionRoots))
-        continue
       if (!via.layers.includes(segment.layer)) continue
       const required =
         radius + segment.width / 2 + Math.max(via.diameter, segment.width)
-      if (pointToSegmentDistance(via, segment.start, segment.end) < required)
+      if (
+        pointToSegmentDistance(via, segment.start, segment.end) < required &&
+        !canJoinAtSharedTerminal([via, segment], input.connectionRoots)
+      )
         return false
     }
     for (const other of immutableVias) {
-      if (canJoinAtSharedTerminal([via, other], input.connectionRoots)) continue
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const required =
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)
-      if (Math.hypot(via.x - other.x, via.y - other.y) < required) return false
+      if (
+        Math.hypot(via.x - other.x, via.y - other.y) < required &&
+        !canJoinAtSharedTerminal([via, other], input.connectionRoots)
+      )
+        return false
     }
     return true
   }
