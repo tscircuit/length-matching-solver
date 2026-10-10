@@ -70,7 +70,11 @@ test("indexes obstacle aliases with ordered forward propagation and immutable me
         ],
       },
     ],
-    routingGrid: { innerGridStep: 0.1, outerGridStep: 1, outerPerimeterWidth: 3 },
+    routingGrid: {
+      innerGridStep: 0.1,
+      outerGridStep: 1,
+      outerPerimeterWidth: 3,
+    },
   }
   const original = structuredClone(params)
   const model = createPostProcessingModel(params)
