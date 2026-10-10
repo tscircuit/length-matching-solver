@@ -1,4 +1,5 @@
 import type {
+  Obstacle,
   SimplifiedPcbTrace,
   SimplifiedPcbTraceRoutePoint,
 } from "../../types"
@@ -184,6 +185,18 @@ export const createPostProcessingModel = (
     })
   }
   const obstacles = structuredClone(params.obstacles)
+  const obstaclesByAlias = new Map<string, Set<Obstacle>>()
+  const aliasesByObstacle = new Map<Obstacle, Set<string>>()
+  for (const obstacle of obstacles) {
+    for (const alias of obstacle.connectedTo) {
+      let connectedObstacles = obstaclesByAlias.get(alias)
+      if (!connectedObstacles) {
+        connectedObstacles = new Set<Obstacle>()
+        obstaclesByAlias.set(alias, connectedObstacles)
+      }
+      connectedObstacles.add(obstacle)
+    }
+  }
   for (
     let hdRouteIndex = 0;
     hdRouteIndex < params.hdRoutes.length;
@@ -201,9 +214,34 @@ export const createPostProcessingModel = (
         internalNamesByRouteIndex.get(hdRouteIndex),
       ].filter((name): name is string => name !== undefined),
     )
-    for (const obstacle of obstacles) {
-      if (!obstacle.connectedTo.some((name) => aliases.has(name))) continue
-      obstacle.connectedTo = [...new Set([...obstacle.connectedTo, ...aliases])]
+    // Preserve route order: only aliases added by earlier routes can match.
+    // A global connected-component union would propagate aliases backwards.
+    const matchedObstacles = new Set<Obstacle>()
+    for (const alias of aliases) {
+      const connectedObstacles = obstaclesByAlias.get(alias)
+      if (!connectedObstacles) continue
+      for (const obstacle of connectedObstacles) {
+        matchedObstacles.add(obstacle)
+      }
+    }
+    for (const obstacle of matchedObstacles) {
+      let obstacleAliases = aliasesByObstacle.get(obstacle)
+      if (!obstacleAliases) {
+        obstacleAliases = new Set(obstacle.connectedTo)
+        aliasesByObstacle.set(obstacle, obstacleAliases)
+        obstacle.connectedTo = [...obstacleAliases]
+      }
+      for (const alias of aliases) {
+        if (obstacleAliases.has(alias)) continue
+        obstacleAliases.add(alias)
+        obstacle.connectedTo.push(alias)
+        let connectedObstacles = obstaclesByAlias.get(alias)
+        if (!connectedObstacles) {
+          connectedObstacles = new Set<Obstacle>()
+          obstaclesByAlias.set(alias, connectedObstacles)
+        }
+        connectedObstacles.add(obstacle)
+      }
     }
   }
   return {
