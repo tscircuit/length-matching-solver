@@ -1,5 +1,6 @@
 {
   "name": "@tscircuit/length-matching-solver",
+  "license": "MIT",
   "version": "0.0.1",
   "type": "module",
   "main": "./lib/index.ts",
