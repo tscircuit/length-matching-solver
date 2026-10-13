@@ -1,3 +1,4 @@
+import type { ConnectionRoots } from "./geometry/canJoinAtSharedTerminal"
 import type {
   DifferentialPair,
   HighDensityRoute,
@@ -46,6 +47,7 @@ export type PostProcessingError = {
 /** Private simplified-trace model used by the coupled-routing algorithms. */
 export type InternalPostProcessingParams = {
   simpleRouteJson: {
+    connectionRoots?: ConnectionRoots
     layerCount: number
     minTraceToPadEdgeClearance?: number
     obstacles: Obstacle[]

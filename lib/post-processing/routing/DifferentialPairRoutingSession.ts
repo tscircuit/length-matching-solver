@@ -39,6 +39,7 @@ type PreparedPair = {
 export type DifferentialPairRoutingInput = {
   pair: DifferentialPair
   traces: SimplifiedPcbTrace[]
+  connectionRoots?: CandidateGeometryContext["connectionRoots"]
   obstacles: CandidateGeometryContext["obstacles"]
   bounds: CandidateGeometryContext["bounds"]
   layerCount: number
@@ -312,6 +313,7 @@ export class DifferentialPairRoutingSession {
       bounds: this.input.bounds,
       layerCount: this.input.layerCount,
       minTraceToPadEdgeClearance: this.input.minTraceToPadEdgeClearance,
+      connectionRoots: this.input.connectionRoots,
     }
     const centerlineDistanceSamples = getCenterlineDistanceSamples({
       minimumCenterlineDistance: this.input.pair.minimumCenterlineDistance,

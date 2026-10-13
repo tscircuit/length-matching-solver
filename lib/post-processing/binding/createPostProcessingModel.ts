@@ -1,3 +1,4 @@
+import { getLogicalConnectionName } from "../../length-matching/connection/getLogicalConnectionName"
 import type {
   Obstacle,
   SimplifiedPcbTrace,
@@ -247,6 +248,12 @@ export const createPostProcessingModel = (
   return {
     params: {
       simpleRouteJson: {
+        connectionRoots: new Map(
+          params.hdRoutes.map((route) => [
+            route.connectionName,
+            getLogicalConnectionName(route),
+          ]),
+        ),
         traces,
         differentialPairs: structuredClone(params.differentialPairs),
         obstacles,

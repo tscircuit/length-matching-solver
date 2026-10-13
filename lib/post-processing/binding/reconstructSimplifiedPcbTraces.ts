@@ -181,6 +181,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
       ),
       obstacles: simpleRouteJson.obstacles,
       bounds: simpleRouteJson.bounds,
+      connectionRoots: simpleRouteJson.connectionRoots,
       layerCount: simpleRouteJson.layerCount,
       minTraceToPadEdgeClearance: simpleRouteJson.minTraceToPadEdgeClearance,
     }
