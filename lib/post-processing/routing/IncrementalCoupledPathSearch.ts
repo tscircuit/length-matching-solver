@@ -14,7 +14,7 @@ type SearchNode = {
   sequence: number
 }
 
-const MAXIMUM_EXPLORED_STATES_PER_ATTEMPT = 20_000
+const MAXIMUM_EXPLORED_STATES_PER_ATTEMPT = 5_000
 
 /** Advances the common-spine composite-grid A* search one explored node at a time. */
 export class IncrementalCoupledPathSearch {
