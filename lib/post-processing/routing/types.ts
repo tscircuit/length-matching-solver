@@ -10,6 +10,9 @@ export type CompositeGridConfig = {
 
 export type CoupledPathSearchInput = {
   start: CoupledPathPoint
+  startDirection?: Point
+  maximumExploredStates?: number
+  allowNonAdjacentLayerTransitions?: boolean
   end: CoupledPathPoint
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number

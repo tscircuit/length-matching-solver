@@ -203,6 +203,13 @@ export const createCoupledPairCandidate = (input: {
       throw new Error(
         "PostProcessingSolver: terminal fanout has no preceding wire",
       )
+    if (
+      last.x === endpoint.x &&
+      last.y === endpoint.y &&
+      last.layer === endpoint.layer &&
+      last.width === endpoint.width
+    )
+      return
     const preceding = route.at(-2)
     let terminalMitered = false
     if (

@@ -20,6 +20,7 @@ const MAXIMUM_EXPLORED_STATES_PER_ATTEMPT = 20_000
 export class IncrementalCoupledPathSearch {
   private readonly queue: SearchNode[]
   private readonly bestCosts = new Map<string, number>()
+  private readonly edgeValidity = new Map<string, boolean>()
   private readonly startLayer: number
   private readonly endLayer: number
   private readonly grid: CompositeRoutingGrid
@@ -40,7 +41,7 @@ export class IncrementalCoupledPathSearch {
     )
     this.exploredStateLimit = Math.min(
       this.maxSearchStates,
-      MAXIMUM_EXPLORED_STATES_PER_ATTEMPT,
+      input.maximumExploredStates ?? MAXIMUM_EXPLORED_STATES_PER_ATTEMPT,
     )
     if (this.startLayer < 0 || this.endLayer < 0) {
       this.queue = []
@@ -49,14 +50,20 @@ export class IncrementalCoupledPathSearch {
     }
     const start: SearchNode = {
       point: input.start,
-      direction: null,
+      direction: input.startDirection
+        ? this.createDirection(input.start, {
+            ...input.start,
+            x: input.start.x + input.startDirection.x,
+            y: input.start.y + input.startDirection.y,
+          })
+        : null,
       cost: 0,
       estimate: this.estimate(input.start),
       parent: null,
       sequence: 0,
     }
     this.queue = [start]
-    this.bestCosts.set(this.keyFor(input.start, null), 0)
+    this.bestCosts.set(this.keyFor(input.start, start.direction), 0)
   }
 
   isComplete(): boolean {
@@ -244,10 +251,27 @@ export class IncrementalCoupledPathSearch {
     return first
   }
 
+  private isEdgeValid(start: CoupledPathPoint, end: CoupledPathPoint): boolean {
+    const key = `${this.keyFor(start, null)}:${this.keyFor(end, null)}`
+    let valid = this.edgeValidity.get(key)
+    if (valid === undefined) {
+      valid = this.input.isEdgeValid(start, end)
+      this.edgeValidity.set(key, valid)
+    }
+    return valid
+  }
+
   private enqueuePlanarNeighbors(current: SearchNode): void {
     for (const next of this.grid.getPlanarNeighbors(current.point)) {
-      if (!this.input.isEdgeValid(current.point, next)) continue
+      if (!this.isEdgeValid(current.point, next)) continue
       const direction = this.createDirection(current.point, next)
+      if (
+        this.input.startDirection &&
+        current.parent &&
+        current.parent.point.layer !== current.point.layer &&
+        current.direction?.key !== direction.key
+      )
+        continue
       const bendCost =
         current.direction === null || current.direction.key === direction.key
           ? 0
@@ -277,8 +301,16 @@ export class IncrementalCoupledPathSearch {
       current.point.layer,
       this.input.layerCount,
     )
-    for (const nextLayerIndex of [currentLayer - 1, currentLayer + 1]) {
-      if (nextLayerIndex < 0 || nextLayerIndex >= this.input.layerCount)
+    for (
+      let nextLayerIndex = 0;
+      nextLayerIndex < this.input.layerCount;
+      nextLayerIndex++
+    ) {
+      if (
+        nextLayerIndex === currentLayer ||
+        (!this.input.allowNonAdjacentLayerTransitions &&
+          Math.abs(nextLayerIndex - currentLayer) !== 1)
+      )
         continue
       const nextLayer = getLayerName(nextLayerIndex, this.input.layerCount)
       if (!this.input.isViaValid(current.point, nextLayer, current.direction))
