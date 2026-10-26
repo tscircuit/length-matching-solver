@@ -39,7 +39,9 @@ export type DualMeanderPlanInput = {
   longerConnectionName: string
   shorterConnectionName: string
   originalLengthDifference: number
-  fixedLengthByConnectionName?: Readonly<Partial<Record<ConnectionName, number>>>
+  fixedLengthByConnectionName?: Readonly<
+    Partial<Record<ConnectionName, number>>
+  >
   lengthTolerance: number
   longerCandidates: SegmentCandidate[]
   shorterCandidates: SegmentCandidate[]

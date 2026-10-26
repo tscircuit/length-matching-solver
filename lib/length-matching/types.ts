@@ -13,7 +13,9 @@ export type LengthMatchingSolverParams = {
   originalConnections: SimpleRouteConnection[]
   differentialPairs?: DifferentialPair[]
   /** Immutable planar copper length outside hdRoutes, keyed by logical root. */
-  fixedLengthByConnectionName?: Readonly<Partial<Record<ConnectionName, number>>>
+  fixedLengthByConnectionName?: Readonly<
+    Partial<Record<ConnectionName, number>>
+  >
   maximumMeanderDepth?: number
   minimumToothPitch?: number
   /**

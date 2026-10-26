@@ -5,7 +5,9 @@ type FullConnectionLengthInput = {
   routes: HighDensityRoute[]
   routeIndexes: number[]
   connectionName: ConnectionName
-  fixedLengthByConnectionName?: Readonly<Partial<Record<ConnectionName, number>>>
+  fixedLengthByConnectionName?: Readonly<
+    Partial<Record<ConnectionName, number>>
+  >
 }
 
 /** Add immutable copper once without exposing it as tunable route geometry. */
@@ -14,7 +16,8 @@ export const getFullConnectionLength = (
 ): number => {
   const routedLength = getConnectionLength(input.routes, input.routeIndexes)
   const offsets = input.fixedLengthByConnectionName
-  if (!offsets || !Object.hasOwn(offsets, input.connectionName)) return routedLength
+  if (!offsets || !Object.hasOwn(offsets, input.connectionName))
+    return routedLength
   const fixedLength = offsets[input.connectionName]
   if (fixedLength === undefined)
     throw new Error(

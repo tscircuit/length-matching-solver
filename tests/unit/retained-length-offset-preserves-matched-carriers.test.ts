@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../../lib"
+import {
+  LengthMatchingSolver,
+  type LengthMatchingSolverParams,
+} from "../../lib"
 
 test("preserves carriers whose complete lengths already match", (): void => {
   const params: LengthMatchingSolverParams = {

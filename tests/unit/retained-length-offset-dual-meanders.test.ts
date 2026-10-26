@@ -10,10 +10,12 @@ import { getRouteLength } from "../../lib/route-geometry"
 test("validates complete lengths when both carriers need minimum-height meanders", (): void => {
   const params: LengthMatchingSolverParams = {
     ...sampleProblem,
-    obstacles: sampleProblem.obstacles.map((obstacle): Obstacle => ({
-      ...obstacle,
-      type: "rect",
-    })),
+    obstacles: sampleProblem.obstacles.map(
+      (obstacle): Obstacle => ({
+        ...obstacle,
+        type: "rect",
+      }),
+    ),
     differentialPairs: [
       {
         connectionNames: ["small_gap_p", "small_gap_n"],

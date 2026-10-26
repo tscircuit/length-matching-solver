@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../../lib"
+import {
+  LengthMatchingSolver,
+  type LengthMatchingSolverParams,
+} from "../../lib"
 import { getRouteLength } from "../../lib/route-geometry"
 
 test("matches complete lengths while leaving retained copper unchanged", (): void => {

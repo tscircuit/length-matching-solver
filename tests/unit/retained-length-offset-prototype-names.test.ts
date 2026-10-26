@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { LengthMatchingSolver, type LengthMatchingSolverParams } from "../../lib"
+import {
+  LengthMatchingSolver,
+  type LengthMatchingSolverParams,
+} from "../../lib"
 import { getRouteLength } from "../../lib/route-geometry"
 
 test("treats a prototype-named connection without an own offset as zero fixed length", (): void => {
