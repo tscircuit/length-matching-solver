@@ -40,6 +40,7 @@ export type {
   SourceTraceId,
 } from "./differential-pair-post-processing/types"
 export type {
+  ConnectionName,
   ConnectionPoint,
   DifferentialPair,
   HighDensityRoute,
