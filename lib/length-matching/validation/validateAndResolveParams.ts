@@ -6,6 +6,14 @@ import type { LengthMatchingSolverParams } from "../types"
 export const validateAndResolveParams = (
   params: LengthMatchingSolverParams,
 ): LengthMatchingConfig => {
+  for (const [connectionName, length] of Object.entries(
+    params.fixedLengthByConnectionName ?? {},
+  )) {
+    if (length === undefined || !Number.isFinite(length) || length < 0)
+      throw new Error(
+        `LengthMatchingSolver: fixed length for connection "${connectionName}" must be a nonnegative finite number`,
+      )
+  }
   const maximumMeanderDepth = params.maximumMeanderDepth ?? 5
   const maxToothCount = params.maxToothCount ?? 12
   if (!Number.isFinite(maximumMeanderDepth) || maximumMeanderDepth <= 0) {

@@ -1,3 +1,5 @@
+export type ConnectionName = string
+
 export type RoutePoint = {
   x: number
   y: number

@@ -1,4 +1,5 @@
 import type {
+  ConnectionName,
   HighDensityRoute,
   Obstacle,
   RoutePoint,
@@ -6,9 +7,9 @@ import type {
 } from "../types"
 import {
   findConnectionRouteIndexes,
-  getConnectionLength,
   getLogicalConnectionName,
 } from "./connection-routes"
+import { getFullConnectionLength } from "./connection/getFullConnectionLength"
 import { isCandidateGeometryValid } from "./geometry-validation"
 import type {
   RegressionAttempt,
@@ -38,6 +39,7 @@ export type DualMeanderPlanInput = {
   longerConnectionName: string
   shorterConnectionName: string
   originalLengthDifference: number
+  fixedLengthByConnectionName?: Readonly<Partial<Record<ConnectionName, number>>>
   lengthTolerance: number
   longerCandidates: SegmentCandidate[]
   shorterCandidates: SegmentCandidate[]
@@ -361,8 +363,18 @@ export const selectDualMeanderPlan = (
       input.shorterConnectionName,
     )
     const measuredDifference = Math.abs(
-      getConnectionLength(finalRoutes, shorterRouteIndexes) -
-        getConnectionLength(finalRoutes, longerRouteIndexes),
+      getFullConnectionLength({
+        routes: finalRoutes,
+        routeIndexes: shorterRouteIndexes,
+        connectionName: input.shorterConnectionName,
+        fixedLengthByConnectionName: input.fixedLengthByConnectionName,
+      }) -
+        getFullConnectionLength({
+          routes: finalRoutes,
+          routeIndexes: longerRouteIndexes,
+          connectionName: input.longerConnectionName,
+          fixedLengthByConnectionName: input.fixedLengthByConnectionName,
+        }),
     )
     if (
       measuredDifference > input.lengthTolerance ||
@@ -440,8 +452,18 @@ export const selectDualMeanderPlan = (
       input.shorterConnectionName,
     )
     const measuredDifference = Math.abs(
-      getConnectionLength(shorterPlan.routes, shorterRouteIndexes) -
-        getConnectionLength(shorterPlan.routes, longerRouteIndexes),
+      getFullConnectionLength({
+        routes: shorterPlan.routes,
+        routeIndexes: shorterRouteIndexes,
+        connectionName: input.shorterConnectionName,
+        fixedLengthByConnectionName: input.fixedLengthByConnectionName,
+      }) -
+        getFullConnectionLength({
+          routes: shorterPlan.routes,
+          routeIndexes: longerRouteIndexes,
+          connectionName: input.longerConnectionName,
+          fixedLengthByConnectionName: input.fixedLengthByConnectionName,
+        }),
     )
     const allAttempts = [...longerPlan.attempts, ...shorterPlan.attempts]
     if (

@@ -4,10 +4,8 @@ import {
   validateAndResolveParams,
   validatePair,
 } from "./length-matching/config"
-import {
-  findConnectionRouteIndexes,
-  getConnectionLength,
-} from "./length-matching/connection-routes"
+import { findConnectionRouteIndexes } from "./length-matching/connection-routes"
+import { getFullConnectionLength } from "./length-matching/connection/getFullConnectionLength"
 import { selectDualMeanderPlan } from "./length-matching/dual-meander-plan"
 import { LengthMatchingNoSolutionError } from "./length-matching/errors/LengthMatchingNoSolutionError"
 import { isCandidateGeometryValid } from "./length-matching/geometry-validation"
@@ -78,11 +76,18 @@ export class LengthMatchingSolver extends BaseSolver {
       throw new Error(
         `LengthMatchingSolver: differential pair ${pair.connectionNames.join("/")} has routed geometry for only one connection`,
       )
-    const firstLength = getConnectionLength(this.matchedHdRoutes, firstIndexes)
-    const secondLength = getConnectionLength(
-      this.matchedHdRoutes,
-      secondIndexes,
-    )
+    const firstLength = getFullConnectionLength({
+      routes: this.matchedHdRoutes,
+      routeIndexes: firstIndexes,
+      connectionName: pair.connectionNames[0],
+      fixedLengthByConnectionName: this.params.fixedLengthByConnectionName,
+    })
+    const secondLength = getFullConnectionLength({
+      routes: this.matchedHdRoutes,
+      routeIndexes: secondIndexes,
+      connectionName: pair.connectionNames[1],
+      fixedLengthByConnectionName: this.params.fixedLengthByConnectionName,
+    })
     const difference = Math.abs(firstLength - secondLength)
     if (difference <= pair.lengthTolerance) return
     const firstIsShorter = firstLength < secondLength
@@ -311,6 +316,7 @@ export class LengthMatchingSolver extends BaseSolver {
       longerConnectionName: activePair.longerConnectionName,
       shorterConnectionName: activePair.shorterConnectionName,
       originalLengthDifference: activePair.targetAddedLength,
+      fixedLengthByConnectionName: this.params.fixedLengthByConnectionName,
       lengthTolerance: activePair.pair.lengthTolerance,
       longerCandidates,
       shorterCandidates: activePair.candidates,
