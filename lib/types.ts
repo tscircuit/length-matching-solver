@@ -125,6 +125,8 @@ export type Obstacle = {
   obstacleId?: string
   componentId?: string
   type: "rect"
+  /** Copper pour whose caller regenerates via antipads; still blocks planar routing. */
+  isCopperPour?: boolean
   layers: string[]
   zLayers?: number[]
   /** Canonicalized z-layer indexes used by autorouter internals. */
