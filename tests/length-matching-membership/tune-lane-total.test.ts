@@ -13,7 +13,9 @@ test("tunes the summed lane deficit while retaining real roots and other copper"
   expect(solver.solved).toBe(true)
   const output = solver.getOutput().matchedHdRoutes
   const lengths = output.map(getRouteLength)
-  expect(Math.abs(lengths[0]! + lengths[1]! - lengths[2]! - lengths[3]!)).toBeLessThanOrEqual(0.01)
+  expect(
+    Math.abs(lengths[0]! + lengths[1]! - lengths[2]! - lengths[3]!),
+  ).toBeLessThanOrEqual(0.01)
   expect(output.map((route) => route.rootConnectionName)).toEqual(
     params.hdRoutes.map((route) => route.rootConnectionName),
   )

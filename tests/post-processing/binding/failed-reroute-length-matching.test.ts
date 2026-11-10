@@ -72,10 +72,15 @@ test("keeps a declared differential pair eligible after coupled rerouting fails"
     },
   })
 
-  expect(binding.solverParams.differentialPairs).toEqual([{
-    connectionNames: [[differentialPair.connectionNames[0]], [differentialPair.connectionNames[1]]],
-    maxLengthSkewMm: differentialPair.lengthTolerance,
-  }])
+  expect(binding.solverParams.differentialPairs).toEqual([
+    {
+      connectionNames: [
+        [differentialPair.connectionNames[0]],
+        [differentialPair.connectionNames[1]],
+      ],
+      maxLengthSkewMm: differentialPair.lengthTolerance,
+    },
+  ])
   expect(binding.traceBindings).toHaveLength(2)
   expect(binding.solverParams.originalConnections).toHaveLength(2)
 })

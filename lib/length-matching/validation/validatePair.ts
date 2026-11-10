@@ -48,7 +48,9 @@ export const validatePair = (
         fail(`hop "${name}" must resolve to exactly one original connection`)
       const connection = connections[0]!
       if (connection.pointsToConnect.length !== 2)
-        fail(`connection "${name}" must have exactly two points before MST splitting`)
+        fail(
+          `connection "${name}" must have exactly two points before MST splitting`,
+        )
       const routeIndexes = findConnectionRouteIndexes(routes, name)
       if (routeIndexes.length !== 1)
         throw new LengthMatchingConstraintError(

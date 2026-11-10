@@ -38,14 +38,13 @@ export const validateHopRoute = (
     if (
       previous &&
       previous.z !== point.z &&
-      (
-        Math.hypot(previous.x - point.x, previous.y - point.y) > 1e-8 ||
-        !route.vias.some((via): boolean =>
-          Math.hypot(via.x - point.x, via.y - point.y) <= 1e-8 &&
-          (via.zLayers === undefined ||
-            (via.zLayers.includes(previous.z) && via.zLayers.includes(point.z))),
-        )
-      )
+      (Math.hypot(previous.x - point.x, previous.y - point.y) > 1e-8 ||
+        !route.vias.some(
+          (via): boolean =>
+            Math.hypot(via.x - point.x, via.y - point.y) <= 1e-8 &&
+            (via.zLayers === undefined ||
+              (via.zLayers.includes(previous.z) && via.zLayers.includes(point.z))),
+        ))
     )
       fail("has a discontinuous layer transition")
   }

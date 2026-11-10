@@ -5,7 +5,10 @@ import type {
   SimplifiedPcbTraceViaRoutePoint,
   SimplifiedPcbTraces,
 } from "../../types"
-import type { LengthMatchingPair, LengthMatchingSolverParams } from "../../length-matching/types"
+import type {
+  LengthMatchingPair,
+  LengthMatchingSolverParams,
+} from "../../length-matching/types"
 import { getLayerIndex } from "../geometry/getLayerIndex"
 import { getTransitionLayers } from "../geometry/getTransitionLayers"
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
@@ -217,7 +220,10 @@ export const createLengthMatchingBinding = (input: {
       traces,
       originalConnections,
       differentialPairs: differentialPairs.map((pair): LengthMatchingPair => ({
-        connectionNames: [[pair.connectionNames[0]], [pair.connectionNames[1]]],
+        connectionNames: [
+          [pair.connectionNames[0]],
+          [pair.connectionNames[1]],
+        ],
         maxLengthSkewMm: pair.lengthTolerance,
         minimumCenterlineDistance: pair.minimumCenterlineDistance,
         maximumCenterlineDistance: pair.maximumCenterlineDistance,
