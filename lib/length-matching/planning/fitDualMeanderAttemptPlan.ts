@@ -4,7 +4,6 @@ import type {
   FittedAttemptPlan,
   MinimumAttemptPlan,
 } from "../dual-meander-plan"
-import { getLogicalConnectionName } from "../connection-routes"
 import { isCandidateGeometryValid } from "../geometry-validation"
 import type {
   RegressionAttempt,
@@ -16,8 +15,7 @@ export const fitDualMeanderAttemptPlan = (input: {
   plan: MinimumAttemptPlan
   targetAddedLength: number
   routes: HighDensityRoute[]
-  connectionName: string
-  excludedConnectionName?: string
+  excludedRouteIndexes?: number[]
   config: Pick<
     DualMeanderPlanInput,
     | "lengthTolerance"
@@ -122,18 +120,17 @@ export const fitDualMeanderAttemptPlan = (input: {
       const attempt = evaluateMeanderCandidate({
         candidate: minimumAttempt.candidate,
         route,
-        connectionName: input.connectionName,
+        connectionName: route.connectionName,
         targetAddedLength: plannedAttempt.targetAddedLength,
         lengthTolerance: input.config.lengthTolerance,
         isGeometryValid: (meanderPoints) =>
           isCandidateGeometryValid({
             route,
             meanderPoints,
-            routedRoutes: input.excludedConnectionName
+            routedRoutes: input.excludedRouteIndexes
               ? routes.filter(
-                  (routedRoute) =>
-                    getLogicalConnectionName(routedRoute) !==
-                    input.excludedConnectionName,
+                  (_, index): boolean =>
+                    !input.excludedRouteIndexes!.includes(index),
                 )
               : routes,
             ...input.config,

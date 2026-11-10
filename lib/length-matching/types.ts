@@ -1,16 +1,25 @@
 import type {
-  DifferentialPair,
   HighDensityRoute,
   Obstacle,
   SimplifiedPcbTraces,
   SimpleRouteConnection,
 } from "../types"
 
+/** Exact copper-hop memberships, independent of electrical roots. */
+export type LengthMatchingPair = {
+  connectionNames: [[string, ...string[]], [string, ...string[]]]
+  /** Maximum absolute difference between summed planar lane lengths, in mm. */
+  maxLengthSkewMm: number
+  /** Optional ranking preferences used by the coupled postprocessor. */
+  minimumCenterlineDistance?: number
+  maximumCenterlineDistance?: number
+}
+
 /** Input geometry and tuning constraints for a differential-pair matching run. */
 export type LengthMatchingSolverParams = {
   hdRoutes: HighDensityRoute[]
   originalConnections: SimpleRouteConnection[]
-  differentialPairs?: DifferentialPair[]
+  differentialPairs?: LengthMatchingPair[]
   maximumMeanderDepth?: number
   minimumToothPitch?: number
   /**

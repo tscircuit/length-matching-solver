@@ -39,8 +39,8 @@
   ],
   "differentialPairs": [
     {
-      "connectionNames": ["small_gap_p", "small_gap_n"],
-      "lengthTolerance": 0.01
+      "connectionNames": [["small_gap_p"], ["small_gap_n"]],
+      "maxLengthSkewMm": 0.01
     }
   ],
   "maximumMeanderDepth": 2,

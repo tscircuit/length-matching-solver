@@ -5,12 +5,6 @@ import { createLaneMembershipParams } from "./createLaneMembershipParams"
 test("fails instead of reporting a matched pair when both lanes have no routes", () => {
   const params = createLaneMembershipParams()
   params.hdRoutes = []
-  params.differentialPairs = [
-    {
-      connectionNames: ["P:0", "N:0"],
-      lengthTolerance: 0.01,
-    },
-  ]
   const solver = new LengthMatchingSolver(params)
 
   expect(() => solver.solve()).toThrow()

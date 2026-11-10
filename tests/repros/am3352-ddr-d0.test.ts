@@ -29,10 +29,10 @@ reproTest(
     )
     expect(params.layerCount).toBe(8)
     expect(params.obstacleMargin).toBe(0.1)
-    expect(params.differentialPairs?.[0]?.connectionNames[0]).toBe(
+    expect(params.differentialPairs?.[0]?.connectionNames[0][0]).toBe(
       "source_net_70",
     )
-    expect(params.differentialPairs?.[0]?.lengthTolerance).toBe(0.635)
+    expect(params.differentialPairs?.[0]?.maxLengthSkewMm).toBe(0.635)
 
     const solver = new LengthMatchingSolver(params)
     const start = performance.now()

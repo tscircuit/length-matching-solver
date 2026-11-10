@@ -84,5 +84,5 @@ test("matches a route using one consistent multi-segment meander style", () => {
       getRouteLength(solver.matchedHdRoutes[1]!) -
         getRouteLength(solver.matchedHdRoutes[0]!),
     ),
-  ).toBeLessThanOrEqual(params.differentialPairs![0]!.lengthTolerance)
+  ).toBeLessThanOrEqual(params.differentialPairs![0]!.maxLengthSkewMm)
 })

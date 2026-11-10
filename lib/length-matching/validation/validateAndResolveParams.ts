@@ -1,6 +1,8 @@
 import { getTraceCopperGeometry } from "../../post-processing/model/getTraceCopperGeometry"
 import type { LengthMatchingConfig } from "../internal-types"
 import type { LengthMatchingSolverParams } from "../types"
+import { LengthMatchingConstraintError } from "../errors/LengthMatchingConstraintError"
+import { validatePair } from "./validatePair"
 
 /** Validate public options once and resolve defaults for every internal module. */
 export const validateAndResolveParams = (
@@ -55,8 +57,28 @@ export const validateAndResolveParams = (
       "LengthMatchingSolver: maxToothCount must be a positive finite integer",
     )
   }
+  const layerCount = params.layerCount ?? 2
+  const seen = new Set<string>()
+  for (const [pairIndex, pair] of (params.differentialPairs ?? []).entries()) {
+    validatePair(
+      pair,
+      params.originalConnections,
+      params.hdRoutes,
+      layerCount,
+      pairIndex,
+    )
+    for (const name of pair.connectionNames.flat()) {
+      if (seen.has(name))
+        throw new LengthMatchingConstraintError(
+          pairIndex,
+          "invalid-input",
+          `hop "${name}" belongs to multiple pairs`,
+        )
+      seen.add(name)
+    }
+  }
   for (const trace of params.traces ?? []) {
-    getTraceCopperGeometry(trace, params.layerCount ?? 2)
+    getTraceCopperGeometry(trace, layerCount)
   }
   return {
     maximumMeanderDepth,
@@ -68,7 +90,7 @@ export const validateAndResolveParams = (
     obstacles: params.obstacles ?? [],
     bounds: params.bounds,
     obstacleMargin: params.obstacleMargin ?? 0.15,
-    layerCount: params.layerCount ?? 2,
+    layerCount,
     colorMap: params.colorMap ?? {},
   }
 }

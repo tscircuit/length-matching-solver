@@ -48,8 +48,8 @@
     }
   ],
   "differentialPairs": [
-    { "connectionNames": ["pair_1_p", "pair_1_n"], "lengthTolerance": 0.001 },
-    { "connectionNames": ["pair_2_p", "pair_2_n"], "lengthTolerance": 0.001 }
+    { "connectionNames": [["pair_1_p"], ["pair_1_n"]], "maxLengthSkewMm": 0.001 },
+    { "connectionNames": [["pair_2_p"], ["pair_2_n"]], "maxLengthSkewMm": 0.001 }
   ],
   "maximumMeanderDepth": 2,
   "minimumToothPitch": 1,

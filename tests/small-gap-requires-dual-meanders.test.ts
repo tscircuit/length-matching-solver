@@ -42,6 +42,6 @@ test("matches a small gap by adding valid meanders to both pair members", () => 
     Math.abs(
       getRouteLength(matchedLongerRoute) - getRouteLength(matchedShorterRoute),
     ),
-  ).toBeLessThanOrEqual(pair.lengthTolerance)
+  ).toBeLessThanOrEqual(pair.maxLengthSkewMm)
   expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
 })

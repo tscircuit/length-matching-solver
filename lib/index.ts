@@ -3,6 +3,8 @@ export {
   type LengthMatchingSolverOutput,
   type LengthMatchingSolverParams,
 } from "./length-matching-solver"
+export type { LengthMatchingPair } from "./length-matching/types"
+export { LengthMatchingConstraintError } from "./length-matching/errors/LengthMatchingConstraintError"
 export { LengthMatchingNoSolutionError } from "./length-matching/errors/LengthMatchingNoSolutionError"
 export {
   DifferentialPairRoutingError,
