@@ -12,7 +12,7 @@ import type {
   PairSolveResult,
   ParsedTrace,
 } from "../model/internal-types"
-import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
+import { parsePostProcessingTrace } from "../model/parsePostProcessingTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
 import { getTerminalFanoutLengthLimit } from "./getTerminalFanoutLengthLimit"
@@ -176,11 +176,11 @@ export class DifferentialPairRoutingSession {
     let first: ParsedTrace
     let second: ParsedTrace
     try {
-      first = parseSimplifiedPcbTrace(
+      first = parsePostProcessingTrace(
         firstMatches[0]!.trace,
         this.input.layerCount,
       )
-      second = parseSimplifiedPcbTrace(
+      second = parsePostProcessingTrace(
         secondMatches[0]!.trace,
         this.input.layerCount,
       )

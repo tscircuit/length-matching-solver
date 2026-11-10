@@ -4,7 +4,7 @@ import type {
   SimplifiedPcbTraceWireRoutePoint,
 } from "../../types"
 import type { PairCandidate, ParsedTrace, Point } from "../model/internal-types"
-import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
+import { parsePostProcessingTrace } from "../model/parsePostProcessingTrace"
 import type { CoupledPathPoint } from "./types"
 
 /** Convert a layered spine into two corresponding offset simplified traces. */
@@ -289,8 +289,8 @@ export const createCoupledPairCandidate = (input: {
     ...input.second.source,
     route: routes[1],
   }
-  const firstParsed = parseSimplifiedPcbTrace(first, input.layerCount)
-  const secondParsed = parseSimplifiedPcbTrace(second, input.layerCount)
+  const firstParsed = parsePostProcessingTrace(first, input.layerCount)
+  const secondParsed = parsePostProcessingTrace(second, input.layerCount)
   return {
     first,
     second,

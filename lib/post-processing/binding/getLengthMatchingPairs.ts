@@ -1,6 +1,6 @@
 import type { DifferentialPair, SimplifiedPcbTraces } from "../../types"
 import { getSimplifiedTraceLength } from "../length-matching/getSimplifiedTraceLength"
-import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
+import { parsePostProcessingTrace } from "../model/parsePostProcessingTrace"
 
 /** Select rerouted pairs and unresolved-skew pairs that have bindable copper. */
 export const getLengthMatchingPairs = (input: {
@@ -36,7 +36,7 @@ export const getLengthMatchingPairs = (input: {
         return false
       const lengths = traces.map((trace) =>
         getSimplifiedTraceLength(
-          parseSimplifiedPcbTrace(trace, input.layerCount),
+          parsePostProcessingTrace(trace, input.layerCount),
         ),
       )
       return Math.abs(lengths[0]! - lengths[1]!) > pair.lengthTolerance + 1e-7

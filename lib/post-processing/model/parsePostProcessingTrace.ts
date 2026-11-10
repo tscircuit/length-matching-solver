@@ -10,7 +10,7 @@ import type {
 const POSITION_EPSILON = 1e-8
 
 /** Parse an ordered wire/via stream into continuous, layer-aware copper. */
-export const parseSimplifiedPcbTrace = (
+export const parsePostProcessingTrace = (
   trace: PostProcessingTrace,
   layerCount: number,
 ): ParsedTrace => {

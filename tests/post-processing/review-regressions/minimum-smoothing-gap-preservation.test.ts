@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import type { SimplifiedPcbTrace } from "../../../lib"
 import { getMinimumPairEdgeGap } from "../../../lib/post-processing/geometry/getMinimumPairEdgeGap"
-import { parseSimplifiedPcbTrace } from "../../../lib/post-processing/model/parseSimplifiedPcbTrace"
+import { parsePostProcessingTrace } from "../../../lib/post-processing/model/parsePostProcessingTrace"
 import { FortyFiveDegreeSimplificationSolver } from "../../../lib/post-processing/solvers/FortyFiveDegreeSimplificationSolver"
 
 test("preserves the initial pair gap when an obstacle makes smoothing asymmetric", () => {
@@ -22,8 +22,8 @@ test("preserves the initial pair gap when an obstacle makes smoothing asymmetric
   })
   const traces = [createTrace("P", 0), createTrace("N", -1)]
   const initialGap = getMinimumPairEdgeGap(
-    parseSimplifiedPcbTrace(traces[0]!, 2),
-    parseSimplifiedPcbTrace(traces[1]!, 2),
+    parsePostProcessingTrace(traces[0]!, 2),
+    parsePostProcessingTrace(traces[1]!, 2),
   )
   const solver = new FortyFiveDegreeSimplificationSolver({
     traces,
@@ -44,8 +44,8 @@ test("preserves the initial pair gap when an obstacle makes smoothing asymmetric
   solver.solve()
   const output = solver.getOutput()
   const finalGap = getMinimumPairEdgeGap(
-    parseSimplifiedPcbTrace(output.traces[0]!, 2),
-    parseSimplifiedPcbTrace(output.traces[1]!, 2),
+    parsePostProcessingTrace(output.traces[0]!, 2),
+    parsePostProcessingTrace(output.traces[1]!, 2),
   )
 
   expect(finalGap).toBeGreaterThanOrEqual(initialGap - 1e-7)

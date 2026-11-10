@@ -8,7 +8,7 @@ import type {
 import type { LengthMatchingSolverParams } from "../../length-matching/types"
 import { getLayerIndex } from "../geometry/getLayerIndex"
 import { getTransitionLayers } from "../geometry/getTransitionLayers"
-import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
+import { parsePostProcessingTrace } from "../model/parsePostProcessingTrace"
 import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
 import { getLengthMatchingPairs } from "./getLengthMatchingPairs"
 import type { FortyFiveDegreeSimplificationOutput } from "../solvers/FortyFiveDegreeSimplificationSolver"
@@ -68,7 +68,7 @@ export const createLengthMatchingBinding = (input: {
         `PostProcessingSolver: rerouted connection "${trace.connection_name}" cannot be bound to LengthMatchingSolver`,
       )
     }
-    const parsed = parseSimplifiedPcbTrace(trace, simpleRouteJson.layerCount)
+    const parsed = parsePostProcessingTrace(trace, simpleRouteJson.layerCount)
     const firstWire = trace.route[0]
     if (firstWire.route_type !== "wire")
       throw new Error(

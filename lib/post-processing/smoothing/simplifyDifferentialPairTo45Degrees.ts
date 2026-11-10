@@ -7,7 +7,7 @@ import type {
 } from "../../types"
 import { validateCandidateGeometry } from "../geometry/validateCandidateGeometry"
 import { getSimplifiedTraceLength } from "../length-matching/getSimplifiedTraceLength"
-import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
+import { parsePostProcessingTrace } from "../model/parsePostProcessingTrace"
 
 const EPSILON = 1e-8
 
@@ -59,8 +59,11 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
   const getMaximumInteriorPairSeparation = (
     traces: SimplifiedPcbTraces,
   ): number => {
-    const first = parseSimplifiedPcbTrace(traces[firstIndex]!, input.layerCount)
-    const second = parseSimplifiedPcbTrace(
+    const first = parsePostProcessingTrace(
+      traces[firstIndex]!,
+      input.layerCount,
+    )
+    const second = parsePostProcessingTrace(
       traces[secondIndex]!,
       input.layerCount,
     )
@@ -98,8 +101,11 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
   const getMinimumInteriorPairEdgeGap = (
     traces: SimplifiedPcbTraces,
   ): number | null => {
-    const first = parseSimplifiedPcbTrace(traces[firstIndex]!, input.layerCount)
-    const second = parseSimplifiedPcbTrace(
+    const first = parsePostProcessingTrace(
+      traces[firstIndex]!,
+      input.layerCount,
+    )
+    const second = parsePostProcessingTrace(
       traces[secondIndex]!,
       input.layerCount,
     )
@@ -129,8 +135,11 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
     return Number.isFinite(minimumGap) ? minimumGap : null
   }
   const validatePairGeometry = (traces: SimplifiedPcbTraces): boolean => {
-    const first = parseSimplifiedPcbTrace(traces[firstIndex]!, input.layerCount)
-    const second = parseSimplifiedPcbTrace(
+    const first = parsePostProcessingTrace(
+      traces[firstIndex]!,
+      input.layerCount,
+    )
+    const second = parsePostProcessingTrace(
       traces[secondIndex]!,
       input.layerCount,
     )
@@ -153,11 +162,11 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
   // coupled rerouter's geometry when the caller requested one exact spacing.
   if (exactCenterlineSpacingIsRequired) return output
 
-  const initialFirst = parseSimplifiedPcbTrace(
+  const initialFirst = parsePostProcessingTrace(
     output[firstIndex]!,
     input.layerCount,
   )
-  const initialSecond = parseSimplifiedPcbTrace(
+  const initialSecond = parsePostProcessingTrace(
     output[secondIndex]!,
     input.layerCount,
   )
@@ -415,11 +424,11 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
     throw new Error(
       `FortyFiveDegreeSimplificationSolver: pair ${pairName} produced invalid complete copper`,
     )
-  const finalFirst = parseSimplifiedPcbTrace(
+  const finalFirst = parsePostProcessingTrace(
     output[firstIndex]!,
     input.layerCount,
   )
-  const finalSecond = parseSimplifiedPcbTrace(
+  const finalSecond = parsePostProcessingTrace(
     output[secondIndex]!,
     input.layerCount,
   )
