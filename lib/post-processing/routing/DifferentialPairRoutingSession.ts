@@ -15,6 +15,7 @@ import type {
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
+import { hasSharedPairedTerminal } from "./hasSharedPairedTerminal"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
 import { resolveTerminalFanoutStation } from "./resolveTerminalFanoutStation"
@@ -252,10 +253,11 @@ export class DifferentialPairRoutingSession {
     }
     const preferredSide: 1 | -1 =
       terminalDelta.x * normal.x + terminalDelta.y * normal.y >= 0 ? 1 : -1
-    const hasInlineTerminalPair = (
-      firstPoint: typeof firstStart,
-      secondPoint: typeof secondStart,
-    ): boolean => {
+    const stations: [typeof firstStart, typeof secondStart][] = [
+      [firstStart, secondStart],
+      [firstEnd, secondEnd],
+    ]
+    const terminalFanout = stations.every(([firstPoint, secondPoint]) => {
       const deltaX = firstPoint.x - secondPoint.x
       const deltaY = firstPoint.y - secondPoint.y
       const separation = Math.hypot(deltaX, deltaY)
@@ -263,10 +265,7 @@ export class DifferentialPairRoutingSession {
         separation > 1e-8 &&
         Math.abs(deltaX * normal.x + deltaY * normal.y) / separation < 0.5
       )
-    }
-    const terminalFanout =
-      hasInlineTerminalPair(firstStart, secondStart) &&
-      hasInlineTerminalPair(firstEnd, secondEnd)
+    })
     const spineDirection = { x: normal.y, y: -normal.x }
     const terminalStartRequiresForwardEgress = [firstStart, secondStart].some(
       (terminal) =>
@@ -313,6 +312,13 @@ export class DifferentialPairRoutingSession {
       layerCount: this.input.layerCount,
       minTraceToPadEdgeClearance: this.input.minTraceToPadEdgeClearance,
     }
+    // Leave a shared pad toward this section's span. The adjacent section can
+    // then approach from its own side without sharing an off-pad escape.
+    const hasInlineJoint =
+      !terminalFanout &&
+      hasSharedPairedTerminal([first, second], stations, context.immutableTraces)
+    const fanoutLengthLimit =
+      this.input.pair.maxUncoupledLength ?? (hasInlineJoint ? spineLength : undefined)
     const centerlineDistanceSamples = getCenterlineDistanceSamples({
       minimumCenterlineDistance: this.input.pair.minimumCenterlineDistance,
       maximumCenterlineDistance: this.input.pair.maximumCenterlineDistance,
@@ -359,19 +365,16 @@ export class DifferentialPairRoutingSession {
               side,
               terminalFanout,
               terminalMiterMargin:
-                this.input.pair.maxUncoupledLength === undefined
+                fanoutLengthLimit === undefined
                   ? undefined
                   : centerlineSpacing / 2,
             })
           let searchStart =
-            this.input.pair.maxUncoupledLength === undefined
+            fanoutLengthLimit === undefined
               ? createLegacyForwardEgressSearchStart(centerlineSpacing, side)
               : start
           let searchEnd = end
-          if (
-            !terminalFanout &&
-            this.input.pair.maxUncoupledLength !== undefined
-          ) {
+          if (!terminalFanout && fanoutLengthLimit !== undefined) {
             const terminalValidator = createValidator(start, end)
             const resolvedStart = resolveTerminalFanoutStation({
               anchor: start,
@@ -383,7 +386,7 @@ export class DifferentialPairRoutingSession {
                 { point: firstStart, polarity: 1 },
                 { point: secondStart, polarity: -1 },
               ],
-              maxUncoupledLength: this.input.pair.maxUncoupledLength,
+              maxUncoupledLength: fanoutLengthLimit,
               maximumTurnDegrees: 55,
               searchStep: grid.innerGridStep,
               isValid: (station) =>
@@ -406,7 +409,7 @@ export class DifferentialPairRoutingSession {
                 { point: firstEnd, polarity: 1 },
                 { point: secondEnd, polarity: -1 },
               ],
-              maxUncoupledLength: this.input.pair.maxUncoupledLength,
+              maxUncoupledLength: fanoutLengthLimit,
               maximumTurnDegrees: 45,
               searchStep: grid.innerGridStep,
               isValid: (station) =>
