@@ -52,7 +52,7 @@ test("routes an exact copper gap on a two-pin pair without an escape-length limi
         return a.y + ((x - a.x) * (b.y - a.y)) / (b.x - a.x)
       })
       const measuredGap = Math.abs(positions[0]! - positions[1]!) - traceWidth
-      expect(measuredGap).toBeCloseTo(0.25, 6)
+      expect(measuredGap).toBeCloseTo(gap, 6)
     }
     if (gap === 0.45) {
       expect(solver.finalVisualize()).toMatchGraphicsSvg(import.meta.path, {

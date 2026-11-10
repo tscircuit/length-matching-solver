@@ -321,6 +321,29 @@ export class DifferentialPairRoutingSession {
         (edgeGap) => edgeGap + first.width / 2 + second.width / 2,
       ),
     })
+    const {
+      minimumCenterlineDistance,
+      maximumCenterlineDistance,
+      maxUncoupledLength,
+    } = this.input.pair
+    // Facing pad rows can escape along the trunk before converging to the
+    // requested pitch, even when no maximum escape length was specified.
+    const facingPadRows = (
+      [
+        [firstStart, secondStart],
+        [firstEnd, secondEnd],
+      ] as const
+    ).every(
+      ([p, n]) =>
+        Math.abs(
+          (p.x - n.x) * spineDirection.x + (p.y - n.y) * spineDirection.y,
+        ) < 1e-6,
+    )
+    const useFanoutStations =
+      maxUncoupledLength !== undefined ||
+      (facingPadRows &&
+        minimumCenterlineDistance !== undefined &&
+        minimumCenterlineDistance === maximumCenterlineDistance)
     const attempts = centerlineDistanceSamples.flatMap((centerlineSpacing) => {
       const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
       return ([preferredSide, preferredSide === 1 ? -1 : 1] as const).flatMap(
@@ -356,20 +379,15 @@ export class DifferentialPairRoutingSession {
               centerlineSpacing,
               side,
               terminalFanout,
-              terminalMiterMargin:
-                this.input.pair.maxUncoupledLength === undefined
-                  ? undefined
-                  : centerlineSpacing / 2,
+              terminalMiterMargin: useFanoutStations
+                ? centerlineSpacing / 2
+                : undefined,
             })
-          let searchStart =
-            this.input.pair.maxUncoupledLength === undefined
-              ? createLegacyForwardEgressSearchStart(centerlineSpacing, side)
-              : start
+          let searchStart = useFanoutStations
+            ? start
+            : createLegacyForwardEgressSearchStart(centerlineSpacing, side)
           let searchEnd = end
-          if (
-            !terminalFanout &&
-            this.input.pair.maxUncoupledLength !== undefined
-          ) {
+          if (!terminalFanout && useFanoutStations) {
             const terminalValidator = createValidator(start, end)
             const resolvedStart = resolveTerminalFanoutStation({
               anchor: start,
@@ -381,7 +399,8 @@ export class DifferentialPairRoutingSession {
                 { point: firstStart, polarity: 1 },
                 { point: secondStart, polarity: -1 },
               ],
-              maxUncoupledLength: this.input.pair.maxUncoupledLength,
+              maxUncoupledLength,
+              availableTravel: spineLength,
               maximumTurnDegrees: 55,
               searchStep: grid.innerGridStep,
               isValid: (station) =>
@@ -404,7 +423,8 @@ export class DifferentialPairRoutingSession {
                 { point: firstEnd, polarity: 1 },
                 { point: secondEnd, polarity: -1 },
               ],
-              maxUncoupledLength: this.input.pair.maxUncoupledLength,
+              maxUncoupledLength,
+              availableTravel: spineLength,
               maximumTurnDegrees: 45,
               searchStep: grid.innerGridStep,
               isValid: (station) =>
