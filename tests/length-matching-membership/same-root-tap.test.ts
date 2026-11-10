@@ -9,7 +9,10 @@ test("excludes tap copper sharing the root of a selected lane hop", () => {
     rootConnectionName: "P_BEFORE",
     traceThickness: 0.15,
     viaDiameter: 0.6,
-    route: [{ x: 5, y: 0, z: 0 }, { x: 5, y: -10, z: 0 }],
+    route: [
+      { x: 5, y: 0, z: 0 },
+      { x: 5, y: -10, z: 0 },
+    ],
     vias: [],
   })
   const solver = new LengthMatchingSolver(params)
