@@ -1,7 +1,7 @@
 import type {
   CopperSegment,
   CopperVia,
-  PostProcessingTrace,
+  SimplifiedPcbTraceForPostProcessing,
 } from "../model/internal-types"
 import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
 import { getLayerIndex } from "./getLayerIndex"
@@ -13,7 +13,7 @@ export type PostProcessingCopper = {
 }
 
 export function getPostProcessingCopperByLane(
-  traces: PostProcessingTrace[],
+  traces: SimplifiedPcbTraceForPostProcessing[],
   layerCount: number,
   firstRoot: string | undefined,
   secondRoot: string | undefined,

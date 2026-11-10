@@ -1,6 +1,6 @@
 import type { Obstacle, SimplifiedPcbTraceRoutePoint } from "../../types"
 import { getLayerName } from "../geometry/getLayerName"
-import type { PostProcessingTrace } from "../model/internal-types"
+import type { SimplifiedPcbTraceForPostProcessing } from "../model/internal-types"
 import type { PostProcessingModel, PostProcessingSolverParams } from "../types"
 
 /** Adapt native HD routes to the private simplified-copper routing model. */
@@ -18,7 +18,7 @@ export const createPostProcessingModel = (
     }
   }
 
-  const traces: PostProcessingTrace[] = params.hdRoutes.map(
+  const traces: SimplifiedPcbTraceForPostProcessing[] = params.hdRoutes.map(
     (hdRoute, hdRouteIndex) => {
       const route: SimplifiedPcbTraceRoutePoint[] = []
       const jumperByStartIndex = new Map<

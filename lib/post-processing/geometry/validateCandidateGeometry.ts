@@ -6,7 +6,7 @@ import type {
   CopperVia,
   ParsedTrace,
   Point,
-  PostProcessingTrace,
+  SimplifiedPcbTraceForPostProcessing,
 } from "../model/internal-types"
 import { getLayerIndex } from "./getLayerIndex"
 import {
@@ -16,7 +16,7 @@ import {
 import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle"
 
 export type CandidateGeometryContext = {
-  immutableTraces: PostProcessingTrace[]
+  immutableTraces: SimplifiedPcbTraceForPostProcessing[]
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number

@@ -5,7 +5,7 @@ import type {
   CopperSegment,
   CopperVia,
   Point,
-  PostProcessingTrace,
+  SimplifiedPcbTraceForPostProcessing,
 } from "../model/internal-types"
 import type { CoupledPathPoint } from "../routing/types"
 import { getLayerIndex } from "./getLayerIndex"
@@ -32,7 +32,7 @@ export type SearchGeometryValidator = {
 
 /** Build a conservative, reusable collision checker for coupled spine search. */
 export const createSearchGeometryValidator = (input: {
-  immutableTraces: PostProcessingTrace[]
+  immutableTraces: SimplifiedPcbTraceForPostProcessing[]
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -40,11 +40,11 @@ export const createSearchGeometryValidator = (input: {
   start: CoupledPathPoint
   end: CoupledPathPoint
   firstTrace: Pick<
-    PostProcessingTrace,
+    SimplifiedPcbTraceForPostProcessing,
     "connection_name" | "rootConnectionName"
   >
   secondTrace: Pick<
-    PostProcessingTrace,
+    SimplifiedPcbTraceForPostProcessing,
     "connection_name" | "rootConnectionName"
   >
   firstStartTerminal: Point

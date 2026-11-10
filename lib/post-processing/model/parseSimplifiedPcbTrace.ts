@@ -4,14 +4,14 @@ import type {
   CopperSegment,
   ParsedTrace,
   PathPoint,
-  PostProcessingTrace,
+  SimplifiedPcbTraceForPostProcessing,
 } from "./internal-types"
 
 const POSITION_EPSILON = 1e-8
 
 /** Parse an ordered wire/via stream into continuous, layer-aware copper. */
-export const parsePostProcessingTrace = (
-  trace: PostProcessingTrace,
+export const parseSimplifiedPcbTrace = (
+  trace: SimplifiedPcbTraceForPostProcessing,
   layerCount: number,
 ): ParsedTrace => {
   if (trace.route.length === 0)

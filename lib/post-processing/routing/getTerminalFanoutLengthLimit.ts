@@ -1,13 +1,13 @@
 import type {
   ParsedTrace,
   PathPoint,
-  PostProcessingTrace,
+  SimplifiedPcbTraceForPostProcessing,
 } from "../model/internal-types"
 
 type TerminalFanoutLengthInput = {
   lanes: [ParsedTrace, ParsedTrace]
   stations: [PathPoint, PathPoint][]
-  immutableTraces: PostProcessingTrace[]
+  immutableTraces: SimplifiedPcbTraceForPostProcessing[]
   inlineSpan?: number
   requestedLimit?: number
 }

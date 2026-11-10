@@ -8,7 +8,7 @@ import { getAddedPairCopper } from "../geometry/getAddedPairCopper"
 import { getLayerName } from "../geometry/getLayerName"
 import { getSimplifiedTraceLength } from "../length-matching/getSimplifiedTraceLength"
 import { validateCandidateGeometry } from "../geometry/validateCandidateGeometry"
-import { parsePostProcessingTrace } from "../model/parsePostProcessingTrace"
+import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import type { FortyFiveDegreeSimplificationOutput } from "../solvers/FortyFiveDegreeSimplificationSolver"
 import type { InternalPostProcessingParams } from "../types"
 import { PostProcessingConstraintError } from "../errors/PostProcessingConstraintError"
@@ -150,19 +150,19 @@ export const reconstructSimplifiedPcbTraces = (input: {
         )
       return matches[0]!
     })
-    const first = parsePostProcessingTrace(
+    const first = parseSimplifiedPcbTrace(
       firstMatch.trace,
       simpleRouteJson.layerCount,
     )
-    const second = parsePostProcessingTrace(
+    const second = parseSimplifiedPcbTrace(
       secondMatch.trace,
       simpleRouteJson.layerCount,
     )
-    const originalFirst = parsePostProcessingTrace(
+    const originalFirst = parseSimplifiedPcbTrace(
       originalTraces[0]!,
       simpleRouteJson.layerCount,
     )
-    const originalSecond = parsePostProcessingTrace(
+    const originalSecond = parseSimplifiedPcbTrace(
       originalTraces[1]!,
       simpleRouteJson.layerCount,
     )

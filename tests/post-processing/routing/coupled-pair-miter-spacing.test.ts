@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { SimplifiedPcbTrace } from "../../../lib"
-import { parsePostProcessingTrace } from "../../../lib/post-processing/model/parsePostProcessingTrace"
+import { parseSimplifiedPcbTrace } from "../../../lib/post-processing/model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "../../../lib/post-processing/routing/createCoupledPairCandidate"
 import type { CoupledPathPoint } from "../../../lib/post-processing/routing/types"
 
@@ -24,7 +24,7 @@ test("maintains lane offsets through composite-grid and via-adjacent miters", ()
         via_diameter: 0.5,
       })
     route.push({ route_type: "wire", ...end, width: 0.2 })
-    return parsePostProcessingTrace(
+    return parseSimplifiedPcbTrace(
       {
         type: "pcb_trace",
         pcb_trace_id: id,
