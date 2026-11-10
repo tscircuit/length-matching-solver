@@ -1,10 +1,13 @@
-import type { SimplifiedPcbTrace } from "../../types"
-import type { ParsedTrace, PathPoint } from "../model/internal-types"
+import type {
+  ParsedTrace,
+  PathPoint,
+  PostProcessingTrace,
+} from "../model/internal-types"
 
 type TerminalFanoutLengthInput = {
   lanes: [ParsedTrace, ParsedTrace]
   stations: [PathPoint, PathPoint][]
-  immutableTraces: SimplifiedPcbTrace[]
+  immutableTraces: PostProcessingTrace[]
   inlineSpan?: number
   requestedLimit?: number
 }
@@ -23,10 +26,10 @@ export function getTerminalFanoutLengthLimit({
 
   const hasInlineJoint = stations.some((station) =>
     station.every((terminal, lane) => {
-      const root = lanes[lane]!.source.__postProcessingRootConnectionName
+      const root = lanes[lane]!.source.rootConnectionName
       if (root === undefined) return false
       return immutableTraces.some((other) => {
-        if (other.__postProcessingRootConnectionName !== root) return false
+        if (other.rootConnectionName !== root) return false
         return [other.route[0], other.route.at(-1)].some(
           (endpoint) =>
             endpoint?.route_type === "wire" &&

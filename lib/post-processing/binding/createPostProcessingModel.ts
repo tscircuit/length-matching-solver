@@ -1,9 +1,6 @@
-import type {
-  Obstacle,
-  SimplifiedPcbTrace,
-  SimplifiedPcbTraceRoutePoint,
-} from "../../types"
+import type { Obstacle, SimplifiedPcbTraceRoutePoint } from "../../types"
 import { getLayerName } from "../geometry/getLayerName"
+import type { PostProcessingTrace } from "../model/internal-types"
 import type { PostProcessingModel, PostProcessingSolverParams } from "../types"
 
 /** Adapt native HD routes to the private simplified-copper routing model. */
@@ -21,7 +18,7 @@ export const createPostProcessingModel = (
     }
   }
 
-  const traces: SimplifiedPcbTrace[] = params.hdRoutes.map(
+  const traces: PostProcessingTrace[] = params.hdRoutes.map(
     (hdRoute, hdRouteIndex) => {
       const route: SimplifiedPcbTraceRoutePoint[] = []
       const jumperByStartIndex = new Map<
@@ -166,7 +163,7 @@ export const createPostProcessingModel = (
         pcb_trace_id: `post_processing_hd_route_${hdRouteIndex}`,
         connection_name: hdRoute.connectionName,
         __postProcessingViaDiameter: hdRoute.viaDiameter,
-        __postProcessingRootConnectionName: hdRoute.rootConnectionName,
+        rootConnectionName: hdRoute.rootConnectionName,
         route,
       }
     },
@@ -183,6 +180,7 @@ export const createPostProcessingModel = (
     traces.push({
       ...structuredClone(trace),
       connection_name,
+      rootConnectionName: undefined,
     })
   }
   const obstacles = structuredClone(params.obstacles)

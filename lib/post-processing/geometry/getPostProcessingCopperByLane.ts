@@ -1,5 +1,8 @@
-import type { SimplifiedPcbTrace } from "../../types"
-import type { CopperSegment, CopperVia } from "../model/internal-types"
+import type {
+  CopperSegment,
+  CopperVia,
+  PostProcessingTrace,
+} from "../model/internal-types"
 import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
 import { getLayerIndex } from "./getLayerIndex"
 
@@ -10,13 +13,13 @@ export type PostProcessingCopper = {
 }
 
 export function getPostProcessingCopperByLane(
-  traces: SimplifiedPcbTrace[],
+  traces: PostProcessingTrace[],
   layerCount: number,
   firstRoot: string | undefined,
   secondRoot: string | undefined,
 ): { first: PostProcessingCopper; second: PostProcessingCopper } {
   const copper = traces.map((trace) => ({
-    root: trace.__postProcessingRootConnectionName,
+    root: trace.rootConnectionName,
     ...getTraceCopperGeometry(trace, layerCount),
   }))
   const groupCopper = (rootToExclude?: string): PostProcessingCopper => {

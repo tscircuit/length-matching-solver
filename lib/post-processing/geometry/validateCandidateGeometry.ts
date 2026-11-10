@@ -1,11 +1,12 @@
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
-import type { Obstacle, SimplifiedPcbTrace } from "../../types"
+import type { Obstacle } from "../../types"
 import type {
   CopperSegment,
   CopperVia,
   ParsedTrace,
   Point,
+  PostProcessingTrace,
 } from "../model/internal-types"
 import { getLayerIndex } from "./getLayerIndex"
 import {
@@ -15,7 +16,7 @@ import {
 import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle"
 
 export type CandidateGeometryContext = {
-  immutableTraces: SimplifiedPcbTrace[]
+  immutableTraces: PostProcessingTrace[]
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -321,8 +322,8 @@ export const validateCandidateGeometry = (
   const copperByLane = getPostProcessingCopperByLane(
     context.immutableTraces,
     context.layerCount,
-    first.source.__postProcessingRootConnectionName,
-    second.source.__postProcessingRootConnectionName,
+    first.source.rootConnectionName,
+    second.source.rootConnectionName,
   )
   if (
     !membersRemainSeparate(first, second) ||

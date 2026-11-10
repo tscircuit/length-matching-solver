@@ -1,7 +1,12 @@
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
-import type { Obstacle, SimplifiedPcbTrace } from "../../types"
-import type { CopperSegment, CopperVia, Point } from "../model/internal-types"
+import type { Obstacle } from "../../types"
+import type {
+  CopperSegment,
+  CopperVia,
+  Point,
+  PostProcessingTrace,
+} from "../model/internal-types"
 import type { CoupledPathPoint } from "../routing/types"
 import { getLayerIndex } from "./getLayerIndex"
 import {
@@ -27,17 +32,21 @@ export type SearchGeometryValidator = {
 
 /** Build a conservative, reusable collision checker for coupled spine search. */
 export const createSearchGeometryValidator = (input: {
-  immutableTraces: SimplifiedPcbTrace[]
+  immutableTraces: PostProcessingTrace[]
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
   minTraceToPadEdgeClearance?: number
   start: CoupledPathPoint
   end: CoupledPathPoint
-  firstConnectionName: string
-  secondConnectionName: string
-  firstRootConnectionName?: string
-  secondRootConnectionName?: string
+  firstTrace: Pick<
+    PostProcessingTrace,
+    "connection_name" | "rootConnectionName"
+  >
+  secondTrace: Pick<
+    PostProcessingTrace,
+    "connection_name" | "rootConnectionName"
+  >
   firstStartTerminal: Point
   firstEndTerminal: Point
   secondStartTerminal: Point
@@ -51,11 +60,13 @@ export const createSearchGeometryValidator = (input: {
   terminalFanout?: boolean
   terminalMiterMargin?: number
 }): SearchGeometryValidator => {
+  const firstConnectionName = input.firstTrace.connection_name
+  const secondConnectionName = input.secondTrace.connection_name
   const copperByLane = getPostProcessingCopperByLane(
     input.immutableTraces,
     input.layerCount,
-    input.firstRootConnectionName,
-    input.secondRootConnectionName,
+    input.firstTrace.rootConnectionName,
+    input.secondTrace.rootConnectionName,
   )
   const samePoint = (left: Point, right: Point): boolean =>
     Math.hypot(left.x - right.x, left.y - right.y) <= 1e-8
@@ -145,7 +156,7 @@ export const createSearchGeometryValidator = (input: {
         end: firstEnd,
         layer: start.layer,
         width: input.firstWidth,
-        connectionName: input.firstConnectionName,
+        connectionName: firstConnectionName,
         terminal,
       },
       {
@@ -153,7 +164,7 @@ export const createSearchGeometryValidator = (input: {
         end: secondEnd,
         layer: start.layer,
         width: input.secondWidth,
-        connectionName: input.secondConnectionName,
+        connectionName: secondConnectionName,
         terminal,
       },
     ]
@@ -186,8 +197,8 @@ export const createSearchGeometryValidator = (input: {
         : [input.firstEndTerminal, input.secondEndTerminal]
     const widths = [input.firstWidth, input.secondWidth]
     const connectionNames = [
-      input.firstConnectionName,
-      input.secondConnectionName,
+      firstConnectionName,
+      secondConnectionName,
     ]
     return terminals.map((terminalPoint, lane) => {
       const polarity = lane === 0 ? 1 : -1
@@ -274,7 +285,7 @@ export const createSearchGeometryValidator = (input: {
         )
           continue
         const [startTerminal, endTerminal] =
-          segment.connectionName === input.firstConnectionName
+          segment.connectionName === firstConnectionName
             ? [input.firstStartTerminal, input.firstEndTerminal]
             : [input.secondStartTerminal, input.secondEndTerminal]
         const progressesOutOfStart =
@@ -346,12 +357,12 @@ export const createSearchGeometryValidator = (input: {
     copperByLane.first === copperByLane.second
       ? firstSegmentIsClear
       : (segment: CopperSegment): boolean =>
-          segment.connectionName === input.firstConnectionName
+          segment.connectionName === firstConnectionName
             ? firstSegmentIsClear(segment)
             : secondSegmentIsClear(segment)
   const viaIsClear = (via: CopperVia): boolean => {
     const { segments: immutableSegments, vias: immutableVias } =
-      via.connectionName === input.firstConnectionName
+      via.connectionName === firstConnectionName
         ? copperByLane.first
         : copperByLane.second
     const radius = via.diameter / 2
@@ -444,7 +455,7 @@ export const createSearchGeometryValidator = (input: {
           y: point.y + normal.y,
           layers,
           diameter: input.firstViaDiameter,
-          connectionName: input.firstConnectionName,
+          connectionName: firstConnectionName,
           terminal,
         },
         {
@@ -452,7 +463,7 @@ export const createSearchGeometryValidator = (input: {
           y: point.y - normal.y,
           layers,
           diameter: input.secondViaDiameter,
-          connectionName: input.secondConnectionName,
+          connectionName: secondConnectionName,
           terminal,
         },
       ]

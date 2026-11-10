@@ -1,9 +1,13 @@
 import type {
+  HighDensityRoute,
   SimplifiedPcbTrace,
   SimplifiedPcbTraceViaRoutePoint,
 } from "../../types"
 
 export type Point = { x: number; y: number }
+
+export type PostProcessingTrace = SimplifiedPcbTrace &
+  Pick<HighDensityRoute, "rootConnectionName">
 
 export type PathPoint = Point & {
   layer: string
@@ -27,7 +31,7 @@ export type CopperVia = Point & {
 }
 
 export type ParsedTrace = {
-  source: SimplifiedPcbTrace
+  source: PostProcessingTrace
   points: PathPoint[]
   segments: CopperSegment[]
   vias: CopperVia[]
