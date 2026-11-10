@@ -196,10 +196,7 @@ export const createSearchGeometryValidator = (input: {
         ? [input.firstStartTerminal, input.secondStartTerminal]
         : [input.firstEndTerminal, input.secondEndTerminal]
     const widths = [input.firstWidth, input.secondWidth]
-    const connectionNames = [
-      firstConnectionName,
-      secondConnectionName,
-    ]
+    const connectionNames = [firstConnectionName, secondConnectionName]
     return terminals.map((terminalPoint, lane) => {
       const polarity = lane === 0 ? 1 : -1
       const lanePoint = {
