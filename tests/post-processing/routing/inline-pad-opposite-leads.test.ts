@@ -3,18 +3,20 @@ import { PostProcessingSolver, type HighDensityRoute } from "../../../lib"
 
 test("brings adjoining pair sections into a wide middle station from opposite sides", () => {
   const hdRoutes = ["P", "N"].flatMap((rootConnectionName, polarity) =>
-    [0, 1].map((section): HighDensityRoute => ({
-      connectionName: `${rootConnectionName}${section}`,
-      rootConnectionName,
-      traceThickness: 0.15,
-      viaDiameter: 0.3,
-      vias: [],
-      route: [-6 + section * 6, section * 6].map((x) => ({
-        x,
-        y: polarity * 2.54,
-        z: 0,
-      })),
-    })),
+    [0, 1].map(
+      (section): HighDensityRoute => ({
+        connectionName: `${rootConnectionName}${section}`,
+        rootConnectionName,
+        traceThickness: 0.15,
+        viaDiameter: 0.3,
+        vias: [],
+        route: [-6 + section * 6, section * 6].map((x) => ({
+          x,
+          y: polarity * 2.54,
+          z: 0,
+        })),
+      }),
+    ),
   )
   const solver = new PostProcessingSolver({
     hdRoutes,

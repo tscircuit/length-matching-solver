@@ -4,7 +4,10 @@ import type { Obstacle, SimplifiedPcbTrace } from "../../types"
 import type { CopperSegment, CopperVia, Point } from "../model/internal-types"
 import type { CoupledPathPoint } from "../routing/types"
 import { getLayerIndex } from "./getLayerIndex"
-import { getPostProcessingCopperByLane, type PostProcessingCopper } from "./getPostProcessingCopperByLane"
+import {
+  getPostProcessingCopperByLane,
+  type PostProcessingCopper,
+} from "./getPostProcessingCopperByLane"
 import { getTransitionLayers } from "./getTransitionLayers"
 import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle"
 
@@ -233,10 +236,11 @@ export const createSearchGeometryValidator = (input: {
         segments[0].width / 2 + segments[1].width / 2 - 1e-7
     )
   }
-  const createSegmentValidator = ({
-    segmentsByLayer: immutableSegmentsByLayer,
-    vias: immutableVias,
-  }: PostProcessingCopper): ((segment: CopperSegment) => boolean) =>
+  const createSegmentValidator =
+    ({
+      segmentsByLayer: immutableSegmentsByLayer,
+      vias: immutableVias,
+    }: PostProcessingCopper): ((segment: CopperSegment) => boolean) =>
     (segment) => {
       const radius = segment.width / 2
       const inflation =

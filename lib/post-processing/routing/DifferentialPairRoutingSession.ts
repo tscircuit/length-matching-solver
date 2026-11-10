@@ -15,7 +15,7 @@ import type {
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
-import { hasSharedPairedTerminal } from "./hasSharedPairedTerminal"
+import { getTerminalFanoutLengthLimit } from "./getTerminalFanoutLengthLimit"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
 import { resolveTerminalFanoutStation } from "./resolveTerminalFanoutStation"
@@ -312,13 +312,13 @@ export class DifferentialPairRoutingSession {
       layerCount: this.input.layerCount,
       minTraceToPadEdgeClearance: this.input.minTraceToPadEdgeClearance,
     }
-    // Leave a shared pad toward this section's span. The adjacent section can
-    // then approach from its own side without sharing an off-pad escape.
-    const hasInlineJoint =
-      !terminalFanout &&
-      hasSharedPairedTerminal([first, second], stations, context.immutableTraces)
-    const fanoutLengthLimit =
-      this.input.pair.maxUncoupledLength ?? (hasInlineJoint ? spineLength : undefined)
+    const fanoutLengthLimit = getTerminalFanoutLengthLimit({
+      lanes: [first, second],
+      stations,
+      immutableTraces: context.immutableTraces,
+      inlineSpan: terminalFanout ? undefined : spineLength,
+      requestedLimit: this.input.pair.maxUncoupledLength,
+    })
     const centerlineDistanceSamples = getCenterlineDistanceSamples({
       minimumCenterlineDistance: this.input.pair.minimumCenterlineDistance,
       maximumCenterlineDistance: this.input.pair.maximumCenterlineDistance,
@@ -349,8 +349,10 @@ export class DifferentialPairRoutingSession {
               end: searchEnd,
               firstConnectionName: first.source.connection_name,
               secondConnectionName: second.source.connection_name,
-              firstRootConnectionName: first.source.__postProcessingRootConnectionName,
-              secondRootConnectionName: second.source.__postProcessingRootConnectionName,
+              firstRootConnectionName:
+                first.source.__postProcessingRootConnectionName,
+              secondRootConnectionName:
+                second.source.__postProcessingRootConnectionName,
               firstStartTerminal: firstStart,
               firstEndTerminal: firstEnd,
               secondStartTerminal: secondStart,
