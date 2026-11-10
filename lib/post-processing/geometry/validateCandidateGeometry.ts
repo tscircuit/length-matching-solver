@@ -7,8 +7,11 @@ import type {
   ParsedTrace,
   Point,
 } from "../model/internal-types"
-import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
 import { getLayerIndex } from "./getLayerIndex"
+import {
+  getPostProcessingCopperByLane,
+  type PostProcessingCopper,
+} from "./getPostProcessingCopperByLane"
 import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle"
 
 export type CandidateGeometryContext = {
@@ -71,24 +74,10 @@ export const validateCandidateGeometry = (
     return getObstacleLayerIndexes(obstacle, layerCount).includes(layerIndex)
   }
 
-  const getImmutableCopper = (
-    traces: SimplifiedPcbTrace[],
-    layerCount: number,
-  ): { segments: CopperSegment[]; vias: CopperVia[] } => {
-    const segments: CopperSegment[] = []
-    const vias: CopperVia[] = []
-    for (const trace of traces) {
-      const copper = getTraceCopperGeometry(trace, layerCount)
-      segments.push(...copper.segments)
-      vias.push(...copper.vias)
-    }
-    return { segments, vias }
-  }
-
   const isSegmentValid = (
     segment: CopperSegment,
     context: CandidateGeometryContext,
-    immutableCopper: ReturnType<typeof getImmutableCopper>,
+    immutableCopper: PostProcessingCopper,
   ): boolean => {
     const radius = segment.width / 2
     if (
@@ -165,7 +154,7 @@ export const validateCandidateGeometry = (
   const isViaValid = (
     via: CopperVia,
     context: CandidateGeometryContext,
-    immutableCopper: ReturnType<typeof getImmutableCopper>,
+    immutableCopper: PostProcessingCopper,
   ): boolean => {
     const radius = via.diameter / 2
     if (
@@ -329,9 +318,11 @@ export const validateCandidateGeometry = (
     return false
   }
 
-  const immutableCopper = getImmutableCopper(
+  const copperByLane = getPostProcessingCopperByLane(
     context.immutableTraces,
     context.layerCount,
+    first.source.__postProcessingRootConnectionName,
+    second.source.__postProcessingRootConnectionName,
   )
   if (
     !membersRemainSeparate(first, second) ||
@@ -339,7 +330,10 @@ export const validateCandidateGeometry = (
     hasSelfCollision(second)
   )
     return false
-  for (const parsed of [first, second]) {
+  for (const [parsed, immutableCopper] of [
+    [first, copperByLane.first],
+    [second, copperByLane.second],
+  ] as const) {
     if (
       parsed.segments.some(
         (segment) => !isSegmentValid(segment, context, immutableCopper),

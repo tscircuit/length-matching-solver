@@ -116,6 +116,8 @@ export type SimplifiedPcbTrace = {
   connectsTo?: string[]
   /** Internal HD-route via diameter retained while post-processing. */
   __postProcessingViaDiameter?: number
+  /** Internal electrical identity shared by independently routed HD sections. */
+  __postProcessingRootConnectionName?: string
   route: SimplifiedPcbTraceRoutePoint[]
 }
 

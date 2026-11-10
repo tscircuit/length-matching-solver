@@ -166,6 +166,7 @@ export const createPostProcessingModel = (
         pcb_trace_id: `post_processing_hd_route_${hdRouteIndex}`,
         connection_name: hdRoute.connectionName,
         __postProcessingViaDiameter: hdRoute.viaDiameter,
+        __postProcessingRootConnectionName: hdRoute.rootConnectionName,
         route,
       }
     },

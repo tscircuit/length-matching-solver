@@ -343,6 +343,8 @@ export class DifferentialPairRoutingSession {
               end: searchEnd,
               firstConnectionName: first.source.connection_name,
               secondConnectionName: second.source.connection_name,
+              firstRootConnectionName: first.source.__postProcessingRootConnectionName,
+              secondRootConnectionName: second.source.__postProcessingRootConnectionName,
               firstStartTerminal: firstStart,
               firstEndTerminal: firstEnd,
               secondStartTerminal: secondStart,
