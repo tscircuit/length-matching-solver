@@ -32,12 +32,12 @@ test("brings adjoining pair sections into a wide middle station from opposite si
         {
           x: (pad - 1) * 6,
           y: 0,
-          connectedTo: pad === 1 ? [`P${1 - section}`] : [],
+          connectedTo: pad === 1 ? [{ connectionName: `P${1 - section}` }] : [],
         },
         {
           x: (pad - 1) * 6,
           y: 2.54,
-          connectedTo: pad === 1 ? [`N${1 - section}`] : [],
+          connectedTo: pad === 1 ? [{ connectionName: `N${1 - section}` }] : [],
         },
       ]
       return {

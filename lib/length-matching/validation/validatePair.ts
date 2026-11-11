@@ -1,12 +1,8 @@
-import type {
-  DifferentialPair,
-  DifferentialPairPath,
-  SimpleRouteConnection,
-} from "../../types"
+import type { DifferentialPair, SimpleRouteConnection } from "../../types"
 
 /** Fail early when a pair cannot refer to two routable source connections. */
 export const validatePair = (
-  pair: DifferentialPair | DifferentialPairPath,
+  pair: DifferentialPair,
   originalConnections: SimpleRouteConnection[],
 ): void => {
   if (pair.connectionNames[0] === pair.connectionNames[1]) {

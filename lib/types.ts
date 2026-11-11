@@ -54,10 +54,14 @@ export type SimpleRouteConnection = {
   pointsToConnect: ConnectionPoint[]
 }
 
+export type DifferentialPairPathSection =
+  | { connectionName: string }
+  | { pcbTraceId: string }
+
 type DifferentialPairTerminal = {
   x: number
   y: number
-  connectedTo: string[]
+  connectedTo: DifferentialPairPathSection[]
 }
 
 export type DifferentialPair = {
@@ -76,12 +80,11 @@ export type DifferentialPair = {
   maximumCenterlineDistance?: number
 }
 
-type DifferentialPairPathSection =
-  | { connectionName: string }
-  | { pcbTraceId: string }
-
 /** One skew constraint over all declared sections of the two signals. */
-export type DifferentialPairPath = DifferentialPair & {
+export type DifferentialPairPath = Pick<
+  DifferentialPair,
+  "connectionNames" | "lengthTolerance"
+> & {
   sections: [DifferentialPairPathSection, DifferentialPairPathSection][]
 }
 

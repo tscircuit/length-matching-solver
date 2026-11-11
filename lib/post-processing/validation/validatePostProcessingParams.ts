@@ -1,5 +1,5 @@
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
-import { getFixedDifferentialPairPathTraceIds } from "../model/getFixedDifferentialPairPathTraceIds"
+import type { Point } from "../model/internal-types"
 import { resolvePostProcessingGridConfig } from "../routing/resolvePostProcessingGridConfig"
 import type { PostProcessingSolverParams } from "../types"
 
@@ -68,7 +68,7 @@ export function validatePostProcessingParams(
   const routeTerminalsByName = params.differentialPairs.some(
     (pair) => pair.terminalPairs !== undefined,
   )
-    ? new Map<string, { x: number; y: number }[]>()
+    ? new Map<string, Point[]>()
     : undefined
   for (const route of params.hdRoutes) {
     if (
@@ -163,16 +163,17 @@ export function validatePostProcessingParams(
     }
   }
 
-  if (routeTerminalsByName && params.differentialPairPaths?.length) {
-    const fixedPathTraceIds = getFixedDifferentialPairPathTraceIds(
-      params.differentialPairPaths,
-    )
+  const fixedTraceTerminalsById = new Map<string, Point[] | null>()
+  if (routeTerminalsByName) {
     for (const trace of params.traces ?? []) {
-      if (!fixedPathTraceIds.has(trace.pcb_trace_id)) continue
       const first = trace.route.find((entry) => entry.route_type === "wire")
       const last = trace.route.findLast((entry) => entry.route_type === "wire")
-      if (first && last)
-        routeTerminalsByName.set(trace.pcb_trace_id, [first, last])
+      fixedTraceTerminalsById.set(
+        trace.pcb_trace_id,
+        first && last && !fixedTraceTerminalsById.has(trace.pcb_trace_id)
+          ? [first, last]
+          : null,
+      )
     }
   }
 
@@ -206,13 +207,7 @@ export function validatePostProcessingParams(
                 !terminal ||
                 !Number.isFinite(terminal.x) ||
                 !Number.isFinite(terminal.y) ||
-                !Array.isArray(terminal.connectedTo) ||
-                terminal.connectedTo.some(
-                  (name) =>
-                    typeof name !== "string" ||
-                    name.length === 0 ||
-                    pair.connectionNames.includes(name),
-                ),
+                !Array.isArray(terminal.connectedTo),
             ),
         )
       )
@@ -220,15 +215,30 @@ export function validatePostProcessingParams(
           `PostProcessingSolver: pair ${pair.connectionNames.join("/")} has invalid terminal pairs`,
         )
       for (const { x, y, connectedTo } of pair.terminalPairs.flat()) {
-        for (const name of connectedTo) {
-          const endpoints = routeTerminalsByName?.get(name)
+        for (const attachment of connectedTo) {
+          if (!attachment || typeof attachment !== "object")
+            throw new Error("PostProcessingSolver: invalid terminal attachment")
+          const isRouted = "connectionName" in attachment
+          const id = isRouted
+            ? attachment.connectionName
+            : attachment.pcbTraceId
+          if (
+            typeof id !== "string" ||
+            id.length === 0 ||
+            (isRouted &&
+              ("pcbTraceId" in attachment || pair.connectionNames.includes(id)))
+          )
+            throw new Error("PostProcessingSolver: invalid terminal attachment")
+          const endpoints = isRouted
+            ? routeTerminalsByName?.get(id)
+            : fixedTraceTerminalsById.get(id)
           if (
             !endpoints?.some(
               (point) => Math.hypot(point.x - x, point.y - y) <= 1e-8,
             )
           )
             throw new Error(
-              `PostProcessingSolver: route "${name}" must end at its declared attachment (${x}, ${y})`,
+              `PostProcessingSolver: ${isRouted ? "route" : "preloaded trace"} "${id}" must end at its declared attachment (${x}, ${y})`,
             )
         }
       }

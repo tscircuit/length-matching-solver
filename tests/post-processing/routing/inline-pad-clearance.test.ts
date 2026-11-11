@@ -6,7 +6,11 @@ import type { DifferentialPairPathJoin } from "../../../lib/post-processing/rout
 test("allows a declared terminal join while rejecting overlap along the same lane", () => {
   const terminal = { x: 4, y: 0 }
   const pathJoins: DifferentialPairPathJoin[] = [
-    { connectionNames: ["P0", "P1"], point: terminal },
+    {
+      connectionName: "P0",
+      connectedTo: { connectionName: "P1" },
+      point: terminal,
+    },
   ]
   const first: CopperSegment = {
     start: { x: 0, y: 0 },

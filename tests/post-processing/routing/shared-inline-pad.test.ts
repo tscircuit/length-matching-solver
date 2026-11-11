@@ -32,11 +32,15 @@ test("couples both sections where they meet copper of the same net", () => {
       const terminals = (
         pad: number,
       ): NonNullable<DifferentialPair["terminalPairs"]>[number] => [
-        { x: pad * 4, y: 0, connectedTo: pad === 1 ? [`P${1 - section}`] : [] },
+        {
+          x: pad * 4,
+          y: 0,
+          connectedTo: pad === 1 ? [{ connectionName: `P${1 - section}` }] : [],
+        },
         {
           x: pad * 4,
           y: 0.4,
-          connectedTo: pad === 1 ? [`N${1 - section}`] : [],
+          connectedTo: pad === 1 ? [{ connectionName: `N${1 - section}` }] : [],
         },
       ]
       return {

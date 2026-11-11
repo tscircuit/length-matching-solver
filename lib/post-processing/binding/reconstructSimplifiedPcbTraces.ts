@@ -1,6 +1,7 @@
 import type { LengthMatchingSolverOutput } from "../../length-matching/types"
 import { resolveDifferentialPairPath } from "../../length-matching/connection/resolveDifferentialPairPath"
 import type {
+  DifferentialPair,
   SimplifiedPcbTraceRoutePoint,
   SimplifiedPcbTraceWireRoutePoint,
   SimplifiedPcbTraces,
@@ -130,7 +131,9 @@ export const reconstructSimplifiedPcbTraces = (input: {
 
   const { pathSectionNames, solverParams } = input.binding
   const pairsToValidate = [
-    ...solverParams.differentialPairs.filter((pair) => !("sections" in pair)),
+    ...solverParams.differentialPairs.filter(
+      (pair): pair is DifferentialPair => !("sections" in pair),
+    ),
     ...simpleRouteJson.differentialPairs.filter((pair) =>
       pair.connectionNames.every((name) => pathSectionNames.has(name)),
     ),

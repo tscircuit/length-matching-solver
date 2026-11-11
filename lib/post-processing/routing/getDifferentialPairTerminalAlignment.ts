@@ -1,8 +1,9 @@
-import type { DifferentialPair } from "../../types"
+import type { DifferentialPair, DifferentialPairPathSection } from "../../types"
 import type { ParsedTrace, Point } from "../model/internal-types"
 
 export type DifferentialPairPathJoin = {
-  connectionNames: [string, string]
+  connectionName: string
+  connectedTo: DifferentialPairPathSection
   point: Point
 }
 
@@ -42,8 +43,9 @@ export function getDifferentialPairTerminalAlignment(
   const pathJoins = terminalPairs.flatMap((terminals) =>
     terminals.flatMap(({ x, y, connectedTo }, lane) =>
       connectedTo.map(
-        (name): DifferentialPairPathJoin => ({
-          connectionNames: [laneNames[lane]!, name],
+        (attachment): DifferentialPairPathJoin => ({
+          connectionName: laneNames[lane]!,
+          connectedTo: attachment,
           point: { x, y },
         }),
       ),

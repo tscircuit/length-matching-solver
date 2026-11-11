@@ -11,9 +11,11 @@ export function isPathJoinClear(
   clearance: number,
 ): boolean {
   const join = pathJoins.find(
-    ({ connectionNames }) =>
-      connectionNames[0] === candidate.connectionName &&
-      connectionNames[1] === other.connectionName,
+    ({ connectionName, connectedTo }) =>
+      connectionName === candidate.connectionName &&
+      ("connectionName" in connectedTo
+        ? connectedTo.connectionName === other.connectionName
+        : connectedTo.pcbTraceId === other.pcbTraceId),
   )
   if (!join) return false
   if ("layers" in candidate || "layers" in other) {

@@ -16,6 +16,7 @@ export type CopperSegment = {
   layer: string
   width: number
   connectionName: string
+  pcbTraceId?: string
   terminal: "start" | "end" | "both" | null
 }
 
@@ -23,6 +24,7 @@ export type CopperVia = Point & {
   layers: string[]
   diameter: number
   connectionName: string
+  pcbTraceId?: string
   terminal: "start" | "end" | "both" | null
 }
 

@@ -4,7 +4,6 @@ import type {
   SimplifiedPcbTraceRoutePoint,
 } from "../../types"
 import { getLayerName } from "../geometry/getLayerName"
-import { getFixedDifferentialPairPathTraceIds } from "../model/getFixedDifferentialPairPathTraceIds"
 import type { PostProcessingModel, PostProcessingSolverParams } from "../types"
 
 /** Adapt native HD routes to the private simplified-copper routing model. */
@@ -29,6 +28,10 @@ export const createPostProcessingModel = (
     internalNamesByRouteIndex.set(matches[0]!.hdRouteIndex, connectionName)
   }
 
+  const preloadedTraceIds = new Set(
+    params.traces?.map((trace) => trace.pcb_trace_id),
+  )
+  let nextTraceIndex = params.hdRoutes.length
   const traces: SimplifiedPcbTrace[] = params.hdRoutes.map(
     (hdRoute, hdRouteIndex) => {
       const route: SimplifiedPcbTraceRoutePoint[] = []
@@ -169,9 +172,12 @@ export const createPostProcessingModel = (
         if (startPortId && wires[0]) wires[0].start_pcb_port_id = startPortId
         if (endPortId && wires.at(-1)) wires.at(-1)!.end_pcb_port_id = endPortId
       }
+      let pcb_trace_id = `post_processing_hd_route_${hdRouteIndex}`
+      while (preloadedTraceIds.has(pcb_trace_id))
+        pcb_trace_id = `post_processing_hd_route_${nextTraceIndex++}`
       return {
         type: "pcb_trace",
-        pcb_trace_id: `post_processing_hd_route_${hdRouteIndex}`,
+        pcb_trace_id,
         connection_name: hdRoute.connectionName,
         __postProcessingViaDiameter: hdRoute.viaDiameter,
         route,
@@ -180,31 +186,13 @@ export const createPostProcessingModel = (
   )
   // Fixed copper must never be selected as a pair member, even when its
   // public connection name matches a route that is being tuned.
-  const connectionNames = new Set(
-    traces.map((trace): string => trace.connection_name),
-  )
-  const fixedPathTraceIds = getFixedDifferentialPairPathTraceIds(
-    params.differentialPairPaths ?? [],
-  )
+  const connectionNames = new Set([
+    ...targetConnectionNames,
+    ...traces.map((trace) => trace.connection_name),
+  ])
   for (const [index, trace] of (params.traces ?? []).entries()) {
-    const isPathSection = fixedPathTraceIds.has(trace.pcb_trace_id)
-    let connection_name = isPathSection
-      ? trace.pcb_trace_id
-      : `post_processing_fixed_trace_${index}`
-    if (
-      isPathSection &&
-      (connectionNames.has(connection_name) ||
-        targetConnectionNames.has(connection_name))
-    )
-      throw new Error(
-        `PostProcessingSolver: preloaded path trace "${connection_name}" conflicts with a mutable connection name`,
-      )
-    while (
-      !isPathSection &&
-      (connectionNames.has(connection_name) ||
-        fixedPathTraceIds.has(connection_name))
-    )
-      connection_name += "_"
+    let connection_name = `post_processing_fixed_trace_${index}`
+    while (connectionNames.has(connection_name)) connection_name += "_"
     connectionNames.add(connection_name)
     traces.push({
       ...structuredClone(trace),

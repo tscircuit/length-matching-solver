@@ -44,6 +44,7 @@ export const getTraceCopperGeometry = (
           layer: entry.layer,
           width: Math.max(current.width, entry.width),
           connectionName: trace.connection_name,
+          pcbTraceId: trace.pcb_trace_id,
           terminal: null,
         })
       current = entry
@@ -86,6 +87,7 @@ export const getTraceCopperGeometry = (
           layer: currentAtVia.layer,
           width: currentAtVia.width,
           connectionName: trace.connection_name,
+          pcbTraceId: trace.pcb_trace_id,
           terminal: null,
         })
       vias.push({
@@ -94,6 +96,7 @@ export const getTraceCopperGeometry = (
         layers,
         diameter,
         connectionName: trace.connection_name,
+        pcbTraceId: trace.pcb_trace_id,
         terminal:
           index === 0
             ? "start"
@@ -154,6 +157,7 @@ export const getTraceCopperGeometry = (
         layer: entry.layer,
         width,
         connectionName: trace.connection_name,
+        pcbTraceId: trace.pcb_trace_id,
         terminal: null,
       })
       current = { ...entry.end, layer: entry.layer, width }
@@ -193,6 +197,7 @@ export const getTraceCopperGeometry = (
         layer,
         width: entry.width,
         connectionName: trace.connection_name,
+        pcbTraceId: trace.pcb_trace_id,
         terminal: null,
       })
     const currentAtTransition = current as
