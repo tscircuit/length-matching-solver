@@ -191,9 +191,13 @@ export const createPostProcessingModel = (
     let connection_name = isPathSection
       ? trace.pcb_trace_id
       : `post_processing_fixed_trace_${index}`
-    if (isPathSection && connectionNames.has(connection_name))
+    if (
+      isPathSection &&
+      (connectionNames.has(connection_name) ||
+        targetConnectionNames.has(connection_name))
+    )
       throw new Error(
-        `PostProcessingSolver: preloaded path trace "${connection_name}" conflicts with a routed connection`,
+        `PostProcessingSolver: preloaded path trace "${connection_name}" conflicts with a mutable connection name`,
       )
     while (
       !isPathSection &&
