@@ -1,7 +1,7 @@
 import type { DifferentialPair, SimplifiedPcbTrace } from "../../types"
 import { DifferentialPairRoutingError } from "../errors/DifferentialPairRoutingError"
 import type { PostProcessingGridConfig } from "../types"
-import { classifyTerminalPair } from "../geometry/classifyTerminalPair"
+import { classifyTerminalRows } from "../geometry/classifyTerminalRows"
 import { createSearchGeometryValidator } from "../geometry/createSearchGeometryValidator"
 import {
   validateCandidateGeometry,
@@ -253,10 +253,12 @@ export class DifferentialPairRoutingSession {
     }
     const preferredSide: 1 | -1 =
       terminalDelta.x * normal.x + terminalDelta.y * normal.y >= 0 ? 1 : -1
-    const combinedRadii = (first.width + second.width) / 2
-    const startPair = classifyTerminalPair(firstStart, secondStart, normal, combinedRadii)
-    const endPair = classifyTerminalPair(firstEnd, secondEnd, normal, combinedRadii)
-    const terminalFanout = startPair === "inline" && endPair === "inline"
+    const { inline: terminalFanout, facing: facingPadRows } = classifyTerminalRows(
+      { first: firstStart, second: secondStart },
+      { first: firstEnd, second: secondEnd },
+      normal,
+      (first.width + second.width) / 2,
+    )
     const spineDirection = { x: normal.y, y: -normal.x }
     const terminalStartRequiresForwardEgress = [firstStart, secondStart].some(
       (terminal) =>
@@ -316,7 +318,6 @@ export class DifferentialPairRoutingSession {
       maximumCenterlineDistance,
       maxUncoupledLength,
     } = this.input.pair
-    const facingPadRows = startPair === "facing" && endPair === "facing"
     const useFanoutStations =
       maxUncoupledLength !== undefined ||
       (facingPadRows &&
