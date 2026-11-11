@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test"
-import { PostProcessingSolver, type HighDensityRoute } from "../../../lib"
+import {
+  type DifferentialPair,
+  type HighDensityRoute,
+  PostProcessingSolver,
+} from "../../../lib"
 
 test("couples both sections where they meet copper of the same net", () => {
   const hdRoutes = ["P", "N"].flatMap((rootConnectionName, polarity) =>
@@ -24,13 +28,25 @@ test("couples both sections where they meet copper of the same net", () => {
   )
   const solver = new PostProcessingSolver({
     hdRoutes,
-    differentialPairs: [0, 1].map((section) => ({
-      connectionNames: [`P${section}`, `N${section}`],
-      adjacentConnectionNames: [[`P${1 - section}`, `N${1 - section}`]],
-      lengthTolerance: 0.025,
-      minimumCenterlineDistance: 0.4,
-      maximumCenterlineDistance: 0.4,
-    })),
+    differentialPairs: [0, 1].map((section): DifferentialPair => {
+      const terminals = (
+        pad: number,
+      ): NonNullable<DifferentialPair["terminalPairs"]>[number] => [
+        { x: pad * 4, y: 0, connectedTo: pad === 1 ? [`P${1 - section}`] : [] },
+        {
+          x: pad * 4,
+          y: 0.4,
+          connectedTo: pad === 1 ? [`N${1 - section}`] : [],
+        },
+      ]
+      return {
+        connectionNames: [`P${section}`, `N${section}`],
+        terminalPairs: [terminals(section), terminals(section + 1)],
+        lengthTolerance: 0.025,
+        minimumCenterlineDistance: 0.4,
+        maximumCenterlineDistance: 0.4,
+      }
+    }),
     obstacles: [],
     bounds: { minX: -1, maxX: 9, minY: -1, maxY: 2 },
     layerCount: 2,

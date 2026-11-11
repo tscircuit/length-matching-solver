@@ -23,7 +23,7 @@ export type CandidateGeometryContext = {
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
   minTraceToPadEdgeClearance?: number
-  adjacentConnectionNames?: DifferentialPair["adjacentConnectionNames"]
+  terminalPairs?: DifferentialPair["terminalPairs"]
 }
 
 /** Validate complete replacement copper against bounds, obstacles, and immutable copper. */
@@ -33,13 +33,9 @@ export const validateCandidateGeometry = (
   context: CandidateGeometryContext,
 ): boolean => {
   const EPSILON = 1e-7
-  const pathJoins = context.adjacentConnectionNames?.length
-    ? getDifferentialPairTerminalAlignment(
-        first,
-        second,
-        context.immutableTraces,
-        context.adjacentConnectionNames,
-      ).pathJoins
+  const pathJoins = context.terminalPairs
+    ? getDifferentialPairTerminalAlignment(first, second, context.terminalPairs)
+        .pathJoins
     : undefined
 
   const rotateIntoObstacle = (point: Point, obstacle: Obstacle): Point => {

@@ -64,6 +64,11 @@ export function validatePostProcessingParams(
   const activePairConnectionNames = new Set(
     params.differentialPairs.flatMap((pair) => pair.connectionNames),
   )
+  const routeTerminalsByName = params.differentialPairs.some(
+    (pair) => pair.terminalPairs !== undefined,
+  )
+    ? new Map<string, { x: number; y: number }[]>()
+    : undefined
   for (const route of params.hdRoutes) {
     if (
       !route ||
@@ -110,6 +115,15 @@ export function validatePostProcessingParams(
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" has an invalid route point`,
         )
+    }
+    if (routeTerminalsByName) {
+      const first = route.route[0]
+      const last = route.route.at(-1)
+      if (first && last) {
+        const endpoints = routeTerminalsByName.get(route.connectionName) ?? []
+        endpoints.push(first, last)
+        routeTerminalsByName.set(route.connectionName, endpoints)
+      }
     }
     for (const via of route.vias) {
       if (
@@ -165,26 +179,46 @@ export function validatePostProcessingParams(
       throw new Error(
         "PostProcessingSolver: differential pair declaration is invalid",
       )
-    if (
-      pair.adjacentConnectionNames !== undefined &&
-      (!Array.isArray(pair.adjacentConnectionNames) ||
-        pair.adjacentConnectionNames.length > 2 ||
-        pair.adjacentConnectionNames.some(
-          (names) =>
-            !Array.isArray(names) ||
-            names.length !== 2 ||
-            names[0] === names[1] ||
-            names.some(
-              (name) =>
-                typeof name !== "string" ||
-                name.length === 0 ||
-                pair.connectionNames.includes(name),
+    if (pair.terminalPairs !== undefined) {
+      if (
+        !Array.isArray(pair.terminalPairs) ||
+        pair.terminalPairs.length !== 2 ||
+        pair.terminalPairs.some(
+          (terminals) =>
+            !Array.isArray(terminals) ||
+            terminals.length !== 2 ||
+            terminals.some(
+              (terminal) =>
+                !terminal ||
+                !Number.isFinite(terminal.x) ||
+                !Number.isFinite(terminal.y) ||
+                !Array.isArray(terminal.connectedTo) ||
+                terminal.connectedTo.some(
+                  (name) =>
+                    typeof name !== "string" ||
+                    name.length === 0 ||
+                    pair.connectionNames.includes(name),
+                ),
             ),
-        ))
-    )
-      throw new Error(
-        `PostProcessingSolver: pair ${pair.connectionNames.join("/")} has invalid path neighbors`,
+        )
       )
+        throw new Error(
+          `PostProcessingSolver: pair ${pair.connectionNames.join("/")} has invalid terminal pairs`,
+        )
+      for (const { x, y, connectedTo } of pair.terminalPairs.flat()) {
+        for (const name of connectedTo) {
+          const endpoints = routeTerminalsByName?.get(name)
+          if (
+            !endpoints?.some(
+              (point) => Math.hypot(point.x - x, point.y - y) <= 1e-8,
+            )
+          )
+            throw new Error(
+              `PostProcessingSolver: route "${name}" must end at its declared attachment (${x}, ${y})`,
+            )
+        }
+      }
+    }
     for (const distance of [
       pair.minimumCenterlineDistance,
       pair.maximumCenterlineDistance,

@@ -196,8 +196,7 @@ export class DifferentialPairRoutingSession {
     const { reverseSecond, pathJoins } = getDifferentialPairTerminalAlignment(
       first,
       second,
-      this.input.traces,
-      this.input.pair.adjacentConnectionNames,
+      this.input.pair.terminalPairs,
     )
     const secondStart = reverseSecond
       ? second.points.at(-1)!
@@ -300,7 +299,7 @@ export class DifferentialPairRoutingSession {
       bounds: this.input.bounds,
       layerCount: this.input.layerCount,
       minTraceToPadEdgeClearance: this.input.minTraceToPadEdgeClearance,
-      adjacentConnectionNames: this.input.pair.adjacentConnectionNames,
+      terminalPairs: this.input.pair.terminalPairs,
     }
     const useDirectionalFanout =
       pathJoins.length > 0 || this.input.pair.maxUncoupledLength !== undefined

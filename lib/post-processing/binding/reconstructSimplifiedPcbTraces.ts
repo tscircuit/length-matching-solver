@@ -187,7 +187,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
     const completePairIsValid = validateCandidateGeometry(first, second, {
       ...validationContext,
       obstacles: [],
-      adjacentConnectionNames: pair.adjacentConnectionNames,
+      terminalPairs: pair.terminalPairs,
     })
     const addedPairCopper = getAddedPairCopper({
       candidatePair: [first, second],

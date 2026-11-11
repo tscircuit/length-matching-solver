@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test"
-import { PostProcessingSolver, type HighDensityRoute } from "../../../lib"
+import {
+  type DifferentialPair,
+  type HighDensityRoute,
+  PostProcessingSolver,
+} from "../../../lib"
 
 test("brings adjoining pair sections into a wide middle station from opposite sides", () => {
   const members = ["P", "N"]
@@ -21,11 +25,27 @@ test("brings adjoining pair sections into a wide middle station from opposite si
   )
   const solver = new PostProcessingSolver({
     hdRoutes,
-    differentialPairs: [0, 1].map((section) => ({
-      connectionNames: [`P${section}`, `N${section}`],
-      adjacentConnectionNames: [[`P${1 - section}`, `N${1 - section}`]],
-      lengthTolerance: 0.05,
-    })),
+    differentialPairs: [0, 1].map((section): DifferentialPair => {
+      const terminals = (
+        pad: number,
+      ): NonNullable<DifferentialPair["terminalPairs"]>[number] => [
+        {
+          x: (pad - 1) * 6,
+          y: 0,
+          connectedTo: pad === 1 ? [`P${1 - section}`] : [],
+        },
+        {
+          x: (pad - 1) * 6,
+          y: 2.54,
+          connectedTo: pad === 1 ? [`N${1 - section}`] : [],
+        },
+      ]
+      return {
+        connectionNames: [`P${section}`, `N${section}`],
+        terminalPairs: [terminals(section), terminals(section + 1)],
+        lengthTolerance: 0.05,
+      }
+    }),
     obstacles: members.flatMap((rootConnectionName, polarity) =>
       [-6, 0, 6].map((x) => ({
         type: "rect",
