@@ -25,7 +25,7 @@ export type LengthMatchingTraceBinding = {
 }
 
 export type LengthMatchingBinding = {
-  solverParams: LengthMatchingSolverParams & {
+  solverParams: Omit<LengthMatchingSolverParams, "differentialPairs"> & {
     differentialPairs: DifferentialPair[]
   }
   traceBindings: LengthMatchingTraceBinding[]

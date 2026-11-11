@@ -28,6 +28,7 @@ import {
   selectPartialMeanderPlan,
 } from "./length-matching/multi-segment-plan"
 import type {
+  LengthMatchingPair,
   LengthMatchingSolverOutput,
   LengthMatchingSolverParams,
 } from "./length-matching/types"
@@ -37,7 +38,7 @@ import type { DifferentialPair, HighDensityRoute } from "./types"
 /** Coordinates the length-matching state machine; algorithm details live in `length-matching/`. */
 export class LengthMatchingSolver extends BaseSolver {
   matchedHdRoutes: HighDensityRoute[]
-  private readonly pairs: DifferentialPair[]
+  private readonly pairs: LengthMatchingPair[]
   private nextPairIndex = 0
   private activePair: ActivePair | null = null
   private currentAttempt: RegressionAttempt | null = null
@@ -59,19 +60,25 @@ export class LengthMatchingSolver extends BaseSolver {
   }
 
   private startNextPair(): void {
-    const pair = this.pairs[this.nextPairIndex++]
-    if (!pair) {
+    const declaredPair = this.pairs[this.nextPairIndex++]
+    if (!declaredPair) {
       this.solved = true
       return
     }
-    validatePair(pair, this.params.originalConnections)
+    validatePair(declaredPair, this.params.originalConnections)
+    const pair: DifferentialPair = {
+      ...declaredPair,
+      connectionNames: declaredPair.connectionNames.map((lane) =>
+        typeof lane === "string" ? lane : lane.join(" -> "),
+      ) as [string, string],
+    }
     const firstIndexes = findConnectionRouteIndexes(
       this.matchedHdRoutes,
-      pair.connectionNames[0],
+      declaredPair.connectionNames[0],
     )
     const secondIndexes = findConnectionRouteIndexes(
       this.matchedHdRoutes,
-      pair.connectionNames[1],
+      declaredPair.connectionNames[1],
     )
     if (firstIndexes.length === 0 && secondIndexes.length === 0) return
     if (firstIndexes.length === 0 || secondIndexes.length === 0)
@@ -107,6 +114,7 @@ export class LengthMatchingSolver extends BaseSolver {
       pair,
       longerConnectionName,
       longerRouteIndexes: firstIsShorter ? secondIndexes : firstIndexes,
+      shorterRouteIndexes: firstIsShorter ? firstIndexes : secondIndexes,
       shorterConnectionName,
       targetAddedLength: difference,
       remainingAddedLength: difference,
@@ -310,6 +318,8 @@ export class LengthMatchingSolver extends BaseSolver {
       routes: this.matchedHdRoutes,
       longerConnectionName: activePair.longerConnectionName,
       shorterConnectionName: activePair.shorterConnectionName,
+      longerRouteIndexes: activePair.longerRouteIndexes,
+      shorterRouteIndexes: activePair.shorterRouteIndexes,
       originalLengthDifference: activePair.targetAddedLength,
       lengthTolerance: activePair.pair.lengthTolerance,
       longerCandidates,

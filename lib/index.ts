@@ -55,3 +55,8 @@ export type {
   SimplifiedPcbTraceViaRoutePoint,
   SimplifiedPcbTraceWireRoutePoint,
 } from "./types"
+
+export type {
+  LengthMatchingLane,
+  LengthMatchingPair,
+} from "./length-matching/types"

@@ -60,6 +60,7 @@ export type ActivePair = {
   pair: DifferentialPair
   longerConnectionName: string
   longerRouteIndexes: number[]
+  shorterRouteIndexes: number[]
   shorterConnectionName: string
   targetAddedLength: number
   remainingAddedLength: number
