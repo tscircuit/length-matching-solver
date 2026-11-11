@@ -124,14 +124,25 @@ export const isCandidateGeometryValid = (input: {
         )
       })
     if (hasNewGeometry && isRetainedSegment) continue
+    const minSegmentX = Math.min(start.x, end.x) - obstacleMargin
+    const maxSegmentX = Math.max(start.x, end.x) + obstacleMargin
+    const minSegmentY = Math.min(start.y, end.y) - obstacleMargin
+    const maxSegmentY = Math.max(start.y, end.y) + obstacleMargin
     for (const obstacle of input.obstacles) {
+      if (
+        obstacle.center.x + obstacle.width / 2 < minSegmentX ||
+        obstacle.center.x - obstacle.width / 2 > maxSegmentX ||
+        obstacle.center.y + obstacle.height / 2 < minSegmentY ||
+        obstacle.center.y - obstacle.height / 2 > maxSegmentY
+      )
+        continue
       if (
         !getObstacleLayerIndexes(obstacle, input.layerCount).includes(start.z)
       )
         continue
       const isTerminalLead =
         index === 0 || index === input.meanderPoints.length - 2
-      if (obstacle.connectedTo.includes(connectionName) && isTerminalLead)
+      if (isTerminalLead && obstacle.connectedTo.includes(connectionName))
         continue
       if (segmentTouchesInflatedObstacle(start, end, obstacle, obstacleMargin))
         return false
