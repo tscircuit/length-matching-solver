@@ -1,6 +1,7 @@
 import type { DifferentialPair, SimplifiedPcbTrace } from "../../types"
 import { DifferentialPairRoutingError } from "../errors/DifferentialPairRoutingError"
 import type { PostProcessingGridConfig } from "../types"
+import { classifyTerminalPair } from "../geometry/classifyTerminalPair"
 import { createSearchGeometryValidator } from "../geometry/createSearchGeometryValidator"
 import {
   validateCandidateGeometry,
@@ -252,21 +253,10 @@ export class DifferentialPairRoutingSession {
     }
     const preferredSide: 1 | -1 =
       terminalDelta.x * normal.x + terminalDelta.y * normal.y >= 0 ? 1 : -1
-    const hasInlineTerminalPair = (
-      firstPoint: typeof firstStart,
-      secondPoint: typeof secondStart,
-    ): boolean => {
-      const deltaX = firstPoint.x - secondPoint.x
-      const deltaY = firstPoint.y - secondPoint.y
-      const separation = Math.hypot(deltaX, deltaY)
-      return (
-        separation > 1e-8 &&
-        Math.abs(deltaX * normal.x + deltaY * normal.y) / separation < 0.5
-      )
-    }
-    const terminalFanout =
-      hasInlineTerminalPair(firstStart, secondStart) &&
-      hasInlineTerminalPair(firstEnd, secondEnd)
+    const combinedRadii = (first.width + second.width) / 2
+    const startPair = classifyTerminalPair(firstStart, secondStart, normal, combinedRadii)
+    const endPair = classifyTerminalPair(firstEnd, secondEnd, normal, combinedRadii)
+    const terminalFanout = startPair === "inline" && endPair === "inline"
     const spineDirection = { x: normal.y, y: -normal.x }
     const terminalStartRequiresForwardEgress = [firstStart, secondStart].some(
       (terminal) =>
@@ -326,19 +316,7 @@ export class DifferentialPairRoutingSession {
       maximumCenterlineDistance,
       maxUncoupledLength,
     } = this.input.pair
-    // Facing pad rows can escape along the trunk before converging to the
-    // requested pitch, even when no maximum escape length was specified.
-    const facingPadRows = (
-      [
-        [firstStart, secondStart],
-        [firstEnd, secondEnd],
-      ] as const
-    ).every(
-      ([p, n]) =>
-        Math.abs(
-          (p.x - n.x) * spineDirection.x + (p.y - n.y) * spineDirection.y,
-        ) < 1e-6,
-    )
+    const facingPadRows = startPair === "facing" && endPair === "facing"
     const useFanoutStations =
       maxUncoupledLength !== undefined ||
       (facingPadRows &&
@@ -440,7 +418,11 @@ export class DifferentialPairRoutingSession {
             const coupledTravel =
               (searchEnd.x - searchStart.x) * spineDirection.x +
               (searchEnd.y - searchStart.y) * spineDirection.y
-            if (coupledTravel <= grid.innerGridStep) return []
+            // Grid-step clearance between escape stations is only needed when
+            // a station moved. An already-coupled straight pair can be shorter.
+            const hasTerminalEscape = coupledTravel < spineLength - 1e-8
+            if (hasTerminalEscape && coupledTravel <= grid.innerGridStep)
+              return []
           }
           const validator = createValidator(searchStart, searchEnd)
           return [
