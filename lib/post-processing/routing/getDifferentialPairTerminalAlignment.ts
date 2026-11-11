@@ -10,32 +10,21 @@ export type DifferentialPairPathJoin = {
 export function getDifferentialPairTerminalAlignment(
   first: ParsedTrace,
   second: ParsedTrace,
-  terminalPairs?: DifferentialPair["terminalPairs"],
+  terminalPairs: NonNullable<DifferentialPair["terminalPairs"]>,
 ): { reverseSecond: boolean; pathJoins: DifferentialPairPathJoin[] } {
   const distance = (a: Point, b: Point): number =>
     Math.hypot(a.x - b.x, a.y - b.y)
-  const firstEnds = [first.points[0]!, first.points.at(-1)!] as const
-  const secondEnds = [second.points[0]!, second.points.at(-1)!] as const
-  if (!terminalPairs) {
-    const forward =
-      distance(firstEnds[0], secondEnds[0]) +
-      distance(firstEnds[1], secondEnds[1])
-    const reverse =
-      distance(firstEnds[0], secondEnds[1]) +
-      distance(firstEnds[1], secondEnds[0])
-    return { reverseSecond: reverse + 1e-8 < forward, pathJoins: [] }
-  }
-
   const isReversed = (
     trace: ParsedTrace,
-    ends: readonly [Point, Point],
     start: Point,
     end: Point,
   ): boolean => {
+    const firstPoint = trace.points[0]!
+    const lastPoint = trace.points.at(-1)!
     const forward =
-      distance(ends[0], start) <= 1e-8 && distance(ends[1], end) <= 1e-8
+      distance(firstPoint, start) <= 1e-8 && distance(lastPoint, end) <= 1e-8
     const reverse =
-      distance(ends[0], end) <= 1e-8 && distance(ends[1], start) <= 1e-8
+      distance(firstPoint, end) <= 1e-8 && distance(lastPoint, start) <= 1e-8
     if (forward === reverse)
       throw new Error(
         `PostProcessingSolver: route "${trace.source.connection_name}" must match its declared terminal pair endpoints`,
@@ -44,8 +33,8 @@ export function getDifferentialPairTerminalAlignment(
   }
 
   const [start, end] = terminalPairs
-  const firstReversed = isReversed(first, firstEnds, start[0], end[0])
-  const secondReversed = isReversed(second, secondEnds, start[1], end[1])
+  const firstReversed = isReversed(first, start[0], end[0])
+  const secondReversed = isReversed(second, start[1], end[1])
   const laneNames = [
     first.source.connection_name,
     second.source.connection_name,

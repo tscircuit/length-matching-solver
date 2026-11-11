@@ -11,6 +11,7 @@ import type {
   PairCandidate,
   PairSolveResult,
   ParsedTrace,
+  Point,
 } from "../model/internal-types"
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
@@ -193,11 +194,23 @@ export class DifferentialPairRoutingSession {
     }
     const firstStart = first.points[0]!
     const firstEnd = first.points.at(-1)!
-    const { reverseSecond, pathJoins } = getDifferentialPairTerminalAlignment(
-      first,
-      second,
-      this.input.pair.terminalPairs,
-    )
+    const distance = (a: Point, b: Point): number =>
+      Math.hypot(a.x - b.x, a.y - b.y)
+    const normalSecondCost =
+      distance(firstStart, second.points[0]!) +
+      distance(firstEnd, second.points.at(-1)!)
+    const reversedSecondCost =
+      distance(firstStart, second.points.at(-1)!) +
+      distance(firstEnd, second.points[0]!)
+    const terminalPairs = this.input.pair.terminalPairs
+    const alignment = terminalPairs
+      ? getDifferentialPairTerminalAlignment(first, second, terminalPairs)
+      : undefined
+    const reverseSecond =
+      alignment?.reverseSecond ?? reversedSecondCost + 1e-8 < normalSecondCost
+    const pathJoins = alignment?.pathJoins.length
+      ? alignment.pathJoins
+      : undefined
     const secondStart = reverseSecond
       ? second.points.at(-1)!
       : second.points[0]!
@@ -299,11 +312,12 @@ export class DifferentialPairRoutingSession {
       bounds: this.input.bounds,
       layerCount: this.input.layerCount,
       minTraceToPadEdgeClearance: this.input.minTraceToPadEdgeClearance,
-      terminalPairs: this.input.pair.terminalPairs,
+      terminalPairs,
     }
     const useDirectionalFanout =
-      pathJoins.length > 0 || this.input.pair.maxUncoupledLength !== undefined
-    const availableTravelDistance = pathJoins.length ? spineLength : undefined
+      pathJoins !== undefined ||
+      this.input.pair.maxUncoupledLength !== undefined
+    const availableTravelDistance = pathJoins ? spineLength : undefined
     const centerlineDistanceSamples = getCenterlineDistanceSamples({
       minimumCenterlineDistance: this.input.pair.minimumCenterlineDistance,
       maximumCenterlineDistance: this.input.pair.maximumCenterlineDistance,
@@ -347,7 +361,7 @@ export class DifferentialPairRoutingSession {
               centerlineSpacing,
               side,
               terminalFanout,
-              pathJoins: pathJoins.length ? pathJoins : undefined,
+              pathJoins,
               terminalMiterMargin: useDirectionalFanout
                 ? centerlineSpacing / 2
                 : undefined,
