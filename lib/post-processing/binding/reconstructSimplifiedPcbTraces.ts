@@ -127,7 +127,7 @@ export const reconstructSimplifiedPcbTraces = (input: {
     traces[binding.traceIndex] = { ...source, route: rebuilt }
   }
 
-  for (const pair of input.binding.solverParams.differentialPairs) {
+  for (const pair of input.binding.differentialPairs) {
     const pairName = pair.connectionNames.join("/")
     const matches = pair.connectionNames.map((connectionName) =>
       traces

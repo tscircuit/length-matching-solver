@@ -1,9 +1,5 @@
-import type {
-  DifferentialPair,
-  SimplifiedPcbTraces,
-  Obstacle,
-  RoutePoint,
-} from "../types"
+import type { SimplifiedPcbTraces, Obstacle, RoutePoint } from "../types"
+import type { LengthMatchingPair } from "./types"
 
 export type MeanderPlacement = "balanced" | "negative" | "positive"
 export type MeanderHeightProfile = "tapered" | "uniform"
@@ -57,10 +53,10 @@ export type RegressionAttempt = SegmentCandidate &
 export type ValidRegressionAttempt = Extract<RegressionAttempt, { valid: true }>
 
 export type ActivePair = {
-  pair: DifferentialPair
-  longerConnectionName: string
+  pair: LengthMatchingPair
   longerRouteIndexes: number[]
-  shorterConnectionName: string
+  shorterConnectionNames: string[]
+  shorterRouteIndexes: number[]
   targetAddedLength: number
   remainingAddedLength: number
   candidates: SegmentCandidate[]

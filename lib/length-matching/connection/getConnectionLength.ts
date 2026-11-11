@@ -1,7 +1,7 @@
 import { getRouteLength } from "../../route-geometry"
 import type { HighDensityRoute } from "../../types"
 
-/** Sum every routed branch belonging to a logical connection. */
+/** Sum planar copper for the explicitly selected lane route indexes. */
 export const getConnectionLength = (
   routes: HighDensityRoute[],
   routeIndexes: number[],

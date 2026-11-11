@@ -49,7 +49,12 @@ test("matches around native fixed copper without counting it toward logical leng
         ),
       }),
     ),
-    differentialPairs: [{ connectionNames: ["a", "b"], lengthTolerance: 0.1 }],
+    differentialPairs: [
+      {
+        connectionNames: [["a"], ["b"]],
+        maxLengthSkewMm: 0.1,
+      },
+    ],
     layerCount: 2,
     obstacleMargin: 0.15,
   })

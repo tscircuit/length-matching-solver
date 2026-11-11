@@ -13,5 +13,6 @@ test("rejects length matching when close keepouts leave no room for a meander", 
   expect(() => solver.solve()).toThrow(
     'linear regression exhausted all segment/tooth combinations for "corridor_n"',
   )
+  expect(solver.failed).toBe(true)
   expect(solver.solved).toBe(false)
 })

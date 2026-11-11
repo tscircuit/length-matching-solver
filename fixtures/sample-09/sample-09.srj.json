@@ -43,8 +43,8 @@
   ],
   "differentialPairs": [
     {
-      "connectionNames": ["usb_d_p", "usb_d_n"],
-      "lengthTolerance": 0.01
+      "connectionNames": [["usb_d_p"], ["usb_d_n"]],
+      "maxLengthSkewMm": 0.01
     }
   ],
   "maximumMeanderDepth": 2,

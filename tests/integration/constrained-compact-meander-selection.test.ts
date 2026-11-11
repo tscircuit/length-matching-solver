@@ -48,8 +48,8 @@ test("uses the compact pitch when obstacles reject relaxed alternatives", () => 
     ],
     differentialPairs: [
       {
-        connectionNames: ["long-route", "short-route"],
-        lengthTolerance: 0.01,
+        connectionNames: [["long-route"], ["short-route"]],
+        maxLengthSkewMm: 0.01,
       },
     ],
     maximumMeanderDepth: 3,

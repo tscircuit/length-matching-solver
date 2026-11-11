@@ -41,8 +41,8 @@
   ],
   "differentialPairs": [
     {
-      "connectionNames": ["data_p", "data_n"],
-      "lengthTolerance": 0.001
+      "connectionNames": [["data_p"], ["data_n"]],
+      "maxLengthSkewMm": 0.001
     }
   ],
   "maximumMeanderDepth": 2,

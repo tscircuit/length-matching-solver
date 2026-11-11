@@ -28,8 +28,6 @@ export const createLaneMembershipParams = (): LengthMatchingSolverParams => {
       rootConnectionName: route.rootConnectionName,
       pointsToConnect: route.route.map(({ x, y }) => ({ x, y, layer: "top" })),
     })),
-    // SAFETY: Deliberately exercise the decided, not-yet-implemented public
-    // contract. Remove this cast when the exact-membership API lands.
     differentialPairs: [
       {
         connectionNames: [
@@ -38,7 +36,7 @@ export const createLaneMembershipParams = (): LengthMatchingSolverParams => {
         ],
         maxLengthSkewMm: 0.01,
       },
-    ] as unknown as LengthMatchingSolverParams["differentialPairs"],
+    ],
     layerCount: 2,
   }
 }

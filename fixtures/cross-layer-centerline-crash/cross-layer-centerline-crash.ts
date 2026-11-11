@@ -43,8 +43,8 @@ export const crossLayerCenterlineCrash: LengthMatchingSolverParams = {
   ],
   differentialPairs: [
     {
-      connectionNames: ["CAM_CLK_P", "CAM_CLK_N"],
-      lengthTolerance: 0.01,
+      connectionNames: [["CAM_CLK_P"], ["CAM_CLK_N"]],
+      maxLengthSkewMm: 0.01,
       minimumCenterlineDistance: 0.15,
       maximumCenterlineDistance: 0.5,
     },

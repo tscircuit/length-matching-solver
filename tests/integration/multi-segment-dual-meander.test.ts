@@ -38,8 +38,8 @@ test("combines one longer-route meander with multiple shorter-route meanders", (
     ],
     differentialPairs: [
       {
-        connectionNames: ["multi_dual_p", "multi_dual_n"],
-        lengthTolerance: 0.01,
+        connectionNames: [["multi_dual_p"], ["multi_dual_n"]],
+        maxLengthSkewMm: 0.01,
       },
     ],
     maximumMeanderDepth: 0.6,

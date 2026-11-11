@@ -4,11 +4,9 @@ import {
   validateAndResolveParams,
   validatePair,
 } from "./length-matching/config"
-import {
-  findConnectionRouteIndexes,
-  getConnectionLength,
-} from "./length-matching/connection-routes"
+import { getConnectionLength } from "./length-matching/connection-routes"
 import { selectDualMeanderPlan } from "./length-matching/dual-meander-plan"
+import { assertPairMatched } from "./length-matching/validation/assertPairMatched"
 import { LengthMatchingNoSolutionError } from "./length-matching/errors/LengthMatchingNoSolutionError"
 import { isCandidateGeometryValid } from "./length-matching/geometry-validation"
 import type {
@@ -28,16 +26,17 @@ import {
   selectPartialMeanderPlan,
 } from "./length-matching/multi-segment-plan"
 import type {
+  LengthMatchingPair,
   LengthMatchingSolverOutput,
   LengthMatchingSolverParams,
 } from "./length-matching/types"
 import { createLengthMatchingVisualization } from "./length-matching/visualization"
-import type { DifferentialPair, HighDensityRoute } from "./types"
+import type { HighDensityRoute } from "./types"
 
 /** Coordinates the length-matching state machine; algorithm details live in `length-matching/`. */
 export class LengthMatchingSolver extends BaseSolver {
   matchedHdRoutes: HighDensityRoute[]
-  private readonly pairs: DifferentialPair[]
+  private readonly pairs: LengthMatchingPair[]
   private nextPairIndex = 0
   private activePair: ActivePair | null = null
   private currentAttempt: RegressionAttempt | null = null
@@ -61,33 +60,34 @@ export class LengthMatchingSolver extends BaseSolver {
   private startNextPair(): void {
     const pair = this.pairs[this.nextPairIndex++]
     if (!pair) {
+      this.pairs.forEach((pair, pairIndex): void => {
+        assertPairMatched(
+          pair,
+          this.params.originalConnections,
+          this.matchedHdRoutes,
+          this.getConfig().layerCount,
+          pairIndex,
+        )
+      })
       this.solved = true
       return
     }
-    validatePair(pair, this.params.originalConnections)
-    const firstIndexes = findConnectionRouteIndexes(
+    const [firstIndexes, secondIndexes] = validatePair(
+      pair,
+      this.params.originalConnections,
       this.matchedHdRoutes,
-      pair.connectionNames[0],
+      this.getConfig().layerCount,
+      this.nextPairIndex - 1,
     )
-    const secondIndexes = findConnectionRouteIndexes(
-      this.matchedHdRoutes,
-      pair.connectionNames[1],
-    )
-    if (firstIndexes.length === 0 && secondIndexes.length === 0) return
-    if (firstIndexes.length === 0 || secondIndexes.length === 0)
-      throw new Error(
-        `LengthMatchingSolver: differential pair ${pair.connectionNames.join("/")} has routed geometry for only one connection`,
-      )
     const firstLength = getConnectionLength(this.matchedHdRoutes, firstIndexes)
     const secondLength = getConnectionLength(
       this.matchedHdRoutes,
       secondIndexes,
     )
     const difference = Math.abs(firstLength - secondLength)
-    if (difference <= pair.lengthTolerance) return
+    if (difference <= pair.maxLengthSkewMm) return
     const firstIsShorter = firstLength < secondLength
-    const shorterConnectionName = pair.connectionNames[firstIsShorter ? 0 : 1]
-    const longerConnectionName = pair.connectionNames[firstIsShorter ? 1 : 0]
+    const shorterConnectionNames = pair.connectionNames[firstIsShorter ? 0 : 1]
     const candidates = createMeanderCandidates({
       routes: this.matchedHdRoutes,
       routeIndexes: firstIsShorter ? firstIndexes : secondIndexes,
@@ -99,15 +99,17 @@ export class LengthMatchingSolver extends BaseSolver {
     })
     if (candidates.length === 0)
       throw new LengthMatchingNoSolutionError({
-        message: `LengthMatchingSolver: no same-layer straight segment can tune connection "${shorterConnectionName}"`,
-        connectionName: shorterConnectionName,
+        message: `LengthMatchingSolver: no same-layer straight segment can tune connection "${shorterConnectionNames.join(", ")}"`,
+        connectionName: shorterConnectionNames.join(", "),
+        pairIndex: this.nextPairIndex - 1,
+        connectionNames: shorterConnectionNames,
         reason: "no-meander-candidate",
       })
     this.activePair = {
       pair,
-      longerConnectionName,
       longerRouteIndexes: firstIsShorter ? secondIndexes : firstIndexes,
-      shorterConnectionName,
+      shorterConnectionNames,
+      shorterRouteIndexes: firstIsShorter ? firstIndexes : secondIndexes,
       targetAddedLength: difference,
       remainingAddedLength: difference,
       candidates,
@@ -129,7 +131,9 @@ export class LengthMatchingSolver extends BaseSolver {
       ...route,
       route: attempt.predictedRoute,
     }
-    activePair.remainingAddedLength -= attempt.addedLength
+    activePair.remainingAddedLength =
+      getConnectionLength(this.matchedHdRoutes, activePair.longerRouteIndexes) -
+      getConnectionLength(this.matchedHdRoutes, activePair.shorterRouteIndexes)
     activePair.lastMatchedSegmentIndexByRoute.set(
       attempt.routeIndex,
       attempt.segmentIndex,
@@ -140,7 +144,7 @@ export class LengthMatchingSolver extends BaseSolver {
     activePair.plannedAttemptTargets?.delete(getRegressionAttemptKey(attempt))
     if (activePair.plannedAttemptTargets?.size === 0)
       activePair.plannedAttemptTargets = null
-    if (activePair.remainingAddedLength <= activePair.pair.lengthTolerance)
+    if (activePair.remainingAddedLength <= activePair.pair.maxLengthSkewMm)
       this.activePair = null
   }
 
@@ -179,7 +183,7 @@ export class LengthMatchingSolver extends BaseSolver {
       const partialPlan = selectPartialMeanderPlan({
         attempts: activePair.partialAttempts,
         targetAddedLength: activePair.remainingAddedLength,
-        lengthTolerance: activePair.pair.lengthTolerance,
+        lengthTolerance: activePair.pair.maxLengthSkewMm,
       })
       if (
         bestFullAttempt &&
@@ -197,8 +201,10 @@ export class LengthMatchingSolver extends BaseSolver {
           activePair.lastMatchedSegmentIndexByRoute.size === 0
         if (!canTryDualPlan)
           throw new LengthMatchingNoSolutionError({
-            message: `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
-            connectionName: activePair.shorterConnectionName,
+            message: `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionNames.join(", ")}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+            connectionName: activePair.shorterConnectionNames.join(", "),
+            pairIndex: this.nextPairIndex - 1,
+            connectionNames: activePair.shorterConnectionNames,
             reason: "meander-search-exhausted",
           })
         return this.tryDualMeanderPlan(activePair)
@@ -227,12 +233,12 @@ export class LengthMatchingSolver extends BaseSolver {
     this.currentAttempt = evaluateMeanderCandidate({
       candidate,
       route,
-      connectionName: activePair.shorterConnectionName,
+      connectionName: route.connectionName,
       targetAddedLength:
         plannedTargetAddedLength === undefined
           ? activePair.remainingAddedLength
           : plannedTargetAddedLength.targetAddedLength,
-      lengthTolerance: activePair.pair.lengthTolerance,
+      lengthTolerance: activePair.pair.maxLengthSkewMm,
       isGeometryValid: (meanderPoints) =>
         isCandidateGeometryValid({
           route,
@@ -283,7 +289,7 @@ export class LengthMatchingSolver extends BaseSolver {
     }
     if (
       activePair.remainingAddedLength - this.currentAttempt.addedLength <=
-      activePair.pair.lengthTolerance
+      activePair.pair.maxLengthSkewMm
     ) {
       activePair.fullAttempts.push(this.currentAttempt)
       return
@@ -294,7 +300,7 @@ export class LengthMatchingSolver extends BaseSolver {
   private tryDualMeanderPlan(activePair: ActivePair): void {
     if (activePair.remainingAddedLength !== activePair.targetAddedLength)
       throw new Error(
-        `LengthMatchingSolver: cannot start a dual-meander plan after partially tuning "${activePair.shorterConnectionName}"`,
+        `LengthMatchingSolver: cannot start a dual-meander plan after partially tuning "${activePair.shorterConnectionNames.join(", ")}"`,
       )
     const config = this.getConfig()
     const longerCandidates = createMeanderCandidates({
@@ -308,10 +314,10 @@ export class LengthMatchingSolver extends BaseSolver {
     })
     const plan = selectDualMeanderPlan({
       routes: this.matchedHdRoutes,
-      longerConnectionName: activePair.longerConnectionName,
-      shorterConnectionName: activePair.shorterConnectionName,
+      longerRouteIndexes: activePair.longerRouteIndexes,
+      shorterRouteIndexes: activePair.shorterRouteIndexes,
       originalLengthDifference: activePair.targetAddedLength,
-      lengthTolerance: activePair.pair.lengthTolerance,
+      lengthTolerance: activePair.pair.maxLengthSkewMm,
       longerCandidates,
       shorterCandidates: activePair.candidates,
       traces: config.traces,
@@ -322,8 +328,10 @@ export class LengthMatchingSolver extends BaseSolver {
     })
     if (!plan)
       throw new LengthMatchingNoSolutionError({
-        message: `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionName}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
-        connectionName: activePair.shorterConnectionName,
+        message: `LengthMatchingSolver: linear regression exhausted all segment/tooth combinations for "${activePair.shorterConnectionNames.join(", ")}"; required ${activePair.targetAddedLength.toFixed(4)}mm`,
+        connectionName: activePair.shorterConnectionNames.join(", "),
+        pairIndex: this.nextPairIndex - 1,
+        connectionNames: activePair.shorterConnectionNames,
         reason: "meander-search-exhausted",
       })
     const updatedRoutes = [...this.matchedHdRoutes]

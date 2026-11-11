@@ -15,6 +15,31 @@ solver.solve()
 const { matchedHdRoutes } = solver.getOutput()
 ```
 
+The direct matcher accepts exact copper-hop memberships:
+
+```ts
+import type { LengthMatchingPair } from "@tscircuit/length-matching-solver"
+
+const differentialPairs: LengthMatchingPair[] = [{
+  connectionNames: [["P_before", "P_after"], ["N_before", "N_after"]],
+  maxLengthSkewMm: 0.1,
+}]
+```
+
+Each name must identify exactly one two-terminal `originalConnections` entry
+and one complete `hdRoutes` polyline with that exact `connectionName`. Stitch
+route fragments before matching. Hop counts may differ between lanes; the
+matcher sums each lane's planar copper, excluding gaps between hops, via
+barrels, fixed traces, and unlisted taps. Keep each route's real
+`rootConnectionName` for electrical clearance; it never selects counted copper.
+Empty lanes, duplicate ownership, incomplete routes, and unmet final skew fail
+the solve. `getOutput()` is available only after successful completion.
+
+This replaces the direct matcher's scalar pair names and `lengthTolerance`.
+Callers must preserve hop names and endpoints through routing, pass every
+listed route, and propagate thrown errors or `failed` instead of accepting
+best-effort output. Revalidate constraints after later geometry mutations.
+
 The solver adds obstacle-aware, tapered multi-lobe meanders until each
 differential pair is within its configured length tolerance. It normally tunes
 only the shorter connection. When realizing the correction would require a
@@ -47,6 +72,10 @@ const { hdRoutes: postProcessedHdRoutes } = solver.getOutput()
 Pair members resolve by `connectionName` or `rootConnectionName` and must each
 identify exactly one route. Unsupported or ambiguous geometry throws. Input,
 immutable non-pair routes, and returned outputs are independently cloned.
+This coupled API retains its existing `DifferentialPair` type (two scalar
+names and `lengthTolerance`); its internal matcher adapter uses singleton hop
+lists. The optional centerline preferences on `LengthMatchingPair` preserve
+this caller's existing meander ranking.
 
 ## Meander geometry quality
 

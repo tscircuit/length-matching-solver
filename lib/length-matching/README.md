@@ -3,7 +3,7 @@
 `length-matching-solver.ts` owns only the `BaseSolver` lifecycle and state changes.
 
 - `config.ts`: validate public inputs and resolve defaults.
-- `connection-routes.ts`: map logical connections to routed branches and lengths.
+- `connection-routes.ts`: select exact hop names and sum lane route lengths.
 - `../route-geometry.ts`: shared planar segment and route-length primitives.
 - `meander-candidate.ts`: enumerate tooth-count, placement, and pitch choices,
   then fit clearance-limited tooth depths.
@@ -28,6 +28,12 @@ test index for relaxed meanders live in
 Keep new algorithm work in its owning module. Do not import the solver class from these modules.
 
 ## Multi-segment matching
+
+Lane memberships are exact hop-name lists, independent of electrical roots.
+Validation requires one complete, anchored polyline per hop. Missing and
+fragmented hops fail before tuning; every pair's coverage and summed skew are
+rechecked on committed output before success. Clearance still uses real roots,
+and a meander cannot detach a same-root tap endpoint.
 
 `LengthMatchingSolver` first tries every candidate as a single-segment match.
 When no single segment can supply the required length, it records each valid

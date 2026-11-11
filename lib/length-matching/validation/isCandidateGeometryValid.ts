@@ -105,6 +105,35 @@ export const isCandidateGeometryValid = (input: {
     getTraceCopperGeometry(trace, input.layerCount),
   )
   const connectionName = getLogicalConnectionName(input.route)
+  // A same-net tap is excluded from length accounting, but its attachment
+  // cannot disappear when the baseline segment is replaced by a meander.
+  for (const otherRoute of input.routedRoutes) {
+    if (
+      otherRoute === input.route ||
+      getLogicalConnectionName(otherRoute) !== connectionName
+    )
+      continue
+    for (const endpoint of [otherRoute.route[0], otherRoute.route.at(-1)]) {
+      if (!endpoint) continue
+      const start = input.meanderPoints[0]!
+      const end = input.meanderPoints.at(-1)!
+      if (
+        endpoint.z === start.z &&
+        pointToSegmentDistance(endpoint, start, end) <= 1e-8 &&
+        !input.meanderPoints
+          .slice(1)
+          .some(
+            (point, index): boolean =>
+              pointToSegmentDistance(
+                endpoint,
+                input.meanderPoints[index]!,
+                point,
+              ) <= 1e-8,
+          )
+      )
+        return false
+    }
+  }
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
   for (let index = 0; index < input.meanderPoints.length - 1; index++) {
     const start = input.meanderPoints[index]!

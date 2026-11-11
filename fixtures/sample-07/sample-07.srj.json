@@ -39,8 +39,8 @@
   ],
   "differentialPairs": [
     {
-      "connectionNames": ["corridor_p", "corridor_n"],
-      "lengthTolerance": 0.001
+      "connectionNames": [["corridor_p"], ["corridor_n"]],
+      "maxLengthSkewMm": 0.001
     }
   ],
   "maximumMeanderDepth": 2,
