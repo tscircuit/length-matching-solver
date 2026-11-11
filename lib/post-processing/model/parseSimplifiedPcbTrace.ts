@@ -1,17 +1,13 @@
+import type { SimplifiedPcbTrace } from "../../types"
 import { getLayerIndex } from "../geometry/getLayerIndex"
 import { getTransitionLayers } from "../geometry/getTransitionLayers"
-import type {
-  CopperSegment,
-  ParsedTrace,
-  PathPoint,
-  SimplifiedPcbTraceForPostProcessing,
-} from "./internal-types"
+import type { CopperSegment, ParsedTrace, PathPoint } from "./internal-types"
 
 const POSITION_EPSILON = 1e-8
 
 /** Parse an ordered wire/via stream into continuous, layer-aware copper. */
 export const parseSimplifiedPcbTrace = (
-  trace: SimplifiedPcbTraceForPostProcessing,
+  trace: SimplifiedPcbTrace,
   layerCount: number,
 ): ParsedTrace => {
   if (trace.route.length === 0)

@@ -1,26 +1,29 @@
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
-import type { Obstacle } from "../../types"
+import type {
+  DifferentialPair,
+  Obstacle,
+  SimplifiedPcbTrace,
+} from "../../types"
 import type {
   CopperSegment,
   CopperVia,
   ParsedTrace,
   Point,
-  SimplifiedPcbTraceForPostProcessing,
 } from "../model/internal-types"
+import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
+import { getDifferentialPairTerminalAlignment } from "../routing/getDifferentialPairTerminalAlignment"
 import { getLayerIndex } from "./getLayerIndex"
-import {
-  getPostProcessingCopperByLane,
-  type PostProcessingCopper,
-} from "./getPostProcessingCopperByLane"
+import { isPathJoinClear } from "./isPathJoinClear"
 import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle"
 
 export type CandidateGeometryContext = {
-  immutableTraces: SimplifiedPcbTraceForPostProcessing[]
+  immutableTraces: SimplifiedPcbTrace[]
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
   minTraceToPadEdgeClearance?: number
+  adjacentConnectionNames?: DifferentialPair["adjacentConnectionNames"]
 }
 
 /** Validate complete replacement copper against bounds, obstacles, and immutable copper. */
@@ -30,6 +33,14 @@ export const validateCandidateGeometry = (
   context: CandidateGeometryContext,
 ): boolean => {
   const EPSILON = 1e-7
+  const pathJoins = context.adjacentConnectionNames?.length
+    ? getDifferentialPairTerminalAlignment(
+        first,
+        second,
+        context.immutableTraces,
+        context.adjacentConnectionNames,
+      ).pathJoins
+    : undefined
 
   const rotateIntoObstacle = (point: Point, obstacle: Obstacle): Point => {
     const radians = (-(obstacle.ccwRotationDegrees ?? 0) * Math.PI) / 180
@@ -75,10 +86,24 @@ export const validateCandidateGeometry = (
     return getObstacleLayerIndexes(obstacle, layerCount).includes(layerIndex)
   }
 
+  const getImmutableCopper = (
+    traces: SimplifiedPcbTrace[],
+    layerCount: number,
+  ): { segments: CopperSegment[]; vias: CopperVia[] } => {
+    const segments: CopperSegment[] = []
+    const vias: CopperVia[] = []
+    for (const trace of traces) {
+      const copper = getTraceCopperGeometry(trace, layerCount)
+      segments.push(...copper.segments)
+      vias.push(...copper.vias)
+    }
+    return { segments, vias }
+  }
+
   const isSegmentValid = (
     segment: CopperSegment,
     context: CandidateGeometryContext,
-    immutableCopper: PostProcessingCopper,
+    immutableCopper: ReturnType<typeof getImmutableCopper>,
   ): boolean => {
     const radius = segment.width / 2
     if (
@@ -135,7 +160,9 @@ export const validateCandidateGeometry = (
           other.start,
           other.end,
         ) <
-        requiredDistance - EPSILON
+          requiredDistance - EPSILON &&
+        (!pathJoins ||
+          !isPathJoinClear(pathJoins, segment, other, requiredDistance))
       )
         return false
     }
@@ -145,7 +172,9 @@ export const validateCandidateGeometry = (
         segment.width / 2 + via.diameter / 2 + segment.width
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
-        requiredDistance - EPSILON
+          requiredDistance - EPSILON &&
+        (!pathJoins ||
+          !isPathJoinClear(pathJoins, segment, via, requiredDistance))
       )
         return false
     }
@@ -155,7 +184,7 @@ export const validateCandidateGeometry = (
   const isViaValid = (
     via: CopperVia,
     context: CandidateGeometryContext,
-    immutableCopper: PostProcessingCopper,
+    immutableCopper: ReturnType<typeof getImmutableCopper>,
   ): boolean => {
     const radius = via.diameter / 2
     if (
@@ -191,7 +220,9 @@ export const validateCandidateGeometry = (
         radius + segment.width / 2 + Math.max(via.diameter, segment.width)
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
-        requiredDistance - EPSILON
+          requiredDistance - EPSILON &&
+        (!pathJoins ||
+          !isPathJoinClear(pathJoins, via, segment, requiredDistance))
       )
         return false
     }
@@ -201,7 +232,9 @@ export const validateCandidateGeometry = (
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)
       if (
         Math.hypot(via.x - other.x, via.y - other.y) <
-        requiredDistance - EPSILON
+          requiredDistance - EPSILON &&
+        (!pathJoins ||
+          !isPathJoinClear(pathJoins, via, other, requiredDistance))
       )
         return false
     }
@@ -319,11 +352,9 @@ export const validateCandidateGeometry = (
     return false
   }
 
-  const copperByLane = getPostProcessingCopperByLane(
+  const immutableCopper = getImmutableCopper(
     context.immutableTraces,
     context.layerCount,
-    first.source.rootConnectionName,
-    second.source.rootConnectionName,
   )
   if (
     !membersRemainSeparate(first, second) ||
@@ -331,10 +362,7 @@ export const validateCandidateGeometry = (
     hasSelfCollision(second)
   )
     return false
-  for (const [parsed, immutableCopper] of [
-    [first, copperByLane.first],
-    [second, copperByLane.second],
-  ] as const) {
+  for (const parsed of [first, second]) {
     if (
       parsed.segments.some(
         (segment) => !isSegmentValid(segment, context, immutableCopper),

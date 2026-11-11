@@ -55,6 +55,7 @@ export const simplifyDifferentialPairTo45Degrees = (input: {
     bounds: input.bounds,
     layerCount: input.layerCount,
     minTraceToPadEdgeClearance: input.minTraceToPadEdgeClearance,
+    adjacentConnectionNames: input.pair.adjacentConnectionNames,
   }
   const getMaximumInteriorPairSeparation = (
     traces: SimplifiedPcbTraces,

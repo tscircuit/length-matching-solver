@@ -1,19 +1,13 @@
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
-import type { Obstacle } from "../../types"
-import type {
-  CopperSegment,
-  CopperVia,
-  Point,
-  SimplifiedPcbTraceForPostProcessing,
-} from "../model/internal-types"
+import type { Obstacle, SimplifiedPcbTrace } from "../../types"
+import type { CopperSegment, CopperVia, Point } from "../model/internal-types"
+import { getTraceCopperGeometry } from "../model/getTraceCopperGeometry"
+import type { DifferentialPairPathJoin } from "../routing/getDifferentialPairTerminalAlignment"
 import type { CoupledPathPoint } from "../routing/types"
 import { getLayerIndex } from "./getLayerIndex"
-import {
-  getPostProcessingCopperByLane,
-  type PostProcessingCopper,
-} from "./getPostProcessingCopperByLane"
 import { getTransitionLayers } from "./getTransitionLayers"
+import { isPathJoinClear } from "./isPathJoinClear"
 import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle"
 
 export type SearchGeometryValidator = {
@@ -32,21 +26,15 @@ export type SearchGeometryValidator = {
 
 /** Build a conservative, reusable collision checker for coupled spine search. */
 export const createSearchGeometryValidator = (input: {
-  immutableTraces: SimplifiedPcbTraceForPostProcessing[]
+  immutableTraces: SimplifiedPcbTrace[]
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
   minTraceToPadEdgeClearance?: number
   start: CoupledPathPoint
   end: CoupledPathPoint
-  firstTrace: Pick<
-    SimplifiedPcbTraceForPostProcessing,
-    "connection_name" | "rootConnectionName"
-  >
-  secondTrace: Pick<
-    SimplifiedPcbTraceForPostProcessing,
-    "connection_name" | "rootConnectionName"
-  >
+  firstConnectionName: string
+  secondConnectionName: string
   firstStartTerminal: Point
   firstEndTerminal: Point
   secondStartTerminal: Point
@@ -59,15 +47,24 @@ export const createSearchGeometryValidator = (input: {
   side: 1 | -1
   terminalFanout?: boolean
   terminalMiterMargin?: number
+  pathJoins?: DifferentialPairPathJoin[]
 }): SearchGeometryValidator => {
-  const firstConnectionName = input.firstTrace.connection_name
-  const secondConnectionName = input.secondTrace.connection_name
-  const copperByLane = getPostProcessingCopperByLane(
-    input.immutableTraces,
-    input.layerCount,
-    input.firstTrace.rootConnectionName,
-    input.secondTrace.rootConnectionName,
+  const immutableSegments: CopperSegment[] = []
+  const immutableVias: CopperVia[] = []
+  for (const trace of input.immutableTraces) {
+    const copper = getTraceCopperGeometry(trace, input.layerCount)
+    immutableSegments.push(...copper.segments)
+    immutableVias.push(...copper.vias)
+  }
+  // Group fixed copper once so each search edge checks only its own layer.
+  const immutableSegmentsByLayer = Array.from(
+    { length: input.layerCount },
+    (): CopperSegment[] => [],
   )
+  for (const segment of immutableSegments) {
+    const layerIndex = getLayerIndex(segment.layer, input.layerCount)
+    immutableSegmentsByLayer[layerIndex]!.push(segment)
+  }
   const samePoint = (left: Point, right: Point): boolean =>
     Math.hypot(left.x - right.x, left.y - right.y) <= 1e-8
   const pointToSegmentDistance = (
@@ -156,7 +153,7 @@ export const createSearchGeometryValidator = (input: {
         end: firstEnd,
         layer: start.layer,
         width: input.firstWidth,
-        connectionName: firstConnectionName,
+        connectionName: input.firstConnectionName,
         terminal,
       },
       {
@@ -164,7 +161,7 @@ export const createSearchGeometryValidator = (input: {
         end: secondEnd,
         layer: start.layer,
         width: input.secondWidth,
-        connectionName: secondConnectionName,
+        connectionName: input.secondConnectionName,
         terminal,
       },
     ]
@@ -196,7 +193,10 @@ export const createSearchGeometryValidator = (input: {
         ? [input.firstStartTerminal, input.secondStartTerminal]
         : [input.firstEndTerminal, input.secondEndTerminal]
     const widths = [input.firstWidth, input.secondWidth]
-    const connectionNames = [firstConnectionName, secondConnectionName]
+    const connectionNames = [
+      input.firstConnectionName,
+      input.secondConnectionName,
+    ]
     return terminals.map((terminalPoint, lane) => {
       const polarity = lane === 0 ? 1 : -1
       const lanePoint = {
@@ -244,124 +244,110 @@ export const createSearchGeometryValidator = (input: {
         segments[0].width / 2 + segments[1].width / 2 - 1e-7
     )
   }
-  const createSegmentValidator =
-    ({
-      segmentsByLayer: immutableSegmentsByLayer,
-      vias: immutableVias,
-    }: PostProcessingCopper): ((segment: CopperSegment) => boolean) =>
-    (segment) => {
-      const radius = segment.width / 2
-      const inflation =
-        radius + (input.minTraceToPadEdgeClearance ?? segment.width)
-      const layerIndex = getLayerIndex(segment.layer, input.layerCount)
-      const segmentMinX = Math.min(segment.start.x, segment.end.x)
-      const segmentMaxX = Math.max(segment.start.x, segment.end.x)
-      const segmentMinY = Math.min(segment.start.y, segment.end.y)
-      const segmentMaxY = Math.max(segment.start.y, segment.end.y)
-      for (const point of [segment.start, segment.end]) {
-        if (
-          point.x - radius < input.bounds.minX ||
-          point.x + radius > input.bounds.maxX ||
-          point.y - radius < input.bounds.minY ||
-          point.y + radius > input.bounds.maxY
-        )
-          return false
-      }
-      for (const obstacle of input.obstacles) {
-        if (!obstacleIsOnLayer(obstacle, segment.layer)) continue
-        // Reject distant obstacles with a rotation-safe bound before exact sampling.
-        const obstacleHalfExtent = Math.hypot(
-          obstacle.width / 2 + inflation,
-          obstacle.height / 2 + inflation,
-        )
-        if (
-          segmentMaxX < obstacle.center.x - obstacleHalfExtent ||
-          segmentMinX > obstacle.center.x + obstacleHalfExtent ||
-          segmentMaxY < obstacle.center.y - obstacleHalfExtent ||
-          segmentMinY > obstacle.center.y + obstacleHalfExtent
-        )
-          continue
-        const [startTerminal, endTerminal] =
-          segment.connectionName === firstConnectionName
-            ? [input.firstStartTerminal, input.firstEndTerminal]
-            : [input.secondStartTerminal, input.secondEndTerminal]
-        const progressesOutOfStart =
-          obstacleContains(startTerminal, obstacle, 0) &&
-          (obstacleContains(segment.start, obstacle, inflation) ||
-            obstacleContains(segment.end, obstacle, inflation)) &&
-          Math.hypot(
-            segment.end.x - startTerminal.x,
-            segment.end.y - startTerminal.y,
-          ) >=
-            Math.hypot(
-              segment.start.x - startTerminal.x,
-              segment.start.y - startTerminal.y,
-            )
-        const progressesIntoEnd =
-          obstacleContains(endTerminal, obstacle, 0) &&
-          (obstacleContains(segment.start, obstacle, inflation) ||
-            obstacleContains(segment.end, obstacle, inflation)) &&
-          Math.hypot(
-            segment.end.x - endTerminal.x,
-            segment.end.y - endTerminal.y,
-          ) <=
-            Math.hypot(
-              segment.start.x - endTerminal.x,
-              segment.start.y - endTerminal.y,
-            )
-        const exitsConnectedTerminal =
-          obstacle.connectedTo.includes(segment.connectionName) &&
-          (progressesOutOfStart || progressesIntoEnd)
-        if (exitsConnectedTerminal) continue
-        if (segmentTouchesInflatedObstacle(segment, obstacle, inflation))
-          return false
-      }
-      for (const other of immutableSegmentsByLayer[layerIndex]!) {
-        const required =
-          segment.width / 2 +
-          other.width / 2 +
-          Math.max(segment.width, other.width)
-        if (
-          segmentMaxX + required < Math.min(other.start.x, other.end.x) ||
-          segmentMinX - required > Math.max(other.start.x, other.end.x) ||
-          segmentMaxY + required < Math.min(other.start.y, other.end.y) ||
-          segmentMinY - required > Math.max(other.start.y, other.end.y)
-        )
-          continue
-        if (
-          getMinimumSegmentDistance(
-            segment.start,
-            segment.end,
-            other.start,
-            other.end,
-          ) < required
-        )
-          return false
-      }
-      for (const via of immutableVias) {
-        if (!via.layers.includes(segment.layer)) continue
-        if (
-          pointToSegmentDistance(via, segment.start, segment.end) <
-          segment.width / 2 + via.diameter / 2 + segment.width
-        )
-          return false
-      }
-      return true
+  const segmentIsClear = (segment: CopperSegment): boolean => {
+    const radius = segment.width / 2
+    const inflation =
+      radius + (input.minTraceToPadEdgeClearance ?? segment.width)
+    const layerIndex = getLayerIndex(segment.layer, input.layerCount)
+    const segmentMinX = Math.min(segment.start.x, segment.end.x)
+    const segmentMaxX = Math.max(segment.start.x, segment.end.x)
+    const segmentMinY = Math.min(segment.start.y, segment.end.y)
+    const segmentMaxY = Math.max(segment.start.y, segment.end.y)
+    for (const point of [segment.start, segment.end]) {
+      if (
+        point.x - radius < input.bounds.minX ||
+        point.x + radius > input.bounds.maxX ||
+        point.y - radius < input.bounds.minY ||
+        point.y + radius > input.bounds.maxY
+      )
+        return false
     }
-  const firstSegmentIsClear = createSegmentValidator(copperByLane.first)
-  const secondSegmentIsClear = createSegmentValidator(copperByLane.second)
-  const segmentIsClear =
-    copperByLane.first === copperByLane.second
-      ? firstSegmentIsClear
-      : (segment: CopperSegment): boolean =>
-          segment.connectionName === firstConnectionName
-            ? firstSegmentIsClear(segment)
-            : secondSegmentIsClear(segment)
+    for (const obstacle of input.obstacles) {
+      if (!obstacleIsOnLayer(obstacle, segment.layer)) continue
+      // Reject distant obstacles with a rotation-safe bound before exact sampling.
+      const obstacleHalfExtent = Math.hypot(
+        obstacle.width / 2 + inflation,
+        obstacle.height / 2 + inflation,
+      )
+      if (
+        segmentMaxX < obstacle.center.x - obstacleHalfExtent ||
+        segmentMinX > obstacle.center.x + obstacleHalfExtent ||
+        segmentMaxY < obstacle.center.y - obstacleHalfExtent ||
+        segmentMinY > obstacle.center.y + obstacleHalfExtent
+      )
+        continue
+      const [startTerminal, endTerminal] =
+        segment.connectionName === input.firstConnectionName
+          ? [input.firstStartTerminal, input.firstEndTerminal]
+          : [input.secondStartTerminal, input.secondEndTerminal]
+      const progressesOutOfStart =
+        obstacleContains(startTerminal, obstacle, 0) &&
+        (obstacleContains(segment.start, obstacle, inflation) ||
+          obstacleContains(segment.end, obstacle, inflation)) &&
+        Math.hypot(
+          segment.end.x - startTerminal.x,
+          segment.end.y - startTerminal.y,
+        ) >=
+          Math.hypot(
+            segment.start.x - startTerminal.x,
+            segment.start.y - startTerminal.y,
+          )
+      const progressesIntoEnd =
+        obstacleContains(endTerminal, obstacle, 0) &&
+        (obstacleContains(segment.start, obstacle, inflation) ||
+          obstacleContains(segment.end, obstacle, inflation)) &&
+        Math.hypot(
+          segment.end.x - endTerminal.x,
+          segment.end.y - endTerminal.y,
+        ) <=
+          Math.hypot(
+            segment.start.x - endTerminal.x,
+            segment.start.y - endTerminal.y,
+          )
+      const exitsConnectedTerminal =
+        obstacle.connectedTo.includes(segment.connectionName) &&
+        (progressesOutOfStart || progressesIntoEnd)
+      if (exitsConnectedTerminal) continue
+      if (segmentTouchesInflatedObstacle(segment, obstacle, inflation))
+        return false
+    }
+    for (const other of immutableSegmentsByLayer[layerIndex]!) {
+      const required =
+        segment.width / 2 +
+        other.width / 2 +
+        Math.max(segment.width, other.width)
+      if (
+        segmentMaxX + required < Math.min(other.start.x, other.end.x) ||
+        segmentMinX - required > Math.max(other.start.x, other.end.x) ||
+        segmentMaxY + required < Math.min(other.start.y, other.end.y) ||
+        segmentMinY - required > Math.max(other.start.y, other.end.y)
+      )
+        continue
+      if (
+        getMinimumSegmentDistance(
+          segment.start,
+          segment.end,
+          other.start,
+          other.end,
+        ) < required &&
+        (!input.pathJoins ||
+          !isPathJoinClear(input.pathJoins, segment, other, required))
+      )
+        return false
+    }
+    for (const via of immutableVias) {
+      if (!via.layers.includes(segment.layer)) continue
+      const required = segment.width / 2 + via.diameter / 2 + segment.width
+      if (
+        pointToSegmentDistance(via, segment.start, segment.end) < required &&
+        (!input.pathJoins ||
+          !isPathJoinClear(input.pathJoins, segment, via, required))
+      )
+        return false
+    }
+    return true
+  }
   const viaIsClear = (via: CopperVia): boolean => {
-    const { segments: immutableSegments, vias: immutableVias } =
-      via.connectionName === firstConnectionName
-        ? copperByLane.first
-        : copperByLane.second
     const radius = via.diameter / 2
     if (
       via.x - radius < input.bounds.minX ||
@@ -387,14 +373,23 @@ export const createSearchGeometryValidator = (input: {
       if (!via.layers.includes(segment.layer)) continue
       const required =
         radius + segment.width / 2 + Math.max(via.diameter, segment.width)
-      if (pointToSegmentDistance(via, segment.start, segment.end) < required)
+      if (
+        pointToSegmentDistance(via, segment.start, segment.end) < required &&
+        (!input.pathJoins ||
+          !isPathJoinClear(input.pathJoins, via, segment, required))
+      )
         return false
     }
     for (const other of immutableVias) {
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const required =
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)
-      if (Math.hypot(via.x - other.x, via.y - other.y) < required) return false
+      if (
+        Math.hypot(via.x - other.x, via.y - other.y) < required &&
+        (!input.pathJoins ||
+          !isPathJoinClear(input.pathJoins, via, other, required))
+      )
+        return false
     }
     return true
   }
@@ -452,7 +447,7 @@ export const createSearchGeometryValidator = (input: {
           y: point.y + normal.y,
           layers,
           diameter: input.firstViaDiameter,
-          connectionName: firstConnectionName,
+          connectionName: input.firstConnectionName,
           terminal,
         },
         {
@@ -460,7 +455,7 @@ export const createSearchGeometryValidator = (input: {
           y: point.y - normal.y,
           layers,
           diameter: input.secondViaDiameter,
-          connectionName: secondConnectionName,
+          connectionName: input.secondConnectionName,
           terminal,
         },
       ]

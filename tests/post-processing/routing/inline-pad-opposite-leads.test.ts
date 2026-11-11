@@ -23,6 +23,7 @@ test("brings adjoining pair sections into a wide middle station from opposite si
     hdRoutes,
     differentialPairs: [0, 1].map((section) => ({
       connectionNames: [`P${section}`, `N${section}`],
+      adjacentConnectionNames: [[`P${1 - section}`, `N${1 - section}`]],
       lengthTolerance: 0.05,
     })),
     obstacles: members.flatMap((rootConnectionName, polarity) =>

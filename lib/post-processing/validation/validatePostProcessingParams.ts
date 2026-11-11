@@ -165,6 +165,26 @@ export function validatePostProcessingParams(
       throw new Error(
         "PostProcessingSolver: differential pair declaration is invalid",
       )
+    if (
+      pair.adjacentConnectionNames !== undefined &&
+      (!Array.isArray(pair.adjacentConnectionNames) ||
+        pair.adjacentConnectionNames.length > 2 ||
+        pair.adjacentConnectionNames.some(
+          (names) =>
+            !Array.isArray(names) ||
+            names.length !== 2 ||
+            names[0] === names[1] ||
+            names.some(
+              (name) =>
+                typeof name !== "string" ||
+                name.length === 0 ||
+                pair.connectionNames.includes(name),
+            ),
+        ))
+    )
+      throw new Error(
+        `PostProcessingSolver: pair ${pair.connectionNames.join("/")} has invalid path neighbors`,
+      )
     for (const distance of [
       pair.minimumCenterlineDistance,
       pair.maximumCenterlineDistance,
