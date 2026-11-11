@@ -1,4 +1,5 @@
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
+import { getFixedDifferentialPairPathTraceIds } from "../model/getFixedDifferentialPairPathTraceIds"
 import { resolvePostProcessingGridConfig } from "../routing/resolvePostProcessingGridConfig"
 import type { PostProcessingSolverParams } from "../types"
 
@@ -159,6 +160,19 @@ export function validatePostProcessingParams(
         throw new Error(
           `PostProcessingSolver: HD route "${route.connectionName}" has an invalid jumper`,
         )
+    }
+  }
+
+  if (routeTerminalsByName && params.differentialPairPaths?.length) {
+    const fixedPathTraceIds = getFixedDifferentialPairPathTraceIds(
+      params.differentialPairPaths,
+    )
+    for (const trace of params.traces ?? []) {
+      if (!fixedPathTraceIds.has(trace.pcb_trace_id)) continue
+      const first = trace.route.find((entry) => entry.route_type === "wire")
+      const last = trace.route.findLast((entry) => entry.route_type === "wire")
+      if (first && last)
+        routeTerminalsByName.set(trace.pcb_trace_id, [first, last])
     }
   }
 

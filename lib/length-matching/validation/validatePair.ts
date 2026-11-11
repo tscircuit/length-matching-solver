@@ -1,8 +1,12 @@
-import type { DifferentialPair, SimpleRouteConnection } from "../../types"
+import type {
+  DifferentialPair,
+  DifferentialPairPath,
+  SimpleRouteConnection,
+} from "../../types"
 
 /** Fail early when a pair cannot refer to two routable source connections. */
 export const validatePair = (
-  pair: DifferentialPair,
+  pair: DifferentialPair | DifferentialPairPath,
   originalConnections: SimpleRouteConnection[],
 ): void => {
   if (pair.connectionNames[0] === pair.connectionNames[1]) {
@@ -31,6 +35,7 @@ export const validatePair = (
     throw new Error(
       "LengthMatchingSolver: differential pair minimumCenterlineDistance cannot exceed maximumCenterlineDistance",
     )
+  if ("sections" in pair) return
   const connectionsByName = new Map(
     originalConnections.map((connection) => [connection.name, connection]),
   )

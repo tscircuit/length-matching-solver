@@ -42,6 +42,7 @@ export type {
 export type {
   ConnectionPoint,
   DifferentialPair,
+  DifferentialPairPath,
   HighDensityRoute,
   HighDensityRouteJumper,
   Obstacle,

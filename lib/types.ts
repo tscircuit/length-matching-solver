@@ -76,6 +76,15 @@ export type DifferentialPair = {
   maximumCenterlineDistance?: number
 }
 
+type DifferentialPairPathSection =
+  | { connectionName: string }
+  | { pcbTraceId: string }
+
+/** One skew constraint over all declared sections of the two signals. */
+export type DifferentialPairPath = DifferentialPair & {
+  sections: [DifferentialPairPathSection, DifferentialPairPathSection][]
+}
+
 export type SimplifiedPcbTraceWireRoutePoint = {
   route_type: "wire"
   x: number

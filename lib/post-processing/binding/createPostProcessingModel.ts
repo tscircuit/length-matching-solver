@@ -4,6 +4,7 @@ import type {
   SimplifiedPcbTraceRoutePoint,
 } from "../../types"
 import { getLayerName } from "../geometry/getLayerName"
+import { getFixedDifferentialPairPathTraceIds } from "../model/getFixedDifferentialPairPathTraceIds"
 import type { PostProcessingModel, PostProcessingSolverParams } from "../types"
 
 /** Adapt native HD routes to the private simplified-copper routing model. */
@@ -11,14 +12,21 @@ export const createPostProcessingModel = (
   params: PostProcessingSolverParams,
 ): PostProcessingModel => {
   const internalNamesByRouteIndex = new Map<number, string>()
-  for (const pair of params.differentialPairs) {
-    for (const connectionName of pair.connectionNames) {
-      const matches = params.hdRoutes
-        .map((route, hdRouteIndex) => ({ route, hdRouteIndex }))
-        .filter(({ route }) => route.connectionName === connectionName)
-      if (matches.length !== 1) continue
-      internalNamesByRouteIndex.set(matches[0]!.hdRouteIndex, connectionName)
+  const targetConnectionNames = new Set(
+    params.differentialPairs.flatMap((pair) => pair.connectionNames),
+  )
+  for (const path of params.differentialPairPaths ?? []) {
+    for (const member of path.sections.flat()) {
+      if ("connectionName" in member)
+        targetConnectionNames.add(member.connectionName)
     }
+  }
+  for (const connectionName of targetConnectionNames) {
+    const matches = params.hdRoutes
+      .map((route, hdRouteIndex) => ({ route, hdRouteIndex }))
+      .filter(({ route }) => route.connectionName === connectionName)
+    if (matches.length !== 1) continue
+    internalNamesByRouteIndex.set(matches[0]!.hdRouteIndex, connectionName)
   }
 
   const traces: SimplifiedPcbTrace[] = params.hdRoutes.map(
@@ -175,9 +183,24 @@ export const createPostProcessingModel = (
   const connectionNames = new Set(
     traces.map((trace): string => trace.connection_name),
   )
+  const fixedPathTraceIds = getFixedDifferentialPairPathTraceIds(
+    params.differentialPairPaths ?? [],
+  )
   for (const [index, trace] of (params.traces ?? []).entries()) {
-    let connection_name = `post_processing_fixed_trace_${index}`
-    while (connectionNames.has(connection_name)) connection_name += "_"
+    const isPathSection = fixedPathTraceIds.has(trace.pcb_trace_id)
+    let connection_name = isPathSection
+      ? trace.pcb_trace_id
+      : `post_processing_fixed_trace_${index}`
+    if (isPathSection && connectionNames.has(connection_name))
+      throw new Error(
+        `PostProcessingSolver: preloaded path trace "${connection_name}" conflicts with a routed connection`,
+      )
+    while (
+      !isPathSection &&
+      (connectionNames.has(connection_name) ||
+        fixedPathTraceIds.has(connection_name))
+    )
+      connection_name += "_"
     connectionNames.add(connection_name)
     traces.push({
       ...structuredClone(trace),
@@ -254,6 +277,13 @@ export const createPostProcessingModel = (
         layerCount: params.layerCount,
         minTraceToPadEdgeClearance: params.minTraceToPadEdgeClearance,
       },
+      ...(params.differentialPairPaths
+        ? {
+            differentialPairPaths: structuredClone(
+              params.differentialPairPaths,
+            ),
+          }
+        : {}),
       ...(params.routingGrid
         ? { routingGrid: structuredClone(params.routingGrid) }
         : {}),

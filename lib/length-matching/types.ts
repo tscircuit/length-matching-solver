@@ -1,5 +1,6 @@
 import type {
   DifferentialPair,
+  DifferentialPairPath,
   HighDensityRoute,
   Obstacle,
   SimplifiedPcbTraces,
@@ -10,7 +11,7 @@ import type {
 export type LengthMatchingSolverParams = {
   hdRoutes: HighDensityRoute[]
   originalConnections: SimpleRouteConnection[]
-  differentialPairs?: DifferentialPair[]
+  differentialPairs?: (DifferentialPair | DifferentialPairPath)[]
   maximumMeanderDepth?: number
   minimumToothPitch?: number
   /**

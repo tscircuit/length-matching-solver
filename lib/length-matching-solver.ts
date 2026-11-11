@@ -8,6 +8,7 @@ import {
   findConnectionRouteIndexes,
   getConnectionLength,
 } from "./length-matching/connection-routes"
+import { resolveDifferentialPairPath } from "./length-matching/connection/resolveDifferentialPairPath"
 import { selectDualMeanderPlan } from "./length-matching/dual-meander-plan"
 import { LengthMatchingNoSolutionError } from "./length-matching/errors/LengthMatchingNoSolutionError"
 import { isCandidateGeometryValid } from "./length-matching/geometry-validation"
@@ -32,12 +33,14 @@ import type {
   LengthMatchingSolverParams,
 } from "./length-matching/types"
 import { createLengthMatchingVisualization } from "./length-matching/visualization"
-import type { DifferentialPair, HighDensityRoute } from "./types"
+import type { HighDensityRoute } from "./types"
 
 /** Coordinates the length-matching state machine; algorithm details live in `length-matching/`. */
 export class LengthMatchingSolver extends BaseSolver {
   matchedHdRoutes: HighDensityRoute[]
-  private readonly pairs: DifferentialPair[]
+  private readonly pairs: NonNullable<
+    LengthMatchingSolverParams["differentialPairs"]
+  >
   private nextPairIndex = 0
   private activePair: ActivePair | null = null
   private currentAttempt: RegressionAttempt | null = null
@@ -65,24 +68,34 @@ export class LengthMatchingSolver extends BaseSolver {
       return
     }
     validatePair(pair, this.params.originalConnections)
-    const firstIndexes = findConnectionRouteIndexes(
-      this.matchedHdRoutes,
-      pair.connectionNames[0],
-    )
-    const secondIndexes = findConnectionRouteIndexes(
-      this.matchedHdRoutes,
-      pair.connectionNames[1],
-    )
-    if (firstIndexes.length === 0 && secondIndexes.length === 0) return
-    if (firstIndexes.length === 0 || secondIndexes.length === 0)
-      throw new Error(
-        `LengthMatchingSolver: differential pair ${pair.connectionNames.join("/")} has routed geometry for only one connection`,
-      )
-    const firstLength = getConnectionLength(this.matchedHdRoutes, firstIndexes)
-    const secondLength = getConnectionLength(
-      this.matchedHdRoutes,
-      secondIndexes,
-    )
+    const path =
+      "sections" in pair
+        ? resolveDifferentialPairPath(
+            pair,
+            this.matchedHdRoutes,
+            this.params.traces ?? [],
+            this.getConfig().layerCount,
+          )
+        : undefined
+    const firstIndexes =
+      path?.routeIndexes[0] ??
+      findConnectionRouteIndexes(this.matchedHdRoutes, pair.connectionNames[0])
+    const secondIndexes =
+      path?.routeIndexes[1] ??
+      findConnectionRouteIndexes(this.matchedHdRoutes, pair.connectionNames[1])
+    if (!path) {
+      if (firstIndexes.length === 0 && secondIndexes.length === 0) return
+      if (firstIndexes.length === 0 || secondIndexes.length === 0)
+        throw new Error(
+          `LengthMatchingSolver: differential pair ${pair.connectionNames.join("/")} has routed geometry for only one connection`,
+        )
+    }
+    const firstLength =
+      path?.lengths[0] ??
+      getConnectionLength(this.matchedHdRoutes, firstIndexes)
+    const secondLength =
+      path?.lengths[1] ??
+      getConnectionLength(this.matchedHdRoutes, secondIndexes)
     const difference = Math.abs(firstLength - secondLength)
     if (difference <= pair.lengthTolerance) return
     const firstIsShorter = firstLength < secondLength

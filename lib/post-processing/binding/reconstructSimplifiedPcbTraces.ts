@@ -1,4 +1,5 @@
 import type { LengthMatchingSolverOutput } from "../../length-matching/types"
+import { resolveDifferentialPairPath } from "../../length-matching/connection/resolveDifferentialPairPath"
 import type {
   SimplifiedPcbTraceRoutePoint,
   SimplifiedPcbTraceWireRoutePoint,
@@ -127,7 +128,14 @@ export const reconstructSimplifiedPcbTraces = (input: {
     traces[binding.traceIndex] = { ...source, route: rebuilt }
   }
 
-  for (const pair of input.binding.solverParams.differentialPairs) {
+  const { pathSectionNames, solverParams } = input.binding
+  const pairsToValidate = [
+    ...solverParams.differentialPairs.filter((pair) => !("sections" in pair)),
+    ...simpleRouteJson.differentialPairs.filter((pair) =>
+      pair.connectionNames.every((name) => pathSectionNames.has(name)),
+    ),
+  ]
+  for (const pair of pairsToValidate) {
     const pairName = pair.connectionNames.join("/")
     const matches = pair.connectionNames.map((connectionName) =>
       traces
@@ -169,7 +177,10 @@ export const reconstructSimplifiedPcbTraces = (input: {
     const finalLengthDifference = Math.abs(
       getSimplifiedTraceLength(first) - getSimplifiedTraceLength(second),
     )
-    if (finalLengthDifference > pair.lengthTolerance + 1e-7)
+    if (
+      !pathSectionNames.has(pair.connectionNames[0]) &&
+      finalLengthDifference > pair.lengthTolerance + 1e-7
+    )
       throw new PostProcessingConstraintError({
         message: `PostProcessingSolver: reconstructed pair ${pairName} exceeds length tolerance ${pair.lengthTolerance} with error ${finalLengthDifference}`,
         connectionNames: [...pair.connectionNames],
@@ -206,6 +217,21 @@ export const reconstructSimplifiedPcbTraces = (input: {
         message: `PostProcessingSolver: length matching produced invalid complete copper for pair ${pairName}`,
         connectionNames: [...pair.connectionNames],
         reason: "invalid-final-copper",
+      })
+  }
+  for (const path of input.params.differentialPairPaths ?? []) {
+    const { lengths } = resolveDifferentialPairPath(
+      path,
+      input.result.matchedHdRoutes,
+      traces,
+      simpleRouteJson.layerCount,
+    )
+    const finalLengthDifference = Math.abs(lengths[0] - lengths[1])
+    if (finalLengthDifference > path.lengthTolerance + 1e-7)
+      throw new PostProcessingConstraintError({
+        message: `PostProcessingSolver: reconstructed path ${path.connectionNames.join("/")} exceeds length tolerance ${path.lengthTolerance} with error ${finalLengthDifference}`,
+        connectionNames: [...path.connectionNames],
+        reason: "length-tolerance-unsatisfied",
       })
   }
   return traces

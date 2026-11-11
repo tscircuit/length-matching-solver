@@ -1,5 +1,6 @@
 import type {
   DifferentialPair,
+  DifferentialPairPath,
   HighDensityRoute,
   Obstacle,
   SimplifiedPcbTraces,
@@ -17,6 +18,8 @@ export type PostProcessingGridConfig = {
 export type PostProcessingSolverParams = {
   hdRoutes: HighDensityRoute[]
   differentialPairs: DifferentialPair[]
+  /** Whole-path constraints over named routed or preloaded sections. */
+  differentialPairPaths?: DifferentialPairPath[]
   /** Fixed SRJ copper preserved throughout rerouting and length matching. */
   traces?: SimplifiedPcbTraces
   obstacles: Obstacle[]
@@ -53,6 +56,7 @@ export type InternalPostProcessingParams = {
     differentialPairs: DifferentialPair[]
     traces: SimplifiedPcbTraces
   }
+  differentialPairPaths?: DifferentialPairPath[]
   routingGrid?: PostProcessingGridConfig
 }
 

@@ -1,5 +1,4 @@
 import type {
-  DifferentialPair,
   HighDensityRoute,
   SimpleRouteConnection,
   SimplifiedPcbTraceViaRoutePoint,
@@ -26,8 +25,11 @@ export type LengthMatchingTraceBinding = {
 
 export type LengthMatchingBinding = {
   solverParams: LengthMatchingSolverParams & {
-    differentialPairs: DifferentialPair[]
+    differentialPairs: NonNullable<
+      LengthMatchingSolverParams["differentialPairs"]
+    >
   }
+  pathSectionNames: ReadonlySet<string>
   traceBindings: LengthMatchingTraceBinding[]
   baseTraces: SimplifiedPcbTraces
 }
@@ -38,15 +40,27 @@ export const createLengthMatchingBinding = (input: {
   params: InternalPostProcessingParams
 }): LengthMatchingBinding => {
   const { simpleRouteJson } = input.params
+  const differentialPairPaths = input.params.differentialPairPaths ?? []
+  const pathSectionNames = new Set<string>()
+  for (const path of differentialPairPaths) {
+    for (const member of path.sections.flat()) {
+      if ("connectionName" in member)
+        pathSectionNames.add(member.connectionName)
+    }
+  }
   const differentialPairs = getLengthMatchingPairs({
     traces: input.result.traces,
-    declaredPairs: simpleRouteJson.differentialPairs,
+    declaredPairs: simpleRouteJson.differentialPairs.filter(
+      (pair) =>
+        !pair.connectionNames.some((name) => pathSectionNames.has(name)),
+    ),
     reroutedPairs: input.result.reroutedPairs,
     layerCount: simpleRouteJson.layerCount,
   })
-  const targetConnectionNames = new Set(
-    differentialPairs.flatMap((pair) => pair.connectionNames),
-  )
+  const targetConnectionNames = new Set([
+    ...pathSectionNames,
+    ...differentialPairs.flatMap((pair) => pair.connectionNames),
+  ])
   const hdRoutes: HighDensityRoute[] = []
   const originalConnections: SimpleRouteConnection[] = []
   const traceBindings: LengthMatchingTraceBinding[] = []
@@ -217,12 +231,13 @@ export const createLengthMatchingBinding = (input: {
       hdRoutes,
       traces,
       originalConnections,
-      differentialPairs,
+      differentialPairs: [...differentialPairs, ...differentialPairPaths],
       obstacles: simpleRouteJson.obstacles,
       bounds: simpleRouteJson.bounds,
       layerCount: simpleRouteJson.layerCount,
       obstacleMargin,
     },
+    pathSectionNames,
     traceBindings,
     baseTraces: structuredClone(input.result.traces),
   }
