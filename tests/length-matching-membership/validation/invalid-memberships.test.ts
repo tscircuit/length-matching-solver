@@ -28,13 +28,23 @@ test("rejects invalid memberships, ambiguous originals, and invalid skew limits"
   }
   const ambiguous = createLaneMembershipParams()
   ambiguous.originalConnections.push(ambiguous.originalConnections[0]!)
-  expect(() => new LengthMatchingSolver(ambiguous).solve()).toThrow("exactly one original connection")
+  expect(() => new LengthMatchingSolver(ambiguous).solve()).toThrow(
+    "exactly one original connection",
+  )
 
   const shared = createLaneMembershipParams()
   shared.differentialPairs!.push(shared.differentialPairs![0]!)
-  expect(() => new LengthMatchingSolver(shared).solve()).toThrow("belongs to multiple pairs")
+  expect(() => new LengthMatchingSolver(shared).solve()).toThrow(
+    "belongs to multiple pairs",
+  )
 
   const multiTerminal = createLaneMembershipParams()
-  multiTerminal.originalConnections[0]!.pointsToConnect.push({ x: 1, y: 1, layer: "top" })
-  expect(() => new LengthMatchingSolver(multiTerminal).solve()).toThrow("exactly two points")
+  multiTerminal.originalConnections[0]!.pointsToConnect.push({
+    x: 1,
+    y: 1,
+    layer: "top",
+  })
+  expect(() => new LengthMatchingSolver(multiTerminal).solve()).toThrow(
+    "exactly two points",
+  )
 })

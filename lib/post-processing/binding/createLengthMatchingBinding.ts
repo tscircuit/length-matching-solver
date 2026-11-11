@@ -219,15 +219,17 @@ export const createLengthMatchingBinding = (input: {
       hdRoutes,
       traces,
       originalConnections,
-      differentialPairs: differentialPairs.map((pair): LengthMatchingPair => ({
-        connectionNames: [
-          [pair.connectionNames[0]],
-          [pair.connectionNames[1]],
-        ],
-        maxLengthSkewMm: pair.lengthTolerance,
-        minimumCenterlineDistance: pair.minimumCenterlineDistance,
-        maximumCenterlineDistance: pair.maximumCenterlineDistance,
-      })),
+      differentialPairs: differentialPairs.map(
+        (pair): LengthMatchingPair => ({
+          connectionNames: [
+            [pair.connectionNames[0]],
+            [pair.connectionNames[1]],
+          ],
+          maxLengthSkewMm: pair.lengthTolerance,
+          minimumCenterlineDistance: pair.minimumCenterlineDistance,
+          maximumCenterlineDistance: pair.maximumCenterlineDistance,
+        }),
+      ),
       obstacles: simpleRouteJson.obstacles,
       bounds: simpleRouteJson.bounds,
       layerCount: simpleRouteJson.layerCount,

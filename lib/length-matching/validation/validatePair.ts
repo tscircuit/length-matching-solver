@@ -60,7 +60,12 @@ export const validatePair = (
             ? `missing route for connection "${name}"`
             : `connection "${name}" must have exactly one complete route; stitch fragments before matching`,
         )
-      validateHopRoute(routes[routeIndexes[0]!]!, connection, layerCount, pairIndex)
+      validateHopRoute(
+        routes[routeIndexes[0]!]!,
+        connection,
+        layerCount,
+        pairIndex,
+      )
       indexes[laneIndex]!.push(routeIndexes[0]!)
     }
   }

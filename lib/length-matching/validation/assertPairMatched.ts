@@ -19,7 +19,9 @@ export const assertPairMatched = (
     layerCount,
     pairIndex,
   )
-  const lengths = indexes.map((lane): number => getConnectionLength(routes, lane))
+  const lengths = indexes.map((lane): number =>
+    getConnectionLength(routes, lane),
+  )
   const skew = Math.abs(lengths[0]! - lengths[1]!)
   if (!Number.isFinite(skew) || skew > pair.maxLengthSkewMm)
     throw new LengthMatchingConstraintError(

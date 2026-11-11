@@ -1,8 +1,4 @@
-import type {
-  SimplifiedPcbTraces,
-  Obstacle,
-  RoutePoint,
-} from "../types"
+import type { SimplifiedPcbTraces, Obstacle, RoutePoint } from "../types"
 import type { LengthMatchingPair } from "./types"
 
 export type MeanderPlacement = "balanced" | "negative" | "positive"

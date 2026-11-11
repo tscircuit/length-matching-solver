@@ -120,14 +120,16 @@ export const isCandidateGeometryValid = (input: {
       if (
         endpoint.z === start.z &&
         pointToSegmentDistance(endpoint, start, end) <= 1e-8 &&
-        !input.meanderPoints.slice(1).some(
-          (point, index): boolean =>
-            pointToSegmentDistance(
-              endpoint,
-              input.meanderPoints[index]!,
-              point,
-            ) <= 1e-8,
-        )
+        !input.meanderPoints
+          .slice(1)
+          .some(
+            (point, index): boolean =>
+              pointToSegmentDistance(
+                endpoint,
+                input.meanderPoints[index]!,
+                point,
+              ) <= 1e-8,
+          )
       )
         return false
     }

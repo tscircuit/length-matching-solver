@@ -16,7 +16,9 @@ test("accepts unequal hop counts and counts only planar copper across vias", ():
   ]
   negative.vias = [{ x: 10, y: 4, zLayers: [0, 1] }]
   params.originalConnections[2]!.pointsToConnect[1] = {
-    x: 20, y: 4, layer: "bottom",
+    x: 20,
+    y: 4,
+    layer: "bottom",
   }
   params.differentialPairs![0]!.connectionNames[1] = ["N:0"]
   const solver = new LengthMatchingSolver(params)
