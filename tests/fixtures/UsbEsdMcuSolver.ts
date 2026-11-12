@@ -47,6 +47,23 @@ export class UsbEsdMcuSolver extends LengthMatchingSolver {
         rootConnectionName,
       }),
     )
+    // Legacy root callers declare only the lane terminals, as bus pipelines do.
+    for (const name of ["P", "N"]) {
+      originalConnections.push({
+        ...originalConnections.find(
+          (connection) => connection.name === `${name}_AB`,
+        )!,
+        name,
+        pointsToConnect: [
+          originalConnections.find(
+            (connection) => connection.name === `${name}_AB`,
+          )!.pointsToConnect[0]!,
+          originalConnections.find(
+            (connection) => connection.name === `${name}_BC`,
+          )!.pointsToConnect[1]!,
+        ],
+      })
+    }
     super({ ...captured, hdRoutes, originalConnections, differentialPairs })
   }
 }

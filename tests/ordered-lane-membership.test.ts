@@ -1,11 +1,8 @@
-// Match the J1 → ESD → MCU USB lanes in hop order, ignoring the P-net TP1 stub.
-// P is shorter than N, so a successful match must add length to P's actual hops.
+// On main root lookup returns P_BC, TP1, P_AB instead of the ordered lane.
+// Exact J1 → ESD → MCU hop lists are not accepted.
 import { expect, test } from "bun:test"
 import { getConnectionLength } from "../lib/length-matching/connection/getConnectionLength"
 import { findConnectionRouteIndexes } from "../lib/length-matching/connection/findConnectionRouteIndexes"
-import "bun-match-svg"
-import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
-import { getUsbPcbCircuitJson } from "./fixtures/getUsbPcbCircuitJson"
 import { UsbEsdMcuSolver } from "./fixtures/UsbEsdMcuSolver"
 
 test.failing(
@@ -61,7 +58,5 @@ test.failing(
       (route) => route.connectionName === "tap",
     )
     expect(matchedTap).toEqual(originalTap)
-    // The passing input test owns the pre-solve snapshot. The fix adds the
-    // solved snapshot here so test.failing cannot hide snapshot failures.
   },
 )
