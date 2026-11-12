@@ -3,6 +3,9 @@
 import { expect, test } from "bun:test"
 import { getConnectionLength } from "../lib/length-matching/connection/getConnectionLength"
 import { findConnectionRouteIndexes } from "../lib/length-matching/connection/findConnectionRouteIndexes"
+import "bun-match-svg"
+import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
+import { getUsbPcbCircuitJson } from "./fixtures/getUsbPcbCircuitJson"
 import { UsbEsdMcuSolver } from "./fixtures/UsbEsdMcuSolver"
 
 test("ordered lanes select exact hops without their same-root tap", async (): Promise<void> => {
@@ -52,5 +55,7 @@ test("ordered lanes select exact hops without their same-root tap", async (): Pr
     (route) => route.connectionName === "tap",
   )
   expect(matchedTap).toEqual(originalTap)
-  await expect(solver.visualize()).toMatchGraphicsSvg(import.meta.path)
+  await expect(
+    convertCircuitJsonToPcbSvg(getUsbPcbCircuitJson(solver.matchedHdRoutes)),
+  ).toMatchSvgSnapshot(import.meta.path)
 })
