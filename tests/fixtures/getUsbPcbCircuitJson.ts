@@ -62,14 +62,14 @@ export function getUsbPcbCircuitJson(
   ]
   notes.forEach((text, index) => {
     circuitJson.push({
-      type: "pcb_fabrication_note_text",
-      pcb_fabrication_note_text_id: `usb_note_${index}`,
+      type: "pcb_silkscreen_text",
+      pcb_silkscreen_text_id: `usb_note_${index}`,
       pcb_component_id: "pcb_component_0",
       font: "tscircuit2024",
       font_size: 0.5,
       text,
       layer: "top",
-      color: "#ffffff",
+      ccw_rotation: 0,
       anchor_alignment: "center",
       anchor_position: {
         x: (minX + maxX) / 2,
