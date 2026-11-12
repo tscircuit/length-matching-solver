@@ -42,12 +42,16 @@ test("snapshots the USB board after length matching", async (): Promise<void> =>
   expect(getConnectionLength(after, [3, 0])).toBeGreaterThan(
     getConnectionLength(before, [3, 0]),
   )
-  console.log("USB lane lengths (mm):", {
-    pLength,
-    nLength,
-    tapLength: getConnectionLength(after, [1]),
-  })
+  const notes = [
+    "length-matching-solver: adds meanders so both lanes of a differential pair end up the same length",
+    "Lanes are now ordered hop lists: D+ = J1->ESD, ESD->MCU; TP1 is not counted.",
+    "Meander goes on D+.",
+    `Result: D+ ${pLength.toFixed(2)} mm, D- ${nLength.toFixed(2)} mm.`,
+  ]
   await expect(
-    convertCircuitJsonToPcbSvg(getUsbPcbCircuitJson(after)),
+    convertCircuitJsonToPcbSvg(getUsbPcbCircuitJson(after, notes), {
+      width: 1200,
+      height: 975,
+    }),
   ).toMatchSvgSnapshot(import.meta.path)
 })
