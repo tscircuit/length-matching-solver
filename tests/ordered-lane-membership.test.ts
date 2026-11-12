@@ -3,6 +3,9 @@
 import { expect, test } from "bun:test"
 import { getConnectionLength } from "../lib/length-matching/connection/getConnectionLength"
 import { findConnectionRouteIndexes } from "../lib/length-matching/connection/findConnectionRouteIndexes"
+import "bun-match-svg"
+import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
+import { getUsbPcbCircuitJson } from "./fixtures/getUsbPcbCircuitJson"
 import { UsbEsdMcuSolver } from "./fixtures/UsbEsdMcuSolver"
 
 test.failing(
