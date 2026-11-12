@@ -6,7 +6,9 @@
   "main": "./lib/index.ts",
   "module": "./lib/index.ts",
   "types": "./lib/index.ts",
-  "files": ["lib"],
+  "files": [
+    "lib"
+  ],
   "exports": {
     ".": {
       "types": "./lib/index.ts",
@@ -49,6 +51,9 @@
     "tsup": "^8.3.6",
     "typescript": "^5.9.3",
     "vite": "6",
-    "vite-tsconfig-paths": "5"
+    "vite-tsconfig-paths": "5",
+    "circuit-json": "0.0.525",
+    "circuit-to-svg": "0.0.220",
+    "bun-match-svg": "^0.0.15"
   }
 }

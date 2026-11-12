@@ -6,11 +6,18 @@ import type {
   SimpleRouteConnection,
 } from "../types"
 
+/** A string keeps logical-root membership; a list selects exact hops in order. */
+export type LengthMatchingLane = string | [string, ...string[]]
+
+export type LengthMatchingPair = Omit<DifferentialPair, "connectionNames"> & {
+  connectionNames: [LengthMatchingLane, LengthMatchingLane]
+}
+
 /** Input geometry and tuning constraints for a differential-pair matching run. */
 export type LengthMatchingSolverParams = {
   hdRoutes: HighDensityRoute[]
   originalConnections: SimpleRouteConnection[]
-  differentialPairs?: DifferentialPair[]
+  differentialPairs?: LengthMatchingPair[]
   maximumMeanderDepth?: number
   minimumToothPitch?: number
   /**

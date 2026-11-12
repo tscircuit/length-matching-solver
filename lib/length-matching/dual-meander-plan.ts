@@ -4,11 +4,7 @@ import type {
   RoutePoint,
   SimplifiedPcbTraces,
 } from "../types"
-import {
-  findConnectionRouteIndexes,
-  getConnectionLength,
-  getLogicalConnectionName,
-} from "./connection-routes"
+import { getConnectionLength } from "./connection-routes"
 import { isCandidateGeometryValid } from "./geometry-validation"
 import type {
   RegressionAttempt,
@@ -37,6 +33,8 @@ export type DualMeanderPlanInput = {
   routes: HighDensityRoute[]
   longerConnectionName: string
   shorterConnectionName: string
+  longerRouteIndexes: number[]
+  shorterRouteIndexes: number[]
   originalLengthDifference: number
   lengthTolerance: number
   longerCandidates: SegmentCandidate[]
@@ -215,7 +213,7 @@ export const selectDualMeanderPlan = (
     candidates: SegmentCandidate[]
     routes: HighDensityRoute[]
     connectionName: string
-    counterpartConnectionName: string
+    counterpartRouteIndexes: number[]
     config: Pick<
       DualMeanderPlanInput,
       | "lengthTolerance"
@@ -227,8 +225,7 @@ export const selectDualMeanderPlan = (
     >
   }): MinimumAttempt[] => {
     const routesWithoutCounterpart = input.routes.filter(
-      (route) =>
-        getLogicalConnectionName(route) !== input.counterpartConnectionName,
+      (_, index) => !input.counterpartRouteIndexes.includes(index),
     )
     const attempts: MinimumAttempt[] = []
     for (const candidate of input.candidates) {
@@ -266,7 +263,7 @@ export const selectDualMeanderPlan = (
     candidates: input.shorterCandidates,
     routes: input.routes,
     connectionName: input.shorterConnectionName,
-    counterpartConnectionName: input.longerConnectionName,
+    counterpartRouteIndexes: input.longerRouteIndexes,
     config: { ...config, lengthTolerance: input.lengthTolerance },
   })
   if (shorterMinimumAttempts.length === 0) return null
@@ -274,7 +271,7 @@ export const selectDualMeanderPlan = (
     candidates: input.longerCandidates,
     routes: input.routes,
     connectionName: input.longerConnectionName,
-    counterpartConnectionName: input.shorterConnectionName,
+    counterpartRouteIndexes: input.shorterRouteIndexes,
     config: { ...config, lengthTolerance: input.lengthTolerance },
   })
   const rankedCandidatePairs = getRankedOptionPairs({
@@ -310,8 +307,7 @@ export const selectDualMeanderPlan = (
         `LengthMatchingSolver: missing shorter route ${shorterMinimum.candidate.routeIndex}`,
       )
     const routesWithoutShorter = input.routes.filter(
-      (route) =>
-        getLogicalConnectionName(route) !== input.shorterConnectionName,
+      (_, index) => !input.shorterRouteIndexes.includes(index),
     )
     const longerAttempt = evaluateMeanderCandidate({
       candidate: longerMinimum.candidate,
@@ -352,14 +348,8 @@ export const selectDualMeanderPlan = (
     })
     if (!shorterAttempt.valid) continue
     const finalRoutes = replaceAttemptRoute(routesWithLonger, shorterAttempt)
-    const longerRouteIndexes = findConnectionRouteIndexes(
-      finalRoutes,
-      input.longerConnectionName,
-    )
-    const shorterRouteIndexes = findConnectionRouteIndexes(
-      finalRoutes,
-      input.shorterConnectionName,
-    )
+    const longerRouteIndexes = input.longerRouteIndexes
+    const shorterRouteIndexes = input.shorterRouteIndexes
     const measuredDifference = Math.abs(
       getConnectionLength(finalRoutes, shorterRouteIndexes) -
         getConnectionLength(finalRoutes, longerRouteIndexes),
@@ -418,7 +408,7 @@ export const selectDualMeanderPlan = (
       targetAddedLength: longerTargetAddedLength,
       routes: input.routes,
       connectionName: input.longerConnectionName,
-      excludedConnectionName: input.shorterConnectionName,
+      excludedRouteIndexes: input.shorterRouteIndexes,
       config: { ...config, lengthTolerance: input.lengthTolerance },
     })
     if (!longerPlan) continue
@@ -431,14 +421,8 @@ export const selectDualMeanderPlan = (
       config: { ...config, lengthTolerance: input.lengthTolerance },
     })
     if (!shorterPlan) continue
-    const longerRouteIndexes = findConnectionRouteIndexes(
-      shorterPlan.routes,
-      input.longerConnectionName,
-    )
-    const shorterRouteIndexes = findConnectionRouteIndexes(
-      shorterPlan.routes,
-      input.shorterConnectionName,
-    )
+    const longerRouteIndexes = input.longerRouteIndexes
+    const shorterRouteIndexes = input.shorterRouteIndexes
     const measuredDifference = Math.abs(
       getConnectionLength(shorterPlan.routes, shorterRouteIndexes) -
         getConnectionLength(shorterPlan.routes, longerRouteIndexes),
