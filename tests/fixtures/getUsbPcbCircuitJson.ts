@@ -19,6 +19,7 @@ type CapturedBoard = {
 /** Convert real two-layer SRJ/HD geometry (board mm, +X right, +Y up) to PCB elements. */
 export function getUsbPcbCircuitJson(
   routes: HighDensityRoute[],
+  notes: string[],
 ): AnyCircuitElement[] {
   const srj = JSON.parse(
     readFileSync(
@@ -43,20 +44,39 @@ export function getUsbPcbCircuitJson(
     N: srj.connections[1]!.name,
   }
   const { minX, maxX, minY, maxY } = srj.bounds
+  // Extend only the rendered board above the captured copper for native notes.
+  const noteHeight = 6
   const circuitJson: AnyCircuitElement[] = [
     {
       type: "pcb_board",
       pcb_board_id: "usb",
       num_layers: 2,
       thickness: 1.6,
-      center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
+      center: { x: (minX + maxX) / 2, y: (minY + maxY + noteHeight) / 2 },
       width: maxX - minX,
-      height: maxY - minY,
+      height: maxY - minY + noteHeight,
       material: "fr4",
     },
     ...artwork,
     ...connectivity,
   ]
+  notes.forEach((text, index) => {
+    circuitJson.push({
+      type: "pcb_fabrication_note_text",
+      pcb_fabrication_note_text_id: `usb_note_${index}`,
+      pcb_component_id: "pcb_component_0",
+      font: "tscircuit2024",
+      font_size: 0.5,
+      text,
+      layer: "top",
+      color: "#ffffff",
+      anchor_alignment: "center",
+      anchor_position: {
+        x: (minX + maxX) / 2,
+        y: maxY + noteHeight - 0.8 - index * 1.1,
+      },
+    })
+  })
   srj.obstacles.forEach((obstacle, index) => {
     circuitJson.push({
       type: "pcb_smtpad",
