@@ -3,6 +3,7 @@ import type { AnyCircuitElement, PcbTrace } from "circuit-json"
 import type { HighDensityRoute } from "../../lib/types"
 
 type CapturedBoard = {
+  connections: Array<{ name: string }>
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   obstacles: Array<{
     center: { x: number; y: number }
@@ -10,6 +11,7 @@ type CapturedBoard = {
     height: number
     layers: string[]
     ccwRotationDegrees?: number
+    circuitJsonMetadata?: { pcb_port_id?: string }
     shape?: string
   }>
 }
@@ -30,6 +32,16 @@ export function getUsbPcbCircuitJson(
       "utf8",
     ),
   ) as AnyCircuitElement[]
+  const connectivity = JSON.parse(
+    readFileSync(
+      new URL("./ordered-usb-pair.connectivity.json", import.meta.url),
+      "utf8",
+    ),
+  ) as AnyCircuitElement[]
+  const roots: Record<string, string> = {
+    P: srj.connections[0]!.name,
+    N: srj.connections[1]!.name,
+  }
   const { minX, maxX, minY, maxY } = srj.bounds
   const circuitJson: AnyCircuitElement[] = [
     {
@@ -43,11 +55,13 @@ export function getUsbPcbCircuitJson(
       material: "fr4",
     },
     ...artwork,
+    ...connectivity,
   ]
   srj.obstacles.forEach((obstacle, index) => {
     circuitJson.push({
       type: "pcb_smtpad",
       pcb_smtpad_id: `pad_${index}`,
+      pcb_port_id: obstacle.circuitJsonMetadata?.pcb_port_id,
       layer: "top",
       x: obstacle.center.x,
       y: obstacle.center.y,
@@ -84,7 +98,7 @@ export function getUsbPcbCircuitJson(
     circuitJson.push({
       type: "pcb_trace",
       pcb_trace_id: `trace_${index}`,
-      source_trace_id: route.rootConnectionName,
+      source_trace_id: roots[route.rootConnectionName!],
       route: points,
     })
     route.vias.forEach((via, viaIndex) =>
