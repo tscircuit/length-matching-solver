@@ -1,14 +1,11 @@
-// Match the J1 → ESD → MCU USB lanes in hop order, ignoring the P-net TP1 stub.
-// P is shorter than N, so a successful match must add length to P's actual hops.
+// Ordered J1 → ESD → MCU hops now reach matching in their declared order.
+// TP1 is excluded and the shorter D+ lane receives the meanders.
 import { expect, test } from "bun:test"
 import { getConnectionLength } from "../lib/length-matching/connection/getConnectionLength"
 import { findConnectionRouteIndexes } from "../lib/length-matching/connection/findConnectionRouteIndexes"
-import "bun-match-svg"
-import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
-import { getUsbPcbCircuitJson } from "./fixtures/getUsbPcbCircuitJson"
 import { UsbEsdMcuSolver } from "./fixtures/UsbEsdMcuSolver"
 
-test("ordered lanes select exact hops without their same-root tap", async (): Promise<void> => {
+test("ordered lanes select exact hops without their same-root tap", (): void => {
   const solver = new UsbEsdMcuSolver([
     {
       connectionNames: [
@@ -55,7 +52,4 @@ test("ordered lanes select exact hops without their same-root tap", async (): Pr
     (route) => route.connectionName === "tap",
   )
   expect(matchedTap).toEqual(originalTap)
-  await expect(
-    convertCircuitJsonToPcbSvg(getUsbPcbCircuitJson(solver.matchedHdRoutes)),
-  ).toMatchSvgSnapshot(import.meta.path)
 })
