@@ -10,8 +10,7 @@ type PadArrangement = {
   maxUncoupledLength?: number
 }
 
-// Expected failure until terminal escape honors the requested copper gap.
-test.failing("honors requested facing-pad copper gaps", (): void => {
+test("honors requested facing-pad copper gaps", (): void => {
   const arrangements: PadArrangement[] = [
     { name: "aligned", stagger: 0, widths: [0.15, 0.15] },
     { name: "one micron stagger", stagger: 0.001, widths: [0.15, 0.15] },
