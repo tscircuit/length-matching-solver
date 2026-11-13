@@ -59,8 +59,7 @@ test("snapshots copper between staggered facing pads", (): void => {
     throw new Error("No top-layer wire crosses the midpoint")
   })
   const measuredGap = Math.abs(centerYs[0]! - centerYs[1]!) - traceWidth
-  // Record current copper here; the expected-failure matrix asserts the request.
-  expect(measuredGap).not.toBeCloseTo(requestedGap, 6)
+  expect(measuredGap).toBeCloseTo(requestedGap, 6)
   expect(solver.finalVisualize()).toMatchGraphicsSvg(import.meta.path, {
     backgroundColor: "white",
   })

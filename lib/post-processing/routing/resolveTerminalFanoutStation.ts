@@ -13,6 +13,7 @@ type ResolveTerminalFanoutStationInput = {
   centerlineSpacing: number
   side: 1 | -1
   lanes: [TerminalFanoutLane, TerminalFanoutLane]
+  availableTravel: number
   maxUncoupledLength?: number
   maximumTurnDegrees: number
   searchStep: number
@@ -47,8 +48,10 @@ export const resolveTerminalFanoutStation = (
       )
     }),
   )
-  const maximumTravelDistance =
-    input.maxUncoupledLength ?? minimumTravelDistance
+  const maximumTravelDistance = Math.min(
+    input.availableTravel,
+    input.maxUncoupledLength ?? input.availableTravel,
+  )
   if (minimumTravelDistance > maximumTravelDistance + 1e-8) return null
   const increment = Math.max(0.05, Math.min(0.25, input.searchStep / 2))
   const attemptCount = Math.max(

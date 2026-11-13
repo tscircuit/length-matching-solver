@@ -2,8 +2,7 @@ import { expect, test } from "bun:test"
 import type { SimplifiedPcbTrace } from "../../../lib"
 import { DifferentialPairRoutingSession } from "../../../lib/post-processing/routing/DifferentialPairRoutingSession"
 
-// A zero escape limit currently rejects a valid sub-grid coupled pair.
-test.failing("routes short already-coupled pairs", (): void => {
+test("routes short already-coupled pairs", (): void => {
   for (const maxUncoupledLength of [undefined, 0]) {
     const traces: SimplifiedPcbTrace[] = [-0.3, 0.3].map(
       (y): SimplifiedPcbTrace => ({

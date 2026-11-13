@@ -2,8 +2,7 @@ import { expect, test } from "bun:test"
 import type { SimplifiedPcbTrace } from "../../../lib"
 import { DifferentialPairRoutingSession } from "../../../lib/post-processing/routing/DifferentialPairRoutingSession"
 
-// The grid-step cutoff currently discards feasible coupled terminal escapes.
-test.failing("routes short coupled spans after pad escape", (): void => {
+test("routes short coupled spans after pad escape", (): void => {
   for (const maxUncoupledLength of [undefined, 2]) {
     const traces: SimplifiedPcbTrace[] = [-0.5, 0.5].map(
       (y): SimplifiedPcbTrace => ({
