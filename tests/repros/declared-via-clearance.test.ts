@@ -7,7 +7,7 @@ import { createPostProcessingModel } from "../../lib/post-processing/binding/cre
 import { createPostProcessingVisualization } from "../../lib/post-processing/visualization/createPostProcessingVisualization"
 import { getRouteLength } from "../../lib/route-geometry/getRouteLength"
 
-test("reproduces blocked paired-via rerouting", () => {
+test("reroutes paired vias using the declared clearance", () => {
   const params: PostProcessingSolverParams = {
     hdRoutes: [
       {
@@ -55,11 +55,10 @@ test("reproduces blocked paired-via rerouting", () => {
   const solver = new PostProcessingSolver(params)
   solver.solve()
   const output = solver.getOutput()
-  expect(output.postProcessingErrors).toHaveLength(1)
-  expect(output.postProcessingErrors[0]?.reason).toBe("no-valid-candidate")
+  expect(output.postProcessingErrors).toEqual([])
   expect(
     output.hdRoutes.map((route) => route.vias.map((via) => via.x)),
-  ).toEqual([[2], [2]])
+  ).toEqual([[4], [4]])
   for (const [index, route] of output.hdRoutes.entries()) {
     expect(route.route[0]).toMatchObject(params.hdRoutes[index]!.route[0]!)
     expect(route.route.at(-1)).toMatchObject(
