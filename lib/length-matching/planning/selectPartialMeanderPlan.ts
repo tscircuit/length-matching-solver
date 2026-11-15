@@ -74,7 +74,7 @@ export const selectPartialMeanderPlan = (input: {
           )
         const feasibleAttempts = options.attempts.filter(
           (attempt) =>
-            attempt.addedLength + input.lengthTolerance >=
+            attempt.addedLength >=
             maximumCapacityTarget.targetAddedLength,
         )
         if (feasibleAttempts.length === 0)

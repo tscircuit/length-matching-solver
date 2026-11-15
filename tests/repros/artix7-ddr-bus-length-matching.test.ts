@@ -2,7 +2,6 @@ import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { gunzipSync } from "node:zlib"
 import {
-  LengthMatchingNoSolutionError,
   LengthMatchingSolver,
   type LengthMatchingSolverParams,
 } from "../../lib"
@@ -15,16 +14,18 @@ import { createPostProcessingVisualization } from "../../lib/post-processing/vis
 test("matches the routed Artix-7 DDR buses within their declared skew", () => {
   const input: LengthMatchingSolverParams = JSON.parse(
     gunzipSync(
-      readFileSync(
-        new URL(
-          "../fixtures/artix7-ddr-bus-length-matching.json.gz",
-          import.meta.url,
+      new Uint8Array(
+        readFileSync(
+          new URL(
+            "../fixtures/artix7-ddr-bus-length-matching.json.gz",
+            import.meta.url,
+          ),
         ),
       ),
     ).toString("utf8"),
   )
   const solver = new LengthMatchingSolver(input)
-  expect(() => solver.solve()).toThrow(LengthMatchingNoSolutionError)
+  solver.solve()
   const skews = input.differentialPairs!.map((pair) => {
     const lengths = pair.connectionNames.map((lane) =>
       getConnectionLength(
@@ -37,7 +38,8 @@ test("matches the routed Artix-7 DDR buses within their declared skew", () => {
   const matchedCount = skews.filter(
     (skew, index) => skew <= input.differentialPairs![index]!.lengthTolerance,
   ).length
-  expect(solver.solved).toBe(false)
+  expect(solver.solved).toBe(true)
+  expect(matchedCount).toBe(skews.length)
   expect(solver.matchedHdRoutes).toHaveLength(input.hdRoutes.length)
   const graphics = solver.visualize()
   const fixedCopper = createPostProcessingVisualization({
