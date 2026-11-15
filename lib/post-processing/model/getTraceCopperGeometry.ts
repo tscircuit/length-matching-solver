@@ -204,5 +204,25 @@ export const getTraceCopperGeometry = (
         : entry.to_layer
     current = { ...entry.end, layer: nextLayer, width: entry.width }
   }
+  const first = trace.route[0]
+  const last = trace.route.at(-1)
+  for (const segment of segments) {
+    if (
+      first &&
+      (first.route_type === "wire" || first.route_type === "via") &&
+      segment.start.x === first.x &&
+      segment.start.y === first.y
+    )
+      segment.terminal = "start"
+    if (
+      last &&
+      (last.route_type === "wire" || last.route_type === "via") &&
+      segment.end.x === last.x &&
+      segment.end.y === last.y
+    ) {
+      if (segment.terminal === "start") segment.terminal = "both"
+      else segment.terminal = "end"
+    }
+  }
   return { segments, vias }
 }

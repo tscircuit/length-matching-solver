@@ -9,7 +9,11 @@ import type { DifferentialPairReroutingOutput } from "./DifferentialPairReroutin
 
 export type FortyFiveDegreeSimplificationInput = Pick<
   InternalPostProcessingParams["simpleRouteJson"],
-  "obstacles" | "bounds" | "layerCount" | "minTraceToPadEdgeClearance"
+  | "obstacles"
+  | "bounds"
+  | "layerCount"
+  | "minTraceToPadEdgeClearance"
+  | "connectionRoots"
 > &
   Omit<DifferentialPairReroutingOutput, "failures">
 
@@ -46,6 +50,7 @@ export class FortyFiveDegreeSimplificationSolver extends BaseSolver {
     this.traces = simplifyDifferentialPairTo45Degrees({
       traces: this.traces,
       pair,
+      connectionRoots: this.input.connectionRoots,
       obstacles: this.input.obstacles,
       bounds: this.input.bounds,
       layerCount: this.input.layerCount,

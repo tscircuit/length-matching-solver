@@ -1,3 +1,7 @@
+import {
+  canJoinAtSharedTerminal,
+  type ConnectionRoots,
+} from "./canJoinAtSharedTerminal"
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import type { Obstacle, SimplifiedPcbTrace } from "../../types"
@@ -13,6 +17,7 @@ import { segmentTouchesInflatedObstacle } from "./segmentTouchesInflatedObstacle
 
 export type CandidateGeometryContext = {
   immutableTraces: SimplifiedPcbTrace[]
+  connectionRoots?: ConnectionRoots
   obstacles: Obstacle[]
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   layerCount: number
@@ -145,7 +150,8 @@ export const validateCandidateGeometry = (
           other.start,
           other.end,
         ) <
-        requiredDistance - EPSILON
+          requiredDistance - EPSILON &&
+        !canJoinAtSharedTerminal([segment, other], context.connectionRoots)
       )
         return false
     }
@@ -155,7 +161,8 @@ export const validateCandidateGeometry = (
         segment.width / 2 + via.diameter / 2 + segment.width
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
-        requiredDistance - EPSILON
+          requiredDistance - EPSILON &&
+        !canJoinAtSharedTerminal([segment, via], context.connectionRoots)
       )
         return false
     }
@@ -201,7 +208,8 @@ export const validateCandidateGeometry = (
         radius + segment.width / 2 + Math.max(via.diameter, segment.width)
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
-        requiredDistance - EPSILON
+          requiredDistance - EPSILON &&
+        !canJoinAtSharedTerminal([via, segment], context.connectionRoots)
       )
         return false
     }
@@ -211,7 +219,8 @@ export const validateCandidateGeometry = (
         radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)
       if (
         Math.hypot(via.x - other.x, via.y - other.y) <
-        requiredDistance - EPSILON
+          requiredDistance - EPSILON &&
+        !canJoinAtSharedTerminal([via, other], context.connectionRoots)
       )
         return false
     }

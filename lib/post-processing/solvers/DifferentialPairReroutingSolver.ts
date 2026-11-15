@@ -55,6 +55,7 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
         this.activeSession = new DifferentialPairRoutingSession({
           pair,
           traces: this.outputTraces,
+          connectionRoots: this.params.simpleRouteJson.connectionRoots,
           obstacles: this.params.simpleRouteJson.obstacles,
           bounds: this.params.simpleRouteJson.bounds,
           layerCount: this.params.simpleRouteJson.layerCount,
