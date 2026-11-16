@@ -151,6 +151,14 @@ export const isCandidateGeometryValid = (input: {
     for (const { segments, vias } of traceCopperGeometry) {
       for (const segment of segments) {
         if (segment.layer !== layer) continue
+        const radius = segment.width / 2
+        if (
+          Math.max(segment.start.x, segment.end.x) + radius < minSegmentX ||
+          Math.min(segment.start.x, segment.end.x) - radius > maxSegmentX ||
+          Math.max(segment.start.y, segment.end.y) + radius < minSegmentY ||
+          Math.min(segment.start.y, segment.end.y) - radius > maxSegmentY
+        )
+          continue
         if (
           getMinimumSegmentDistance(start, end, segment.start, segment.end) <
           obstacleMargin + segment.width / 2
@@ -159,6 +167,14 @@ export const isCandidateGeometryValid = (input: {
       }
       for (const via of vias) {
         if (!via.layers.includes(layer)) continue
+        const radius = via.diameter / 2
+        if (
+          via.x + radius < minSegmentX ||
+          via.x - radius > maxSegmentX ||
+          via.y + radius < minSegmentY ||
+          via.y - radius > maxSegmentY
+        )
+          continue
         if (
           pointToSegmentDistance(via, start, end) <
           obstacleMargin + via.diameter / 2
@@ -171,6 +187,14 @@ export const isCandidateGeometryValid = (input: {
         getLogicalConnectionName(otherRoute) === connectionName
       for (const via of otherRoute.vias) {
         if (via.zLayers && !via.zLayers.includes(start.z)) continue
+        const radius = otherRoute.viaDiameter / 2
+        if (
+          via.x + radius < minSegmentX ||
+          via.x - radius > maxSegmentX ||
+          via.y + radius < minSegmentY ||
+          via.y - radius > maxSegmentY
+        )
+          continue
         const touchesSegmentEndpoint =
           Math.hypot(via.x - start.x, via.y - start.y) <= 1e-8 ||
           Math.hypot(via.x - end.x, via.y - end.y) <= 1e-8
@@ -193,6 +217,14 @@ export const isCandidateGeometryValid = (input: {
         const otherStart = otherRoute.route[otherIndex]!
         const otherEnd = otherRoute.route[otherIndex + 1]!
         if (start.z !== otherStart.z || start.z !== otherEnd.z) continue
+        const radius = otherRoute.traceThickness / 2
+        if (
+          Math.max(otherStart.x, otherEnd.x) + radius < minSegmentX ||
+          Math.min(otherStart.x, otherEnd.x) - radius > maxSegmentX ||
+          Math.max(otherStart.y, otherEnd.y) + radius < minSegmentY ||
+          Math.min(otherStart.y, otherEnd.y) - radius > maxSegmentY
+        )
+          continue
         const requiredDistance =
           input.route.traceThickness / 2 +
           otherRoute.traceThickness / 2 +
