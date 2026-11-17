@@ -58,12 +58,18 @@ export const createCoupledPairCandidate = (input: {
       const normal = createNormal(previous ?? point, next ?? point)
       return { x: normal.x * halfSpacing, y: normal.y * halfSpacing }
     }
-    if (input.terminalFanout && index === 1)
-      return createNormal(previous, point)
-    if (input.terminalFanout && index === input.path.length - 2)
-      return createNormal(point, next)
-    if (input.terminalFanout && input.path[index + 1]?.layer !== point.layer)
-      return createNormal(previous, point)
+    if (input.terminalFanout && index === 1) {
+      const normal = createNormal(previous, point)
+      return { x: normal.x * halfSpacing, y: normal.y * halfSpacing }
+    }
+    if (input.terminalFanout && index === input.path.length - 2) {
+      const normal = createNormal(point, next)
+      return { x: normal.x * halfSpacing, y: normal.y * halfSpacing }
+    }
+    if (input.terminalFanout && input.path[index + 1]?.layer !== point.layer) {
+      const normal = createNormal(previous, point)
+      return { x: normal.x * halfSpacing, y: normal.y * halfSpacing }
+    }
     const incomingNormal = createNormal(previous, point)
     const outgoingNormal = createNormal(point, next)
     const bisector = {
