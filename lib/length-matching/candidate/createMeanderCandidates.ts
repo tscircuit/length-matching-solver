@@ -2,7 +2,7 @@ import { getSegmentLength } from "../../route-geometry"
 import type { HighDensityRoute } from "../../types"
 import type { MeanderPlacement, SegmentCandidate } from "../internal-types"
 
-const DEFAULT_MIN_MEANDER_GAP = 0.3
+export const DEFAULT_MIN_MEANDER_GAP = 0.3
 
 /** Enumerate deterministic segment, tooth-count, and side choices for tuning. */
 export const createMeanderCandidates = (input: {

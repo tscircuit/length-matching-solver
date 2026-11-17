@@ -13,6 +13,12 @@ export {
   type PostProcessingSolverOutput,
   type PostProcessingSolverParams,
 } from "./PostProcessingSolver"
+export { TraceRoutingSolver } from "./TraceRoutingSolver"
+export type {
+  TraceRoutingConnection,
+  TraceRoutingSolverOutput,
+  TraceRoutingSolverParams,
+} from "./trace-routing/types"
 export {
   DEFAULT_MAX_DIFFERENTIAL_PAIR_CENTERLINE_SPACING_MM,
   DEFAULT_MIN_DIFFERENTIAL_PAIR_CENTERLINE_SPACING_MM,
