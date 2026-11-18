@@ -16,8 +16,14 @@ const { simpleRouteJson } = getSimpleRouteJsonFromCircuitJson({
   db: circuit.db,
   subcircuitComponent,
 })
-await Bun.write("board.circuit.json", JSON.stringify(circuitJson, null, 2) + "\n")
-await Bun.write("board.srj.json", JSON.stringify(simpleRouteJson, null, 2) + "\n")
+await Bun.write(
+  "board.circuit.json",
+  JSON.stringify(circuitJson, null, 2) + "\n",
+)
+await Bun.write(
+  "board.srj.json",
+  JSON.stringify(simpleRouteJson, null, 2) + "\n",
+)
 const router = new AutoroutingPipelineSolver9_PreloadedTraceGraph(
   simpleRouteJson,
   { cacheProvider: null },
