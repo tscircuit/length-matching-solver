@@ -47,9 +47,7 @@ test("replays the native USB interface gap capture", async (): Promise<void> => 
   solver.solve()
   const output = solver.getOutput()
   expect(solver.solved).toBe(true)
-  expect(output.postProcessingErrors.map((error) => error.reason)).toEqual([
-    "no-valid-candidate",
-  ])
+  expect(output.postProcessingErrors).toEqual([])
   expect(params).toEqual(originalParams)
   expect(output.hdRoutes).toHaveLength(2)
   for (const trace of output.hdRoutes) {
@@ -61,8 +59,7 @@ test("replays the native USB interface gap capture", async (): Promise<void> => 
     expect(trace.traceThickness).toBe(0.15)
   }
   for (const gap of getUsbInterfaceGapSamples(output.hdRoutes)) {
-    expect(gap).not.toBeCloseTo(requestedGap, 6)
-    expect(gap).toBeCloseTo(0.5, 6)
+    expect(gap).toBeCloseTo(requestedGap, 6)
   }
   await expect(
     convertCircuitJsonToPcbSvg(
