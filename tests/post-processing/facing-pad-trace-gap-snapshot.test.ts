@@ -2,13 +2,19 @@ import { expect, test } from "bun:test"
 import "bun-match-svg"
 import type { AnyCircuitElement } from "circuit-json"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
-import { PostProcessingSolver, type PostProcessingSolverParams } from "../../lib"
+import {
+  PostProcessingSolver,
+  type PostProcessingSolverParams,
+} from "../../lib"
 import { getUsbInterfaceGapPcbCircuitJson } from "./fixtures/usb-interface-gap/getUsbInterfaceGapPcbCircuitJson"
 import { getUsbInterfaceGapSamples } from "./fixtures/usb-interface-gap/getUsbInterfaceGapSamples"
 
 test("replays the native USB interface gap capture", async (): Promise<void> => {
   const params: PostProcessingSolverParams = await Bun.file(
-    new URL("./fixtures/usb-interface-gap/post-processing.json", import.meta.url),
+    new URL(
+      "./fixtures/usb-interface-gap/post-processing.json",
+      import.meta.url,
+    ),
   ).json()
   const board: AnyCircuitElement[] = await Bun.file(
     new URL("./fixtures/usb-interface-gap/board.circuit.json", import.meta.url),
@@ -28,9 +34,9 @@ test("replays the native USB interface gap capture", async (): Promise<void> => 
   expect(
     board.filter((element) => element.type === "pcb_component"),
   ).toHaveLength(2)
-  expect(
-    board.filter((element) => element.type === "pcb_smtpad"),
-  ).toHaveLength(23)
+  expect(board.filter((element) => element.type === "pcb_smtpad")).toHaveLength(
+    23,
+  )
   expect(
     board.filter((element) => element.type === "pcb_plated_hole"),
   ).toHaveLength(4)
