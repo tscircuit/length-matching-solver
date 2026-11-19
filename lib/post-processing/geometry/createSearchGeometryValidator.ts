@@ -334,7 +334,9 @@ export const createSearchGeometryValidator = (input: {
       if (!via.layers.includes(segment.layer)) continue
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
-        segment.width / 2 + via.diameter / 2 + segment.width
+        segment.width / 2 +
+          via.diameter / 2 +
+          (input.minTraceToPadEdgeClearance ?? segment.width)
       )
         return false
     }
@@ -342,6 +344,7 @@ export const createSearchGeometryValidator = (input: {
   }
   const viaIsClear = (via: CopperVia): boolean => {
     const radius = via.diameter / 2
+    const obstacleClearance = input.minTraceToPadEdgeClearance ?? via.diameter
     if (
       via.x - radius < input.bounds.minX ||
       via.x + radius > input.bounds.maxX ||
@@ -350,6 +353,7 @@ export const createSearchGeometryValidator = (input: {
     )
       return false
     for (const obstacle of input.obstacles) {
+      if (obstacle.isCopperPour) continue
       if (!via.layers.some((layer) => obstacleIsOnLayer(obstacle, layer)))
         continue
       const exitsConnectedTerminal =
@@ -358,21 +362,27 @@ export const createSearchGeometryValidator = (input: {
         obstacleContains(via, obstacle, 0)
       if (
         !exitsConnectedTerminal &&
-        obstacleContains(via, obstacle, radius + via.diameter)
+        obstacleContains(via, obstacle, radius + obstacleClearance)
       )
         return false
     }
     for (const segment of immutableSegments) {
       if (!via.layers.includes(segment.layer)) continue
       const required =
-        radius + segment.width / 2 + Math.max(via.diameter, segment.width)
+        radius +
+        segment.width / 2 +
+        (input.minTraceToPadEdgeClearance ??
+          Math.max(via.diameter, segment.width))
       if (pointToSegmentDistance(via, segment.start, segment.end) < required)
         return false
     }
     for (const other of immutableVias) {
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const required =
-        radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)
+        radius +
+        other.diameter / 2 +
+        (input.minTraceToPadEdgeClearance ??
+          Math.max(via.diameter, other.diameter))
       if (Math.hypot(via.x - other.x, via.y - other.y) < required) return false
     }
     return true

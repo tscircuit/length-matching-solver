@@ -152,7 +152,9 @@ export const validateCandidateGeometry = (
     for (const via of immutableCopper.vias) {
       if (!via.layers.includes(segment.layer)) continue
       const requiredDistance =
-        segment.width / 2 + via.diameter / 2 + segment.width
+        segment.width / 2 +
+        via.diameter / 2 +
+        (context.minTraceToPadEdgeClearance ?? segment.width)
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
         requiredDistance - EPSILON
@@ -168,6 +170,7 @@ export const validateCandidateGeometry = (
     immutableCopper: ReturnType<typeof getImmutableCopper>,
   ): boolean => {
     const radius = via.diameter / 2
+    const obstacleClearance = context.minTraceToPadEdgeClearance ?? via.diameter
     if (
       via.x - radius < context.bounds.minX - EPSILON ||
       via.x + radius > context.bounds.maxX + EPSILON ||
@@ -176,6 +179,7 @@ export const validateCandidateGeometry = (
     )
       return false
     for (const obstacle of context.obstacles) {
+      if (obstacle.isCopperPour) continue
       if (
         !via.layers.some((layer) =>
           isObstacleOnLayer(obstacle, layer, context.layerCount),
@@ -190,15 +194,18 @@ export const validateCandidateGeometry = (
         Math.abs(local.y) <= obstacle.height / 2 + EPSILON
       if (
         !exitsConnectedTerminalObstacle &&
-        Math.abs(local.x) <= obstacle.width / 2 + radius + via.diameter &&
-        Math.abs(local.y) <= obstacle.height / 2 + radius + via.diameter
+        Math.abs(local.x) <= obstacle.width / 2 + radius + obstacleClearance &&
+        Math.abs(local.y) <= obstacle.height / 2 + radius + obstacleClearance
       )
         return false
     }
     for (const segment of immutableCopper.segments) {
       if (!via.layers.includes(segment.layer)) continue
       const requiredDistance =
-        radius + segment.width / 2 + Math.max(via.diameter, segment.width)
+        radius +
+        segment.width / 2 +
+        (context.minTraceToPadEdgeClearance ??
+          Math.max(via.diameter, segment.width))
       if (
         pointToSegmentDistance(via, segment.start, segment.end) <
         requiredDistance - EPSILON
@@ -208,7 +215,10 @@ export const validateCandidateGeometry = (
     for (const other of immutableCopper.vias) {
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
       const requiredDistance =
-        radius + other.diameter / 2 + Math.max(via.diameter, other.diameter)
+        radius +
+        other.diameter / 2 +
+        (context.minTraceToPadEdgeClearance ??
+          Math.max(via.diameter, other.diameter))
       if (
         Math.hypot(via.x - other.x, via.y - other.y) <
         requiredDistance - EPSILON
