@@ -16,7 +16,10 @@ import { reconstructHdRoutesFromMatchingOutput } from "./post-processing/binding
 import { DifferentialPairRoutingError } from "./post-processing/errors/DifferentialPairRoutingError"
 import { PostProcessingConstraintError } from "./post-processing/errors/PostProcessingConstraintError"
 import { PostProcessingGridCapacityError } from "./post-processing/errors/PostProcessingGridCapacityError"
-import { getDifferentialPairReroutingIterationLimit } from "./post-processing/routing/getDifferentialPairReroutingIterationLimit"
+import {
+  getDifferentialPairReroutingIterationLimit,
+  MAXIMUM_TOTAL_ROW_FANOUT_ITERATIONS,
+} from "./post-processing/routing/getDifferentialPairReroutingIterationLimit"
 import {
   DifferentialPairReroutingSolver,
   type DifferentialPairReroutingOutput,
@@ -178,6 +181,7 @@ export class PostProcessingSolver extends BasePipelineSolver<PostProcessingSolve
     const pipelineLifecycleIterations = 10
     const pipelineIterationLimit =
       reroutingIterationLimit +
+      MAXIMUM_TOTAL_ROW_FANOUT_ITERATIONS +
       simplificationIterationLimit +
       lengthMatchingIterationLimit +
       pipelineLifecycleIterations

@@ -32,6 +32,8 @@ test("snapshots the DSI_D0 pad escape on the RK3506G2 layout", async (): Promise
 
   const skew = Math.abs(getRouteLength(positive) - getRouteLength(negative))
   const { lengthTolerance } = srj.differentialPairs[0]!
+  expect(postProcessingErrors).toEqual([])
+  expect(skew).toBeLessThanOrEqual(lengthTolerance)
   const status = postProcessingErrors.length
     ? postProcessingErrors.map(({ reason }) => reason).join(", ")
     : "Post-processing accepted"
