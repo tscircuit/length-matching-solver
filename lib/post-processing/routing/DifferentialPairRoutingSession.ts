@@ -295,6 +295,14 @@ export class DifferentialPairRoutingSession {
     const sides = [preferredSide, preferredSide === 1 ? -1 : 1] as const
     const attempts = centerlineDistanceSamples.flatMap((centerlineSpacing) => {
       const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
+      const grid = resolvePostProcessingGridConfig({
+        config: this.input.routingGrid,
+        bounds: this.input.bounds,
+        defaultInnerGridStep: Math.max(
+          0.25,
+          Math.min(0.5, centerlineSpacing / 2),
+        ),
+      })
       // A mixed terminal layout can place a coupled segment inside its pad.
       // Try clear escape stations at the requested spacing before widening.
       const searchMixedTerminalFanout =
@@ -315,14 +323,6 @@ export class DifferentialPairRoutingSession {
           })),
         )
         .flatMap(({ side, useFanoutStations }) => {
-          const grid = resolvePostProcessingGridConfig({
-            config: this.input.routingGrid,
-            bounds: this.input.bounds,
-            defaultInnerGridStep: Math.max(
-              0.25,
-              Math.min(0.5, centerlineSpacing / 2),
-            ),
-          })
           const createValidator = (
             searchStart: CoupledPathPoint,
             searchEnd: CoupledPathPoint,
@@ -385,6 +385,7 @@ export class DifferentialPairRoutingSession {
                   "start",
                 ),
             })
+            if (!resolvedStart) return []
             const resolvedEnd = resolveTerminalFanoutStation({
               anchor: end,
               escapeDirection: {
@@ -409,7 +410,7 @@ export class DifferentialPairRoutingSession {
                   "end",
                 ),
             })
-            if (!resolvedStart || !resolvedEnd) return []
+            if (!resolvedEnd) return []
             searchStart = resolvedStart
             searchEnd = resolvedEnd
             const coupledTravel =

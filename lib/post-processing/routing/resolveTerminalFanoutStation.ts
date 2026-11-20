@@ -48,8 +48,9 @@ export const resolveTerminalFanoutStation = (
       )
     }),
   )
+  const { maxUncoupledLength } = input
   const maximumTravelDistance =
-    input.maxUncoupledLength ?? input.availableTravel ?? minimumTravelDistance
+    maxUncoupledLength ?? input.availableTravel ?? minimumTravelDistance
   if (minimumTravelDistance > maximumTravelDistance + 1e-8) return null
   const increment = Math.max(0.05, Math.min(0.25, input.searchStep / 2))
   const attemptCount = Math.max(
@@ -66,18 +67,16 @@ export const resolveTerminalFanoutStation = (
       y: input.anchor.y + input.escapeDirection.y * travelDistance,
       layer: input.anchor.layer,
     }
-    const fanoutLengthsAreValid = input.lanes.every(({ point, polarity }) => {
-      const laneOffset = (polarity * input.side * input.centerlineSpacing) / 2
-      const lanePoint = {
-        x: station.x + normal.x * laneOffset,
-        y: station.y + normal.y * laneOffset,
-      }
-      return (
-        input.maxUncoupledLength === undefined ||
-        Math.hypot(lanePoint.x - point.x, lanePoint.y - point.y) <=
-          input.maxUncoupledLength + 1e-8
-      )
-    })
+    const fanoutLengthsAreValid =
+      maxUncoupledLength === undefined ||
+      input.lanes.every(({ point, polarity }) => {
+        const laneOffset = (polarity * input.side * input.centerlineSpacing) / 2
+        const length = Math.hypot(
+          station.x + normal.x * laneOffset - point.x,
+          station.y + normal.y * laneOffset - point.y,
+        )
+        return length <= maxUncoupledLength + 1e-8
+      })
     if (fanoutLengthsAreValid && input.isValid(station)) return station
   }
   return null
