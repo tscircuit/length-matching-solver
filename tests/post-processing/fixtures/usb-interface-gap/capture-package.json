@@ -1,0 +1,42 @@
+{
+  "name": "usb-interface-gap-capture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "bun capture.tsx"
+  },
+  "dependencies": {
+    "@tscircuit/cableprinter": "0.0.6",
+    "@tscircuit/capacity-autorouter": "0.0.1124",
+    "@tscircuit/checks": "0.0.280",
+    "@tscircuit/circuit-json-util": "0.0.131",
+    "@tscircuit/copper-pour-solver": "0.0.74",
+    "@tscircuit/core": "0.0.2410",
+    "@tscircuit/create-fdm-enclosure": "0.0.7",
+    "@tscircuit/footprinter": "0.0.451",
+    "@tscircuit/infer-cable-insertion-point": "0.0.5",
+    "@tscircuit/infgrid-ijump-astar": "0.0.35",
+    "@tscircuit/manifold-2d": "0.0.6",
+    "@tscircuit/matchpack": "0.0.100",
+    "@tscircuit/math-utils": "0.0.39",
+    "@tscircuit/miniflex": "0.0.4",
+    "@tscircuit/modelprinter": "0.0.37",
+    "@tscircuit/props": "0.0.738",
+    "@tscircuit/schematic-match-adapt": "0.0.22",
+    "@tscircuit/soup-util": "0.0.41",
+    "bpc-graph": "0.0.67",
+    "calculate-elbow": "0.0.13",
+    "circuit-json": "0.0.555",
+    "circuit-json-to-bpc": "0.0.14",
+    "circuit-json-to-connectivity-map": "0.0.36",
+    "circuit-json-to-gltf": "0.0.164",
+    "circuit-json-to-spice": "0.0.47",
+    "minicssgrid": "0.0.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "schematic-symbols": "0.0.251",
+    "spicets": "0.0.5",
+    "spicey": "0.0.14",
+    "typescript": "5.9.3"
+  }
+}
