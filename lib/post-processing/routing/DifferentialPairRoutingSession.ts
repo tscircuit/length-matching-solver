@@ -288,11 +288,15 @@ export class DifferentialPairRoutingSession {
         (edgeGap) => edgeGap + first.width / 2 + second.width / 2,
       ),
     })
-    const {
-      minimumCenterlineDistance,
-      maximumCenterlineDistance,
-      maxUncoupledLength,
-    } = this.input.pair
+    const { maxUncoupledLength } = this.input.pair
+    // Mixed orientations can put a coupled segment inside a pad. Also try
+    // searching for clear escape stations before coupling the traces.
+    const terminalSearchModes: Array<"forward" | "fanout"> =
+      maxUncoupledLength !== undefined
+        ? ["fanout"]
+        : hasMixedTerminalOrientation
+          ? ["forward", "fanout"]
+          : ["forward"]
     const sides = [preferredSide, preferredSide === 1 ? -1 : 1] as const
     const attempts = centerlineDistanceSamples.flatMap((centerlineSpacing) => {
       const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
@@ -304,18 +308,6 @@ export class DifferentialPairRoutingSession {
           Math.min(0.5, centerlineSpacing / 2),
         ),
       })
-      // A mixed terminal layout can place a coupled segment inside its pad.
-      // Search for clear escape stations at the requested spacing.
-      const shouldTryFanoutStations =
-        hasMixedTerminalOrientation &&
-        centerlineSpacing === minimumCenterlineDistance &&
-        centerlineSpacing === maximumCenterlineDistance
-      const terminalSearchModes: Array<"forward" | "fanout"> =
-        maxUncoupledLength !== undefined
-          ? ["fanout"]
-          : shouldTryFanoutStations
-            ? ["forward", "fanout"]
-            : ["forward"]
       return sides
         .flatMap((side) =>
           terminalSearchModes.map((terminalSearchMode) => ({
