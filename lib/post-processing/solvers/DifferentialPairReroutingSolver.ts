@@ -7,7 +7,10 @@ import {
   type DifferentialPairRoutingFailureReason,
 } from "../errors/DifferentialPairRoutingError"
 import { DifferentialPairRoutingSession } from "../routing/DifferentialPairRoutingSession"
-import { getDifferentialPairReroutingIterationLimit } from "../routing/getDifferentialPairReroutingIterationLimit"
+import {
+  getDifferentialPairReroutingIterationLimit,
+  MAXIMUM_TOTAL_ROW_FANOUT_ITERATIONS,
+} from "../routing/getDifferentialPairReroutingIterationLimit"
 import type { InternalPostProcessingParams } from "../types"
 import { createPostProcessingVisualization } from "../visualization/createPostProcessingVisualization"
 
@@ -31,6 +34,7 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
   private nextPairIndex = 0
   private activeConnectionNames: [string, string] | null = null
   private activeSession: DifferentialPairRoutingSession | null = null
+  private rowFanoutIterations = 0
 
   constructor(private readonly params: InternalPostProcessingParams) {
     super()
@@ -61,6 +65,14 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
           minTraceToPadEdgeClearance:
             this.params.simpleRouteJson.minTraceToPadEdgeClearance,
           routingGrid: this.params.routingGrid,
+          reserveRowFanoutIteration: (): boolean => {
+            if (this.rowFanoutIterations >= MAXIMUM_TOTAL_ROW_FANOUT_ITERATIONS)
+              return false
+            this.rowFanoutIterations++
+            // Row fanout has its own budget so it leaves the regular search budget available.
+            this.MAX_ITERATIONS++
+            return true
+          },
         })
         this.stats = this.activeSession.getStats()
         return

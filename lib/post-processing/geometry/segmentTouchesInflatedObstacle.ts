@@ -2,6 +2,8 @@ import { getMinimumSegmentDistance } from "../../route-geometry"
 import type { Obstacle } from "../../types"
 import type { CopperSegment, Point } from "../model/internal-types"
 
+export const OBSTACLE_CONTACT_TOLERANCE = 1e-7
+
 /** Test a copper centerline against a rotated rectangular obstacle plus inflation. */
 export const segmentTouchesInflatedObstacle = (
   segment: CopperSegment,
@@ -39,6 +41,6 @@ export const segmentTouchesInflatedObstacle = (
         end,
         corner,
         corners[(index + 1) % corners.length]!,
-      ) <= 1e-7,
+      ) <= OBSTACLE_CONTACT_TOLERANCE,
   )
 }

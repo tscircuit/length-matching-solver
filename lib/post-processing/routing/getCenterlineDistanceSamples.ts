@@ -3,6 +3,7 @@ export const getCenterlineDistanceSamples = (input: {
   minimumCenterlineDistance?: number
   maximumCenterlineDistance?: number
   minimumPhysicalDistance: number
+  restrictToPreference?: boolean
   legacyCenterlineDistances: number[]
 }): number[] => {
   const {
@@ -33,6 +34,9 @@ export const getCenterlineDistanceSamples = (input: {
   return allSamples.filter(
     (distance, index) =>
       distance > input.minimumPhysicalDistance &&
+      (!input.restrictToPreference ||
+        (distance >= (minimum ?? -Infinity) - 1e-8 &&
+          distance <= (maximum ?? Infinity) + 1e-8)) &&
       allSamples.findIndex(
         (otherDistance) => Math.abs(otherDistance - distance) < 1e-8,
       ) === index,

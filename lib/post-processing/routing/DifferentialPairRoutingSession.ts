@@ -1,6 +1,4 @@
-import type { DifferentialPair, SimplifiedPcbTrace } from "../../types"
 import { DifferentialPairRoutingError } from "../errors/DifferentialPairRoutingError"
-import type { PostProcessingGridConfig } from "../types"
 import { createSearchGeometryValidator } from "../geometry/createSearchGeometryValidator"
 import {
   validateCandidateGeometry,
@@ -15,40 +13,23 @@ import type {
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
-import {
-  getForwardPairSearchStart,
-  MAX_START_TERMINAL_TURN_DEGREES,
-} from "./getForwardPairSearchStart"
+import { MAXIMUM_ROW_FANOUT_ITERATIONS_PER_PAIR } from "./getDifferentialPairReroutingIterationLimit"
+import { getForwardPairSearchStart } from "./getForwardPairSearchStart"
+import { getTerminalRowEscapeDirectionPairs } from "./getTerminalRowEscapeDirectionPairs"
+import { createTerminalEscapeValidator } from "./createTerminalEscapeValidator"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
+import { isInlineTerminalPair } from "./isInlineTerminalPair"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
-import { resolveTerminalFanoutStation } from "./resolveTerminalFanoutStation"
-import type { CoupledPathPoint, CoupledPathSearchInput } from "./types"
+import { resolvePairFanoutStations } from "./resolvePairFanoutStations"
+import type {
+  CoupledPathPoint,
+  DifferentialPairRoutingInput,
+  PreparedPair,
+} from "./types"
+export type { DifferentialPairRoutingInput } from "./types"
 
 const EDGE_GAP_SAMPLES = [0.75, 0.5, 1, 0.25, 1.25]
 const CENTERLINE_DISTANCE_PENALTY_PER_MM = 100
-
-type PreparedPair = {
-  first: ParsedTrace
-  second: ParsedTrace
-  reverseSecond: boolean
-  terminalFanout: boolean
-  context: CandidateGeometryContext
-  attempts: Array<{
-    edgeGap: number
-    side: 1 | -1
-    input: CoupledPathSearchInput
-  }>
-}
-
-export type DifferentialPairRoutingInput = {
-  pair: DifferentialPair
-  traces: SimplifiedPcbTrace[]
-  obstacles: CandidateGeometryContext["obstacles"]
-  bounds: CandidateGeometryContext["bounds"]
-  layerCount: number
-  minTraceToPadEdgeClearance?: number
-  routingGrid?: PostProcessingGridConfig
-}
 
 /** Incrementally explores and scores coupled route candidates for one differential pair. */
 export class DifferentialPairRoutingSession {
@@ -58,6 +39,7 @@ export class DifferentialPairRoutingSession {
   private result: PairSolveResult | null = null
   private search: IncrementalCoupledPathSearch | null = null
   private fanoutPending = false
+  private rowFanoutIterations: number | null = null
   private nextAttempt = 0
   private exploredNodeCount = 0
 
@@ -106,6 +88,16 @@ export class DifferentialPairRoutingSession {
 
   step(): void {
     if (this.result) return
+    if (this.rowFanoutIterations !== null) {
+      if (
+        this.rowFanoutIterations >= MAXIMUM_ROW_FANOUT_ITERATIONS_PER_PAIR ||
+        this.input.reserveRowFanoutIteration?.() === false
+      ) {
+        this.complete()
+        return
+      }
+      this.rowFanoutIterations++
+    }
     const prepared = this.prepared
     if (!this.search) {
       if (
@@ -125,6 +117,15 @@ export class DifferentialPairRoutingSession {
           return
         }
         prepared.attempts.push(...this.prepare("fanout").attempts)
+      }
+      if (
+        this.nextAttempt === prepared.attempts.length &&
+        this.candidates.length === 0 &&
+        prepared.hasMixedTerminalOrientation &&
+        this.rowFanoutIterations === null
+      ) {
+        this.rowFanoutIterations = 0
+        prepared.attempts.push(...this.prepare("row-fanout").attempts)
       }
       const attempt = prepared.attempts[this.nextAttempt]
       if (!attempt) {
@@ -168,6 +169,7 @@ export class DifferentialPairRoutingSession {
     )
       return
     this.candidates.push(candidate)
+    if (this.rowFanoutIterations !== null) this.complete()
   }
 
   private get hasSpacingPreference(): boolean {
@@ -177,7 +179,9 @@ export class DifferentialPairRoutingSession {
     )
   }
 
-  private prepare(search: "initial" | "fanout" = "initial"): PreparedPair {
+  private prepare(
+    search: "initial" | "fanout" | "row-fanout" = "initial",
+  ): PreparedPair {
     const firstMatches = this.input.traces
       .map((trace, index) => ({ trace, index }))
       .filter(
@@ -284,21 +288,10 @@ export class DifferentialPairRoutingSession {
     }
     const preferredSide: 1 | -1 =
       terminalDelta.x * normal.x + terminalDelta.y * normal.y >= 0 ? 1 : -1
-    const hasInlineTerminalPair = (
-      firstPoint: typeof firstStart,
-      secondPoint: typeof secondStart,
-    ): boolean => {
-      const deltaX = firstPoint.x - secondPoint.x
-      const deltaY = firstPoint.y - secondPoint.y
-      const separation = Math.hypot(deltaX, deltaY)
-      return (
-        separation > 1e-8 &&
-        Math.abs(deltaX * normal.x + deltaY * normal.y) / separation < 0.5
-      )
-    }
-    const inlineStart = hasInlineTerminalPair(firstStart, secondStart)
-    const inlineEnd = hasInlineTerminalPair(firstEnd, secondEnd)
+    const inlineStart = isInlineTerminalPair(firstStart, secondStart, normal)
+    const inlineEnd = isInlineTerminalPair(firstEnd, secondEnd, normal)
     const terminalFanout = inlineStart && inlineEnd
+    const hasMixedTerminalOrientation = inlineStart !== inlineEnd
     const spineDirection = { x: normal.y, y: -normal.x }
     const context: CandidateGeometryContext = {
       immutableTraces: this.input.traces.filter(
@@ -310,22 +303,24 @@ export class DifferentialPairRoutingSession {
       layerCount: this.input.layerCount,
       minTraceToPadEdgeClearance: this.input.minTraceToPadEdgeClearance,
     }
+    const useRowFanout = search === "row-fanout"
     const centerlineDistanceSamples = getCenterlineDistanceSamples({
       minimumCenterlineDistance: this.input.pair.minimumCenterlineDistance,
       maximumCenterlineDistance: this.input.pair.maximumCenterlineDistance,
       minimumPhysicalDistance: first.width / 2 + second.width / 2,
+      restrictToPreference: useRowFanout,
       legacyCenterlineDistances: EDGE_GAP_SAMPLES.map(
         (edgeGap) => edgeGap + first.width / 2 + second.width / 2,
       ),
     })
     const { maxUncoupledLength } = this.input.pair
     const modes: ("forward" | "fanout")[] = []
-    if (search === "fanout" || maxUncoupledLength !== undefined) {
+    if (search !== "initial" || maxUncoupledLength !== undefined) {
       modes.push("fanout")
     } else {
       modes.push("forward")
       if (
-        inlineStart !== inlineEnd &&
+        hasMixedTerminalOrientation &&
         (this.hasSpacingPreference ||
           !validateCandidateGeometry(first, second, context))
       ) {
@@ -333,6 +328,12 @@ export class DifferentialPairRoutingSession {
       }
     }
     this.fanoutPending = !terminalFanout && !modes.includes("fanout")
+    const directions = useRowFanout
+      ? getTerminalRowEscapeDirectionPairs(
+          [firstStart, secondStart],
+          [firstEnd, secondEnd],
+        )
+      : [{ startDirection: spineDirection, endDirection: spineDirection }]
     const sides = [preferredSide, preferredSide === 1 ? -1 : 1] as const
     const attempts = centerlineDistanceSamples.flatMap((centerlineSpacing) => {
       const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
@@ -344,121 +345,118 @@ export class DifferentialPairRoutingSession {
           Math.min(0.5, centerlineSpacing / 2),
         ),
       })
-      return sides.flatMap((side) =>
-        modes.flatMap((mode) => {
-          const createValidator = (
-            searchStart: CoupledPathPoint,
-            searchEnd: CoupledPathPoint,
-          ) =>
-            createSearchGeometryValidator({
-              ...context,
-              start: searchStart,
-              end: searchEnd,
-              firstConnectionName: first.source.connection_name,
-              secondConnectionName: second.source.connection_name,
-              firstStartTerminal: firstStart,
-              firstEndTerminal: firstEnd,
-              secondStartTerminal: secondStart,
-              secondEndTerminal: secondEnd,
-              firstWidth: first.width,
-              secondWidth: second.width,
-              firstViaDiameter:
-                first.transitions[0]?.via_diameter ?? first.viaDiameter,
-              secondViaDiameter:
-                second.transitions[0]?.via_diameter ?? second.viaDiameter,
-              centerlineSpacing,
-              side,
-              terminalFanout,
-              terminalMiterMargin:
-                mode === "fanout" ? centerlineSpacing / 2 : undefined,
-            })
-          let searchStart = start
-          let searchEnd = end
-          if (!terminalFanout && mode === "forward") {
-            searchStart = getForwardPairSearchStart({
-              start,
-              terminals: [firstStart, secondStart],
-              spineDirection,
-              spineNormal: normal,
-              centerlineSpacing,
-              side,
-            })
-          }
-          if (!terminalFanout && mode === "fanout") {
-            const terminalValidator = createValidator(start, end)
-            const resolvedStart = resolveTerminalFanoutStation({
-              anchor: start,
-              escapeDirection: spineDirection,
-              pathDirection: spineDirection,
-              centerlineSpacing,
-              side,
-              lanes: [
-                { point: firstStart, polarity: 1 },
-                { point: secondStart, polarity: -1 },
-              ],
-              maxUncoupledLength,
-              availableTravelDistance: spineLength,
-              maximumTurnDegrees: MAX_START_TERMINAL_TURN_DEGREES,
-              searchStep: grid.innerGridStep,
-              isValid: (station) =>
-                terminalValidator.isTerminalFanoutValid(
-                  station,
-                  spineDirection,
-                  "start",
-                ),
-            })
-            if (!resolvedStart) return []
-            const resolvedEnd = resolveTerminalFanoutStation({
-              anchor: end,
-              escapeDirection: {
-                x: -spineDirection.x,
-                y: -spineDirection.y,
-              },
-              pathDirection: spineDirection,
-              centerlineSpacing,
-              side,
-              lanes: [
-                { point: firstEnd, polarity: 1 },
-                { point: secondEnd, polarity: -1 },
-              ],
-              maxUncoupledLength,
-              availableTravelDistance: spineLength,
-              maximumTurnDegrees: 45,
-              searchStep: grid.innerGridStep,
-              isValid: (station) =>
-                terminalValidator.isTerminalFanoutValid(
-                  station,
-                  spineDirection,
-                  "end",
-                ),
-            })
-            if (!resolvedEnd) return []
-            searchStart = resolvedStart
-            searchEnd = resolvedEnd
-            const coupledTravel =
-              (searchEnd.x - searchStart.x) * spineDirection.x +
-              (searchEnd.y - searchStart.y) * spineDirection.y
-            if (coupledTravel <= grid.innerGridStep) return []
-          }
-          const validator = createValidator(searchStart, searchEnd)
-          return [
-            {
-              edgeGap,
-              side,
-              input: {
+      const spacingAttempts = sides.flatMap((side) =>
+        modes.flatMap((mode) =>
+          directions.flatMap((directionPair) => {
+            const { startDirection, endDirection } = directionPair
+            const createValidator = (
+              searchStart: CoupledPathPoint,
+              searchEnd: CoupledPathPoint,
+            ) =>
+              createSearchGeometryValidator({
+                ...context,
                 start: searchStart,
                 end: searchEnd,
-                bounds: this.input.bounds,
-                layerCount: this.input.layerCount,
-                grid,
-                ...validator,
+                firstConnectionName: first.source.connection_name,
+                secondConnectionName: second.source.connection_name,
+                firstStartTerminal: firstStart,
+                firstEndTerminal: firstEnd,
+                secondStartTerminal: secondStart,
+                secondEndTerminal: secondEnd,
+                firstWidth: first.width,
+                secondWidth: second.width,
+                firstViaDiameter:
+                  first.transitions[0]?.via_diameter ?? first.viaDiameter,
+                secondViaDiameter:
+                  second.transitions[0]?.via_diameter ?? second.viaDiameter,
+                centerlineSpacing,
+                side,
+                terminalFanout,
+                terminalMiterMargin:
+                  mode === "fanout"
+                    ? useRowFanout
+                      ? 0
+                      : centerlineSpacing / 2
+                    : undefined,
+              })
+            let searchStart = start
+            let searchEnd = end
+            if (!terminalFanout && mode === "forward") {
+              searchStart = getForwardPairSearchStart({
+                start,
+                terminals: [firstStart, secondStart],
+                spineDirection,
+                spineNormal: normal,
+                centerlineSpacing,
+                side,
+              })
+            }
+            if (!terminalFanout && mode === "fanout") {
+              const stations = resolvePairFanoutStations({
+                start: {
+                  anchor: start,
+                  direction: startDirection,
+                  terminals: [firstStart, secondStart],
+                },
+                end: {
+                  anchor: end,
+                  direction: endDirection,
+                  terminals: [firstEnd, secondEnd],
+                },
+                spineDirection,
+                centerlineSpacing,
+                side,
+                maxUncoupledLength,
+                availableTravelDistance: spineLength,
+                searchStep: grid.innerGridStep,
+                isTerminalFanoutValid: createValidator(start, end)
+                  .isTerminalFanoutValid,
+              })
+              if (!stations) return []
+              searchStart = stations.start
+              searchEnd = stations.end
+            }
+            const validator = createValidator(searchStart, searchEnd)
+            return [
+              {
+                edgeGap,
+                side,
+                input: {
+                  start: searchStart,
+                  end: searchEnd,
+                  bounds: this.input.bounds,
+                  layerCount: this.input.layerCount,
+                  grid,
+                  ...(useRowFanout
+                    ? createTerminalEscapeValidator(
+                        validator,
+                        [searchStart, searchEnd],
+                        directionPair,
+                      )
+                    : validator),
+                },
               },
-            },
-          ]
-        }),
+            ]
+          }),
+        ),
       )
+      if (useRowFanout)
+        spacingAttempts.sort(
+          ({ input: a }, { input: b }) =>
+            Math.hypot(a.end.x - a.start.x, a.end.y - a.start.y) -
+            Math.hypot(b.end.x - b.start.x, b.end.y - b.start.y),
+        )
+      return spacingAttempts
     })
-    return { first, second, reverseSecond, terminalFanout, context, attempts }
+    return {
+      first,
+      second,
+      reverseSecond,
+      terminalFanout,
+      hasMixedTerminalOrientation,
+      context,
+      attempts,
+    }
   }
 
   private complete(): void {

@@ -1,4 +1,32 @@
-import type { Point } from "../model/internal-types"
+import type { DifferentialPair, SimplifiedPcbTrace } from "../../types"
+import type { CandidateGeometryContext } from "../geometry/validateCandidateGeometry"
+import type { ParsedTrace, Point } from "../model/internal-types"
+import type { PostProcessingGridConfig } from "../types"
+
+export type DifferentialPairRoutingInput = {
+  pair: DifferentialPair
+  traces: SimplifiedPcbTrace[]
+  obstacles: CandidateGeometryContext["obstacles"]
+  bounds: CandidateGeometryContext["bounds"]
+  layerCount: number
+  minTraceToPadEdgeClearance?: number
+  routingGrid?: PostProcessingGridConfig
+  reserveRowFanoutIteration?: () => boolean
+}
+
+export type PreparedPair = {
+  first: ParsedTrace
+  second: ParsedTrace
+  reverseSecond: boolean
+  terminalFanout: boolean
+  hasMixedTerminalOrientation: boolean
+  context: CandidateGeometryContext
+  attempts: Array<{
+    edgeGap: number
+    side: 1 | -1
+    input: CoupledPathSearchInput
+  }>
+}
 
 export type CoupledPathPoint = Point & { layer: string }
 
