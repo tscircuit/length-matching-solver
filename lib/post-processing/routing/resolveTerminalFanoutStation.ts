@@ -14,9 +14,9 @@ type ResolveTerminalFanoutStationInput = {
   side: 1 | -1
   lanes: [TerminalFanoutLane, TerminalFanoutLane]
   maxUncoupledLength?: number
-  availableTravel?: number
+  availableTravelDistance?: number
   maximumTurnDegrees: number
-  searchStep: number
+  innerGridStep: number
   isValid: (station: CoupledPathPoint) => boolean
 }
 
@@ -50,17 +50,15 @@ export const resolveTerminalFanoutStation = (
   )
   const { maxUncoupledLength } = input
   const maximumTravelDistance =
-    maxUncoupledLength ?? input.availableTravel ?? minimumTravelDistance
+    maxUncoupledLength ?? input.availableTravelDistance ?? minimumTravelDistance
   if (minimumTravelDistance > maximumTravelDistance + 1e-8) return null
-  const increment = Math.max(0.05, Math.min(0.25, input.searchStep / 2))
-  const attemptCount = Math.max(
-    1,
-    Math.ceil((maximumTravelDistance - minimumTravelDistance) / increment) + 1,
-  )
-  for (let attemptIndex = 0; attemptIndex < attemptCount; attemptIndex++) {
+  const stationStep = Math.max(0.05, Math.min(0.25, input.innerGridStep / 2))
+  const searchDistance = maximumTravelDistance - minimumTravelDistance
+  const stationCount = Math.max(1, Math.ceil(searchDistance / stationStep) + 1)
+  for (let stationIndex = 0; stationIndex < stationCount; stationIndex++) {
     const travelDistance = Math.min(
       maximumTravelDistance,
-      minimumTravelDistance + attemptIndex * increment,
+      minimumTravelDistance + stationIndex * stationStep,
     )
     const station = {
       x: input.anchor.x + input.escapeDirection.x * travelDistance,
@@ -71,11 +69,11 @@ export const resolveTerminalFanoutStation = (
       maxUncoupledLength === undefined ||
       input.lanes.every(({ point, polarity }) => {
         const laneOffset = (polarity * input.side * input.centerlineSpacing) / 2
-        const length = Math.hypot(
+        const escapeLength = Math.hypot(
           station.x + normal.x * laneOffset - point.x,
           station.y + normal.y * laneOffset - point.y,
         )
-        return length <= maxUncoupledLength + 1e-8
+        return escapeLength <= maxUncoupledLength + 1e-8
       })
     if (fanoutLengthsAreValid && input.isValid(station)) return station
   }

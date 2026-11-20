@@ -1,30 +1,30 @@
 import type { Point } from "../model/internal-types"
 import type { CoupledPathPoint } from "./types"
 
-type ForwardEgressInput = {
+type ForwardPairSearchStartInput = {
   start: CoupledPathPoint
   terminals: [Point, Point]
-  direction: Point
-  normal: Point
+  spineDirection: Point
+  spineNormal: Point
   centerlineSpacing: number
   side: 1 | -1
 }
 
 /** Moves a spine start past the forward pad of a staggered terminal row. */
-export function getForwardEgressSearchStart({
+export function getForwardPairSearchStart({
   start,
   terminals,
-  direction,
-  normal,
+  spineDirection,
+  spineNormal,
   centerlineSpacing,
   side,
-}: ForwardEgressInput): CoupledPathPoint {
+}: ForwardPairSearchStartInput): CoupledPathPoint {
   const projectedTerminals = terminals.map((terminal) => {
     const dx = terminal.x - start.x
     const dy = terminal.y - start.y
     return {
-      parallel: dx * direction.x + dy * direction.y,
-      perpendicular: dx * normal.x + dy * normal.y,
+      parallel: dx * spineDirection.x + dy * spineDirection.y,
+      perpendicular: dx * spineNormal.x + dy * spineNormal.y,
     }
   })
   if (!projectedTerminals.some(({ parallel }) => parallel > 1e-8)) return start
@@ -38,8 +38,8 @@ export function getForwardEgressSearchStart({
     }),
   )
   return {
-    x: start.x + direction.x * forwardDistance,
-    y: start.y + direction.y * forwardDistance,
+    x: start.x + spineDirection.x * forwardDistance,
+    y: start.y + spineDirection.y * forwardDistance,
     layer: start.layer,
   }
 }

@@ -15,7 +15,7 @@ import type {
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
-import { getForwardEgressSearchStart } from "./getForwardEgressSearchStart"
+import { getForwardPairSearchStart } from "./getForwardPairSearchStart"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
 import { resolveTerminalFanoutStation } from "./resolveTerminalFanoutStation"
@@ -265,9 +265,10 @@ export class DifferentialPairRoutingSession {
         Math.abs(deltaX * normal.x + deltaY * normal.y) / separation < 0.5
       )
     }
-    const startIsInline = hasInlineTerminalPair(firstStart, secondStart)
-    const endIsInline = hasInlineTerminalPair(firstEnd, secondEnd)
-    const terminalFanout = startIsInline && endIsInline
+    const startPairIsInline = hasInlineTerminalPair(firstStart, secondStart)
+    const endPairIsInline = hasInlineTerminalPair(firstEnd, secondEnd)
+    const bothEndsAreInline = startPairIsInline && endPairIsInline
+    const hasMixedTerminalOrientation = startPairIsInline !== endPairIsInline
     const spineDirection = { x: normal.y, y: -normal.x }
     const context: CandidateGeometryContext = {
       immutableTraces: this.input.traces.filter(
@@ -304,25 +305,26 @@ export class DifferentialPairRoutingSession {
         ),
       })
       // A mixed terminal layout can place a coupled segment inside its pad.
-      // Try clear escape stations at the requested spacing before widening.
-      const searchMixedTerminalFanout =
-        startIsInline !== endIsInline &&
+      // Search for clear escape stations at the requested spacing.
+      const shouldTryFanoutStations =
+        hasMixedTerminalOrientation &&
         centerlineSpacing === minimumCenterlineDistance &&
         centerlineSpacing === maximumCenterlineDistance
-      const fanoutOptions =
+      const terminalSearchModes: Array<"forward" | "fanout"> =
         maxUncoupledLength !== undefined
-          ? [true]
-          : searchMixedTerminalFanout
-            ? [false, true]
-            : [false]
+          ? ["fanout"]
+          : shouldTryFanoutStations
+            ? ["forward", "fanout"]
+            : ["forward"]
       return sides
         .flatMap((side) =>
-          fanoutOptions.map((useFanoutStations) => ({
+          terminalSearchModes.map((terminalSearchMode) => ({
             side,
-            useFanoutStations,
+            terminalSearchMode,
           })),
         )
-        .flatMap(({ side, useFanoutStations }) => {
+        .flatMap(({ side, terminalSearchMode }) => {
+          const useFanoutStations = terminalSearchMode === "fanout"
           const createValidator = (
             searchStart: CoupledPathPoint,
             searchEnd: CoupledPathPoint,
@@ -345,26 +347,26 @@ export class DifferentialPairRoutingSession {
                 second.transitions[0]?.via_diameter ?? second.viaDiameter,
               centerlineSpacing,
               side,
-              terminalFanout,
+              terminalFanout: bothEndsAreInline,
               terminalMiterMargin: useFanoutStations
                 ? centerlineSpacing / 2
                 : undefined,
             })
           let searchStart = start
           let searchEnd = end
-          if (!terminalFanout && !useFanoutStations) {
-            searchStart = getForwardEgressSearchStart({
+          if (!bothEndsAreInline && !useFanoutStations) {
+            searchStart = getForwardPairSearchStart({
               start,
               terminals: [firstStart, secondStart],
-              direction: spineDirection,
-              normal,
+              spineDirection,
+              spineNormal: normal,
               centerlineSpacing,
               side,
             })
           }
-          if (!terminalFanout && useFanoutStations) {
+          if (!bothEndsAreInline && useFanoutStations) {
             const terminalValidator = createValidator(start, end)
-            const resolvedStart = resolveTerminalFanoutStation({
+            const startStation = resolveTerminalFanoutStation({
               anchor: start,
               escapeDirection: spineDirection,
               pathDirection: spineDirection,
@@ -375,9 +377,9 @@ export class DifferentialPairRoutingSession {
                 { point: secondStart, polarity: -1 },
               ],
               maxUncoupledLength,
-              availableTravel: spineLength,
+              availableTravelDistance: spineLength,
               maximumTurnDegrees: 55,
-              searchStep: grid.innerGridStep,
+              innerGridStep: grid.innerGridStep,
               isValid: (station) =>
                 terminalValidator.isTerminalFanoutValid(
                   station,
@@ -385,8 +387,8 @@ export class DifferentialPairRoutingSession {
                   "start",
                 ),
             })
-            if (!resolvedStart) return []
-            const resolvedEnd = resolveTerminalFanoutStation({
+            if (!startStation) return []
+            const endStation = resolveTerminalFanoutStation({
               anchor: end,
               escapeDirection: {
                 x: -spineDirection.x,
@@ -400,9 +402,9 @@ export class DifferentialPairRoutingSession {
                 { point: secondEnd, polarity: -1 },
               ],
               maxUncoupledLength,
-              availableTravel: spineLength,
+              availableTravelDistance: spineLength,
               maximumTurnDegrees: 45,
-              searchStep: grid.innerGridStep,
+              innerGridStep: grid.innerGridStep,
               isValid: (station) =>
                 terminalValidator.isTerminalFanoutValid(
                   station,
@@ -410,9 +412,9 @@ export class DifferentialPairRoutingSession {
                   "end",
                 ),
             })
-            if (!resolvedEnd) return []
-            searchStart = resolvedStart
-            searchEnd = resolvedEnd
+            if (!endStation) return []
+            searchStart = startStation
+            searchEnd = endStation
             const coupledTravel =
               (searchEnd.x - searchStart.x) * spineDirection.x +
               (searchEnd.y - searchStart.y) * spineDirection.y
@@ -435,7 +437,14 @@ export class DifferentialPairRoutingSession {
           ]
         })
     })
-    return { first, second, reverseSecond, terminalFanout, context, attempts }
+    return {
+      first,
+      second,
+      reverseSecond,
+      terminalFanout: bothEndsAreInline,
+      context,
+      attempts,
+    }
   }
 
   private complete(): void {
