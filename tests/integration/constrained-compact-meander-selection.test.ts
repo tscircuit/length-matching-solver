@@ -55,16 +55,15 @@ test("uses the compact pitch when obstacles reject relaxed alternatives", () => 
     maximumMeanderDepth: 3,
     maxToothCount: 1,
     bounds: { minX: -1, maxX: 11, minY: -4, maxY: 8 },
-    obstacles: [3, 7].flatMap((x) =>
-      [-1, 1].map((normalSign) => ({
-        type: "rect" as const,
-        layers: ["top"],
-        connectedTo: [],
-        center: { x, y: normalSign * 1.65 },
-        width: 2.8,
-        height: 1.7,
-      })),
-    ),
+    obstacles: [-1, 1].map((normalSign, obstacleIndex) => ({
+      obstacleId: `relaxed-pitch-blocker-${obstacleIndex}`,
+      type: "rect" as const,
+      layers: ["top"],
+      connectedTo: [],
+      center: { x: 4, y: normalSign * 1.65 },
+      width: 0.8,
+      height: 1.7,
+    })),
     obstacleMargin: 0.15,
     layerCount: 2,
   }

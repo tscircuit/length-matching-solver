@@ -50,7 +50,7 @@ test("moves the coupled run past an obstacle between side-by-side start pads", (
   }
   const result = solver.getResult()
 
-  expect(result.status).toBe("accepted")
+  if (result.status !== "accepted") throw new Error("Expected a rerouted pair")
   expect(result.candidate.edgeGap).toBeCloseTo(0.15, 8)
   const firstCoupledPoint = result.candidate.first.route[1]
   if (firstCoupledPoint?.route_type !== "wire")

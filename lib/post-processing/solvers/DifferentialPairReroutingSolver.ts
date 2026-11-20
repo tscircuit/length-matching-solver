@@ -76,20 +76,22 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
 
     const result = this.activeSession.getResult()
     this.activeSession = null
-    for (const replacement of [
-      result.candidate.first,
-      result.candidate.second,
-    ]) {
-      const index = this.outputTraces.findIndex(
-        (trace) => trace.connection_name === replacement.connection_name,
-      )
-      if (index < 0)
-        throw new Error(
-          `DifferentialPairReroutingSolver: accepted replacement for unknown connection "${replacement.connection_name}"`,
+    if (result.status === "accepted") {
+      for (const replacement of [
+        result.candidate.first,
+        result.candidate.second,
+      ]) {
+        const index = this.outputTraces.findIndex(
+          (trace) => trace.connection_name === replacement.connection_name,
         )
-      this.outputTraces[index] = replacement
+        if (index < 0)
+          throw new Error(
+            `DifferentialPairReroutingSolver: accepted replacement for unknown connection "${replacement.connection_name}"`,
+          )
+        this.outputTraces[index] = replacement
+      }
+      this.reroutedPairs.push(pair)
     }
-    this.reroutedPairs.push(pair)
     this.nextPairIndex++
     if (
       this.nextPairIndex ===
@@ -99,7 +101,7 @@ export class DifferentialPairReroutingSolver extends BaseSolver {
       return
     }
     this.stats = {
-      phase: "accepted",
+      phase: result.status,
       pair: pair.connectionNames.join("/"),
       pairIndex: this.nextPairIndex - 1,
       pairCount: this.params.simpleRouteJson.differentialPairs.length,

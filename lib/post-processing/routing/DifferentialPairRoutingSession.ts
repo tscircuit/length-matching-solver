@@ -16,6 +16,7 @@ import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
 import { getForwardPairSearchStart } from "./getForwardPairSearchStart"
+import { hasPairSpacingPreference } from "./hasPairSpacingPreference"
 import { hasInlineTerminalPair } from "./hasInlineTerminalPair"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
@@ -114,6 +115,13 @@ export class DifferentialPairRoutingSession {
         this.candidates.length === 0 &&
         prepared.prepareFanoutAttempts
       ) {
+        if (
+          !hasPairSpacingPreference(this.input.pair) &&
+          validateCandidateGeometry(prepared.first, prepared.second, prepared.context)
+        ) {
+          this.result = { status: "retained" }
+          return
+        }
         prepared.attempts.push(...prepared.prepareFanoutAttempts())
         delete prepared.prepareFanoutAttempts
       }
@@ -306,14 +314,8 @@ export class DifferentialPairRoutingSession {
             Math.min(0.5, centerlineSpacing / 2),
           ),
         })
-        return sides
-          .flatMap((side) =>
-            modes.map((terminalSearchMode) => ({
-              side,
-              terminalSearchMode,
-            })),
-          )
-          .flatMap(({ side, terminalSearchMode }) => {
+        return sides.flatMap((side) =>
+          modes.flatMap((terminalSearchMode) => {
             const useFanoutStations = terminalSearchMode === "fanout"
             const createValidator = (
               searchStart: CoupledPathPoint,
@@ -425,14 +427,14 @@ export class DifferentialPairRoutingSession {
                 },
               },
             ]
-          })
+          }),
+        )
       })
     const modes: TerminalSearchMode[] = []
     if (maxUncoupledLength === undefined) modes.push("forward")
     const scoreBothModes =
       maxUncoupledLength === undefined && hasMixedTerminalOrientation &&
-      (this.input.pair.minimumCenterlineDistance !== undefined ||
-        this.input.pair.maximumCenterlineDistance !== undefined ||
+      (hasPairSpacingPreference(this.input.pair) ||
         !validateCandidateGeometry(first, second, context))
     if (maxUncoupledLength !== undefined || scoreBothModes) {
       modes.push("fanout")
@@ -466,10 +468,7 @@ export class DifferentialPairRoutingSession {
   }
 
   private score(candidate: PairCandidate): number {
-    const hasCenterlineDistancePreference =
-      this.input.pair.minimumCenterlineDistance !== undefined ||
-      this.input.pair.maximumCenterlineDistance !== undefined
-    const spacingPenalty = hasCenterlineDistancePreference
+    const spacingPenalty = hasPairSpacingPreference(this.input.pair)
       ? Math.max(
           0,
           (this.input.pair.minimumCenterlineDistance ??
