@@ -19,6 +19,7 @@ export type PreparedPair = {
   second: ParsedTrace
   reverseSecond: boolean
   terminalFanout: boolean
+  hasMixedTerminalOrientation: boolean
   context: CandidateGeometryContext
   attempts: Array<{
     edgeGap: number

@@ -18,6 +18,7 @@ import { getForwardPairSearchStart } from "./getForwardPairSearchStart"
 import { getTerminalRowEscapeDirectionPairs } from "./getTerminalRowEscapeDirectionPairs"
 import { createTerminalEscapeValidator } from "./createTerminalEscapeValidator"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
+import { isInlineTerminalPair } from "./isInlineTerminalPair"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
 import { resolvePairFanoutStations } from "./resolvePairFanoutStations"
 import type {
@@ -120,7 +121,7 @@ export class DifferentialPairRoutingSession {
       if (
         this.nextAttempt === prepared.attempts.length &&
         this.candidates.length === 0 &&
-        !prepared.terminalFanout &&
+        prepared.hasMixedTerminalOrientation &&
         this.rowFanoutIterations === null
       ) {
         this.rowFanoutIterations = 0
@@ -287,21 +288,10 @@ export class DifferentialPairRoutingSession {
     }
     const preferredSide: 1 | -1 =
       terminalDelta.x * normal.x + terminalDelta.y * normal.y >= 0 ? 1 : -1
-    const hasInlineTerminalPair = (
-      firstPoint: typeof firstStart,
-      secondPoint: typeof secondStart,
-    ): boolean => {
-      const deltaX = firstPoint.x - secondPoint.x
-      const deltaY = firstPoint.y - secondPoint.y
-      const separation = Math.hypot(deltaX, deltaY)
-      return (
-        separation > 1e-8 &&
-        Math.abs(deltaX * normal.x + deltaY * normal.y) / separation < 0.5
-      )
-    }
-    const inlineStart = hasInlineTerminalPair(firstStart, secondStart)
-    const inlineEnd = hasInlineTerminalPair(firstEnd, secondEnd)
+    const inlineStart = isInlineTerminalPair(firstStart, secondStart, normal)
+    const inlineEnd = isInlineTerminalPair(firstEnd, secondEnd, normal)
     const terminalFanout = inlineStart && inlineEnd
+    const hasMixedTerminalOrientation = inlineStart !== inlineEnd
     const spineDirection = { x: normal.y, y: -normal.x }
     const context: CandidateGeometryContext = {
       immutableTraces: this.input.traces.filter(
@@ -330,7 +320,7 @@ export class DifferentialPairRoutingSession {
     } else {
       modes.push("forward")
       if (
-        inlineStart !== inlineEnd &&
+        hasMixedTerminalOrientation &&
         (this.hasSpacingPreference ||
           !validateCandidateGeometry(first, second, context))
       ) {
@@ -458,7 +448,15 @@ export class DifferentialPairRoutingSession {
         )
       return spacingAttempts
     })
-    return { first, second, reverseSecond, terminalFanout, context, attempts }
+    return {
+      first,
+      second,
+      reverseSecond,
+      terminalFanout,
+      hasMixedTerminalOrientation,
+      context,
+      attempts,
+    }
   }
 
   private complete(): void {
