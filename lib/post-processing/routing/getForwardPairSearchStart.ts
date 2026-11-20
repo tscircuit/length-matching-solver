@@ -1,6 +1,8 @@
 import type { Point } from "../model/internal-types"
 import type { CoupledPathPoint } from "./types"
 
+export const MAX_START_TERMINAL_TURN_DEGREES = 55
+
 type ForwardPairSearchStartInput = {
   start: CoupledPathPoint
   terminals: [Point, Point]
@@ -29,11 +31,13 @@ export function getForwardPairSearchStart({
   })
   if (!projectedTerminals.some(({ parallel }) => parallel > 1e-8)) return start
 
-  const tangentOfMaximumTurn = Math.tan((55 * Math.PI) / 180)
+  const tangentOfMaximumTurn = Math.tan(
+    (MAX_START_TERMINAL_TURN_DEGREES * Math.PI) / 180,
+  )
   const forwardDistance = Math.max(
     ...projectedTerminals.map(({ parallel, perpendicular }, index) => {
-      const polarity = index === 0 ? 1 : -1
-      const offset = (polarity * side * centerlineSpacing) / 2
+      let offset = (side * centerlineSpacing) / 2
+      if (index === 1) offset = -offset
       return parallel + Math.abs(perpendicular - offset) / tangentOfMaximumTurn
     }),
   )

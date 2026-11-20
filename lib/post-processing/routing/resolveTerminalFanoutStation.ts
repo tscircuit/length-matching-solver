@@ -14,7 +14,7 @@ type ResolveTerminalFanoutStationInput = {
   side: 1 | -1
   lanes: [TerminalFanoutLane, TerminalFanoutLane]
   maxUncoupledLength?: number
-  availableTravelDistance?: number
+  availableTravelDistance: number
   maximumTurnDegrees: number
   innerGridStep: number
   isValid: (station: CoupledPathPoint) => boolean
@@ -50,7 +50,7 @@ export const resolveTerminalFanoutStation = (
   )
   const { maxUncoupledLength } = input
   const maximumTravelDistance =
-    maxUncoupledLength ?? input.availableTravelDistance ?? minimumTravelDistance
+    maxUncoupledLength ?? input.availableTravelDistance
   if (minimumTravelDistance > maximumTravelDistance + 1e-8) return null
   const stationStep = Math.max(0.05, Math.min(0.25, input.innerGridStep / 2))
   const searchDistance = maximumTravelDistance - minimumTravelDistance

@@ -1,46 +1,27 @@
 import type { DifferentialPair, SimplifiedPcbTrace } from "../../types"
 import { DifferentialPairRoutingError } from "../errors/DifferentialPairRoutingError"
 import type { PostProcessingGridConfig } from "../types"
-import { createSearchGeometryValidator } from "../geometry/createSearchGeometryValidator"
 import {
   validateCandidateGeometry,
   type CandidateGeometryContext,
 } from "../geometry/validateCandidateGeometry"
 import { getSimplifiedTraceLength } from "../length-matching/getSimplifiedTraceLength"
-import type {
-  PairCandidate,
-  PairSolveResult,
-  ParsedTrace,
-} from "../model/internal-types"
-import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
+import type { PairCandidate, PairSolveResult } from "../model/internal-types"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
-import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
-import { getForwardPairSearchStart } from "./getForwardPairSearchStart"
 import { hasPairSpacingPreference } from "./hasPairSpacingPreference"
-import { hasInlineTerminalPair } from "./hasInlineTerminalPair"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
-import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
-import { resolveTerminalFanoutStation } from "./resolveTerminalFanoutStation"
-import type { CoupledPathPoint, CoupledPathSearchInput } from "./types"
+import {
+  prepareTerminalSearchAttempts,
+  type TerminalSearchAttempt,
+  type TerminalSearchMode,
+} from "./prepareTerminalSearchAttempts"
+import {
+  getPairRoutingGeometry,
+  type PairRoutingGeometry,
+} from "./getPairRoutingGeometry"
+import type { CoupledPathPoint } from "./types"
 
-const EDGE_GAP_SAMPLES = [0.75, 0.5, 1, 0.25, 1.25]
 const CENTERLINE_DISTANCE_PENALTY_PER_MM = 100
-
-type TerminalSearchMode = "forward" | "fanout"
-
-type PreparedPair = {
-  first: ParsedTrace
-  second: ParsedTrace
-  reverseSecond: boolean
-  terminalFanout: boolean
-  context: CandidateGeometryContext
-  prepareFanoutAttempts?: () => PreparedPair["attempts"]
-  attempts: Array<{
-    edgeGap: number
-    side: 1 | -1
-    input: CoupledPathSearchInput
-  }>
-}
 
 export type DifferentialPairRoutingInput = {
   pair: DifferentialPair
@@ -55,7 +36,9 @@ export type DifferentialPairRoutingInput = {
 /** Incrementally explores and scores coupled route candidates for one differential pair. */
 export class DifferentialPairRoutingSession {
   private readonly pairName: string
-  private readonly prepared: PreparedPair
+  private readonly prepared: PairRoutingGeometry
+  private readonly attempts: TerminalSearchAttempt[]
+  private fanoutPending: boolean
   private readonly candidates: PairCandidate[] = []
   private result: PairSolveResult | null = null
   private search: IncrementalCoupledPathSearch | null = null
@@ -64,7 +47,25 @@ export class DifferentialPairRoutingSession {
 
   constructor(private readonly input: DifferentialPairRoutingInput) {
     this.pairName = input.pair.connectionNames.join("/")
-    this.prepared = this.prepare()
+    this.prepared = getPairRoutingGeometry(input)
+    const { first, second, context, hasMixedTerminalOrientation } =
+      this.prepared
+    const { pair } = input
+    const modes: TerminalSearchMode[] = []
+    if (pair.maxUncoupledLength !== undefined) {
+      modes.push("fanout")
+    } else {
+      modes.push("forward")
+      if (
+        hasMixedTerminalOrientation &&
+        (hasPairSpacingPreference(pair) ||
+          !validateCandidateGeometry(first, second, context))
+      )
+        modes.push("fanout")
+    }
+    this.attempts = prepareTerminalSearchAttempts(modes, this.prepared)
+    this.fanoutPending =
+      !this.prepared.bothEndsAreInline && !modes.includes("fanout")
   }
 
   isComplete(): boolean {
@@ -85,9 +86,9 @@ export class DifferentialPairRoutingSession {
 
   getProgress(): number {
     if (this.result) return 1
-    let attemptCount = this.prepared.attempts.length
+    let attemptCount = this.attempts.length
     if (attemptCount === 0) return 0
-    if (this.prepared.prepareFanoutAttempts && this.candidates.length === 0) {
+    if (this.fanoutPending && this.candidates.length === 0) {
       attemptCount *= 2
     }
     const attemptProgress = this.search?.getProgress() ?? 0
@@ -99,7 +100,7 @@ export class DifferentialPairRoutingSession {
       phase: this.search ? "searching" : "candidate-selection",
       pair: this.pairName,
       attemptIndex: this.nextAttempt,
-      attemptCount: this.prepared.attempts.length,
+      attemptCount: this.attempts.length,
       exploredNodeCount:
         this.exploredNodeCount + (this.search?.getExploredCount() ?? 0),
       gridNodeCount: this.search?.getGridNodeCount() ?? 0,
@@ -112,21 +113,27 @@ export class DifferentialPairRoutingSession {
     const prepared = this.prepared
     if (!this.search) {
       if (
-        this.nextAttempt === prepared.attempts.length &&
+        this.nextAttempt === this.attempts.length &&
         this.candidates.length === 0 &&
-        prepared.prepareFanoutAttempts
+        this.fanoutPending
       ) {
         if (
           !hasPairSpacingPreference(this.input.pair) &&
-          validateCandidateGeometry(prepared.first, prepared.second, prepared.context)
+          validateCandidateGeometry(
+            prepared.first,
+            prepared.second,
+            prepared.context,
+          )
         ) {
           this.result = { status: "retained" }
           return
         }
-        prepared.attempts.push(...prepared.prepareFanoutAttempts())
-        delete prepared.prepareFanoutAttempts
+        this.fanoutPending = false
+        this.attempts.push(
+          ...prepareTerminalSearchAttempts(["fanout"], prepared),
+        )
       }
-      const attempt = prepared.attempts[this.nextAttempt]
+      const attempt = this.attempts[this.nextAttempt]
       if (!attempt) {
         this.complete()
         return
@@ -138,7 +145,7 @@ export class DifferentialPairRoutingSession {
     if (!this.search.isComplete()) return
     const path = this.search.getPath()
     this.exploredNodeCount += this.search.getExploredCount()
-    const attempt = prepared.attempts[this.nextAttempt]
+    const attempt = this.attempts[this.nextAttempt]
     if (!attempt)
       throw new Error(
         `PostProcessingSolver: differential pair ${this.pairName} lost its active attempt`,
@@ -156,7 +163,7 @@ export class DifferentialPairRoutingSession {
       edgeGap: attempt.edgeGap,
       side: attempt.side,
       layerCount: this.input.layerCount,
-      terminalFanout: prepared.terminalFanout,
+      terminalFanout: prepared.bothEndsAreInline,
     })
     if (!candidate) return
     if (
@@ -168,289 +175,6 @@ export class DifferentialPairRoutingSession {
     )
       return
     this.candidates.push(candidate)
-  }
-
-  private prepare(): PreparedPair {
-    const firstMatches = this.input.traces
-      .map((trace, index) => ({ trace, index }))
-      .filter(
-        ({ trace }) =>
-          trace.connection_name === this.input.pair.connectionNames[0],
-      )
-    const secondMatches = this.input.traces
-      .map((trace, index) => ({ trace, index }))
-      .filter(
-        ({ trace }) =>
-          trace.connection_name === this.input.pair.connectionNames[1],
-      )
-    if (firstMatches.length !== 1 || secondMatches.length !== 1)
-      throw new DifferentialPairRoutingError({
-        connectionNames: this.input.pair.connectionNames,
-        reason: "trace-resolution-failure",
-        message:
-          "must resolve each connection_name to exactly one non-branching trace",
-      })
-    if (firstMatches[0]!.index === secondMatches[0]!.index)
-      throw new DifferentialPairRoutingError({
-        connectionNames: this.input.pair.connectionNames,
-        reason: "trace-resolution-failure",
-        message: "resolved both members to one trace",
-      })
-
-    let first: ParsedTrace
-    let second: ParsedTrace
-    try {
-      first = parseSimplifiedPcbTrace(
-        firstMatches[0]!.trace,
-        this.input.layerCount,
-      )
-      second = parseSimplifiedPcbTrace(
-        secondMatches[0]!.trace,
-        this.input.layerCount,
-      )
-    } catch (error) {
-      throw new DifferentialPairRoutingError({
-        connectionNames: this.input.pair.connectionNames,
-        reason: "invalid-routed-geometry",
-        message: `has unsupported or invalid routed geometry: ${error instanceof Error ? error.message : String(error)}`,
-      })
-    }
-    const firstStart = first.points[0]!
-    const firstEnd = first.points.at(-1)!
-    const normalSecondCost =
-      Math.hypot(
-        firstStart.x - second.points[0]!.x,
-        firstStart.y - second.points[0]!.y,
-      ) +
-      Math.hypot(
-        firstEnd.x - second.points.at(-1)!.x,
-        firstEnd.y - second.points.at(-1)!.y,
-      )
-    const reversedSecondCost =
-      Math.hypot(
-        firstStart.x - second.points.at(-1)!.x,
-        firstStart.y - second.points.at(-1)!.y,
-      ) +
-      Math.hypot(
-        firstEnd.x - second.points[0]!.x,
-        firstEnd.y - second.points[0]!.y,
-      )
-    const reverseSecond = reversedSecondCost + 1e-8 < normalSecondCost
-    const secondStart = reverseSecond
-      ? second.points.at(-1)!
-      : second.points[0]!
-    const secondEnd = reverseSecond ? second.points[0]! : second.points.at(-1)!
-    if (
-      firstStart.layer !== secondStart.layer ||
-      firstEnd.layer !== secondEnd.layer
-    )
-      throw new DifferentialPairRoutingError({
-        connectionNames: this.input.pair.connectionNames,
-        reason: "terminal-layer-mismatch",
-        message: "does not have common paired layers at both terminal stations",
-      })
-
-    const start = {
-      x: (firstStart.x + secondStart.x) / 2,
-      y: (firstStart.y + secondStart.y) / 2,
-      layer: firstStart.layer,
-    }
-    const end = {
-      x: (firstEnd.x + secondEnd.x) / 2,
-      y: (firstEnd.y + secondEnd.y) / 2,
-      layer: firstEnd.layer,
-    }
-    const spineLength = Math.hypot(end.x - start.x, end.y - start.y)
-    if (spineLength < 1e-6)
-      throw new DifferentialPairRoutingError({
-        connectionNames: this.input.pair.connectionNames,
-        reason: "coincident-terminal-midpoints",
-        message: "has coincident terminal-pair midpoints",
-      })
-    const normal = {
-      x: -(end.y - start.y) / spineLength,
-      y: (end.x - start.x) / spineLength,
-    }
-    const terminalDelta = {
-      x: firstStart.x - secondStart.x,
-      y: firstStart.y - secondStart.y,
-    }
-    const preferredSide: 1 | -1 =
-      terminalDelta.x * normal.x + terminalDelta.y * normal.y >= 0 ? 1 : -1
-    const startPairIsInline = hasInlineTerminalPair([firstStart, secondStart], normal)
-    const endPairIsInline = hasInlineTerminalPair([firstEnd, secondEnd], normal)
-    const bothEndsAreInline = startPairIsInline && endPairIsInline
-    const hasMixedTerminalOrientation = startPairIsInline !== endPairIsInline
-    const spineDirection = { x: normal.y, y: -normal.x }
-    const context: CandidateGeometryContext = {
-      immutableTraces: this.input.traces.filter(
-        (_, index) =>
-          index !== firstMatches[0]!.index && index !== secondMatches[0]!.index,
-      ),
-      obstacles: this.input.obstacles,
-      bounds: this.input.bounds,
-      layerCount: this.input.layerCount,
-      minTraceToPadEdgeClearance: this.input.minTraceToPadEdgeClearance,
-    }
-    const centerlineDistanceSamples = getCenterlineDistanceSamples({
-      minimumCenterlineDistance: this.input.pair.minimumCenterlineDistance,
-      maximumCenterlineDistance: this.input.pair.maximumCenterlineDistance,
-      minimumPhysicalDistance: first.width / 2 + second.width / 2,
-      legacyCenterlineDistances: EDGE_GAP_SAMPLES.map(
-        (edgeGap) => edgeGap + first.width / 2 + second.width / 2,
-      ),
-    })
-    const { maxUncoupledLength } = this.input.pair
-    const sides = [preferredSide, preferredSide === 1 ? -1 : 1] as const
-    const prepareAttempts = (
-      modes: TerminalSearchMode[],
-    ): PreparedPair["attempts"] =>
-      centerlineDistanceSamples.flatMap((centerlineSpacing) => {
-        const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
-        const grid = resolvePostProcessingGridConfig({
-          config: this.input.routingGrid,
-          bounds: this.input.bounds,
-          defaultInnerGridStep: Math.max(
-            0.25,
-            Math.min(0.5, centerlineSpacing / 2),
-          ),
-        })
-        return sides.flatMap((side) =>
-          modes.flatMap((terminalSearchMode) => {
-            const useFanoutStations = terminalSearchMode === "fanout"
-            const createValidator = (
-              searchStart: CoupledPathPoint,
-              searchEnd: CoupledPathPoint,
-            ) =>
-              createSearchGeometryValidator({
-                ...context,
-                start: searchStart,
-                end: searchEnd,
-                firstConnectionName: first.source.connection_name,
-                secondConnectionName: second.source.connection_name,
-                firstStartTerminal: firstStart,
-                firstEndTerminal: firstEnd,
-                secondStartTerminal: secondStart,
-                secondEndTerminal: secondEnd,
-                firstWidth: first.width,
-                secondWidth: second.width,
-                firstViaDiameter:
-                  first.transitions[0]?.via_diameter ?? first.viaDiameter,
-                secondViaDiameter:
-                  second.transitions[0]?.via_diameter ?? second.viaDiameter,
-                centerlineSpacing,
-                side,
-                terminalFanout: bothEndsAreInline,
-                terminalMiterMargin: useFanoutStations
-                  ? centerlineSpacing / 2
-                  : undefined,
-              })
-            let searchStart = start
-            let searchEnd = end
-            if (!bothEndsAreInline && !useFanoutStations) {
-              searchStart = getForwardPairSearchStart({
-                start,
-                terminals: [firstStart, secondStart],
-                spineDirection,
-                spineNormal: normal,
-                centerlineSpacing,
-                side,
-              })
-            }
-            if (!bothEndsAreInline && useFanoutStations) {
-              const terminalValidator = createValidator(start, end)
-              const startStation = resolveTerminalFanoutStation({
-                anchor: start,
-                escapeDirection: spineDirection,
-                pathDirection: spineDirection,
-                centerlineSpacing,
-                side,
-                lanes: [
-                  { point: firstStart, polarity: 1 },
-                  { point: secondStart, polarity: -1 },
-                ],
-                maxUncoupledLength,
-                availableTravelDistance: spineLength,
-                maximumTurnDegrees: 55,
-                innerGridStep: grid.innerGridStep,
-                isValid: (station) =>
-                  terminalValidator.isTerminalFanoutValid(
-                    station,
-                    spineDirection,
-                    "start",
-                  ),
-              })
-              if (!startStation) return []
-              const endStation = resolveTerminalFanoutStation({
-                anchor: end,
-                escapeDirection: {
-                  x: -spineDirection.x,
-                  y: -spineDirection.y,
-                },
-                pathDirection: spineDirection,
-                centerlineSpacing,
-                side,
-                lanes: [
-                  { point: firstEnd, polarity: 1 },
-                  { point: secondEnd, polarity: -1 },
-                ],
-                maxUncoupledLength,
-                availableTravelDistance: spineLength,
-                maximumTurnDegrees: 45,
-                innerGridStep: grid.innerGridStep,
-                isValid: (station) =>
-                  terminalValidator.isTerminalFanoutValid(
-                    station,
-                    spineDirection,
-                    "end",
-                  ),
-              })
-              if (!endStation) return []
-              searchStart = startStation
-              searchEnd = endStation
-              const coupledTravel =
-                (searchEnd.x - searchStart.x) * spineDirection.x +
-                (searchEnd.y - searchStart.y) * spineDirection.y
-              if (coupledTravel <= grid.innerGridStep) return []
-            }
-            const validator = createValidator(searchStart, searchEnd)
-            return [
-              {
-                edgeGap,
-                side,
-                input: {
-                  start: searchStart,
-                  end: searchEnd,
-                  bounds: this.input.bounds,
-                  layerCount: this.input.layerCount,
-                  grid,
-                  ...validator,
-                },
-              },
-            ]
-          }),
-        )
-      })
-    const modes: TerminalSearchMode[] = []
-    if (maxUncoupledLength === undefined) modes.push("forward")
-    const scoreBothModes =
-      maxUncoupledLength === undefined && hasMixedTerminalOrientation &&
-      (hasPairSpacingPreference(this.input.pair) ||
-        !validateCandidateGeometry(first, second, context))
-    if (maxUncoupledLength !== undefined || scoreBothModes) {
-      modes.push("fanout")
-    }
-    return {
-      first,
-      second,
-      reverseSecond,
-      terminalFanout: bothEndsAreInline,
-      context,
-      attempts: prepareAttempts(modes),
-      prepareFanoutAttempts: !bothEndsAreInline && !modes.includes("fanout")
-        ? () => prepareAttempts(["fanout"])
-        : undefined,
-    }
   }
 
   private complete(): void {
