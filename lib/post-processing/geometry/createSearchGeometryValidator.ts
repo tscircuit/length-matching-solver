@@ -62,6 +62,22 @@ export const createSearchGeometryValidator = (input: {
     const layerIndex = getLayerIndex(segment.layer, input.layerCount)
     immutableSegmentsByLayer[layerIndex]!.push(segment)
   }
+  const obstaclesByLayer = Array.from(
+    { length: input.layerCount },
+    (): { obstacle: Obstacle; halfExtent: number }[] => [],
+  )
+  const widestLane = Math.max(input.firstWidth, input.secondWidth)
+  const maxInflation =
+    widestLane / 2 + (input.minTraceToPadEdgeClearance ?? widestLane)
+  for (const obstacle of input.obstacles) {
+    const halfExtent = Math.hypot(
+      obstacle.width / 2 + maxInflation,
+      obstacle.height / 2 + maxInflation,
+    )
+    for (const layer of getObstacleLayerIndexes(obstacle, input.layerCount)) {
+      obstaclesByLayer[layer]!.push({ obstacle, halfExtent })
+    }
+  }
   const samePoint = (left: Point, right: Point): boolean =>
     Math.hypot(left.x - right.x, left.y - right.y) <= 1e-8
   const pointToSegmentDistance = (
@@ -98,10 +114,6 @@ export const createSearchGeometryValidator = (input: {
       Math.abs(x) <= obstacle.width / 2 + inflation &&
       Math.abs(y) <= obstacle.height / 2 + inflation
     )
-  }
-  const obstacleIsOnLayer = (obstacle: Obstacle, layer: string): boolean => {
-    const z = getLayerIndex(layer, input.layerCount)
-    return getObstacleLayerIndexes(obstacle, input.layerCount).includes(z)
   }
   const laneSegments = (
     start: CoupledPathPoint,
@@ -222,9 +234,8 @@ export const createSearchGeometryValidator = (input: {
     return (
       segments.every(segmentIsClear) &&
       stationPoints.every((point, lane) =>
-        input.obstacles.every(
-          (obstacle) =>
-            !obstacleIsOnLayer(obstacle, station.layer) ||
+        obstaclesByLayer[getLayerIndex(station.layer, input.layerCount)]!.every(
+          ({ obstacle }) =>
             !obstacleContains(
               point,
               obstacle,
@@ -259,18 +270,12 @@ export const createSearchGeometryValidator = (input: {
       )
         return false
     }
-    for (const obstacle of input.obstacles) {
-      if (!obstacleIsOnLayer(obstacle, segment.layer)) continue
-      // Reject distant obstacles with a rotation-safe bound before exact sampling.
-      const obstacleHalfExtent = Math.hypot(
-        obstacle.width / 2 + inflation,
-        obstacle.height / 2 + inflation,
-      )
+    for (const { obstacle, halfExtent } of obstaclesByLayer[layerIndex]!) {
       if (
-        segmentMaxX < obstacle.center.x - obstacleHalfExtent ||
-        segmentMinX > obstacle.center.x + obstacleHalfExtent ||
-        segmentMaxY < obstacle.center.y - obstacleHalfExtent ||
-        segmentMinY > obstacle.center.y + obstacleHalfExtent
+        segmentMaxX < obstacle.center.x - halfExtent ||
+        segmentMinX > obstacle.center.x + halfExtent ||
+        segmentMaxY < obstacle.center.y - halfExtent ||
+        segmentMinY > obstacle.center.y + halfExtent
       )
         continue
       const [startTerminal, endTerminal] =
@@ -349,25 +354,25 @@ export const createSearchGeometryValidator = (input: {
       via.y + radius > input.bounds.maxY
     )
       return false
-    for (const obstacle of input.obstacles) {
-      if (!via.layers.some((layer) => obstacleIsOnLayer(obstacle, layer)))
-        continue
-      const exitsConnectedTerminal =
-        via.terminal !== null &&
-        obstacle.connectedTo.includes(via.connectionName) &&
-        obstacleContains(via, obstacle, 0)
-      if (
-        !exitsConnectedTerminal &&
-        obstacleContains(via, obstacle, radius + via.diameter)
-      )
-        return false
-    }
-    for (const segment of immutableSegments) {
-      if (!via.layers.includes(segment.layer)) continue
-      const required =
-        radius + segment.width / 2 + Math.max(via.diameter, segment.width)
-      if (pointToSegmentDistance(via, segment.start, segment.end) < required)
-        return false
+    for (const layer of via.layers) {
+      const layerIndex = getLayerIndex(layer, input.layerCount)
+      for (const { obstacle } of obstaclesByLayer[layerIndex]!) {
+        const exitsConnectedTerminal =
+          via.terminal !== null &&
+          obstacle.connectedTo.includes(via.connectionName) &&
+          obstacleContains(via, obstacle, 0)
+        if (
+          !exitsConnectedTerminal &&
+          obstacleContains(via, obstacle, radius + via.diameter)
+        )
+          return false
+      }
+      for (const segment of immutableSegmentsByLayer[layerIndex]!) {
+        const required =
+          radius + segment.width / 2 + Math.max(via.diameter, segment.width)
+        if (pointToSegmentDistance(via, segment.start, segment.end) < required)
+          return false
+      }
     }
     for (const other of immutableVias) {
       if (!other.layers.some((layer) => via.layers.includes(layer))) continue
