@@ -42,7 +42,7 @@ type PreparedPair = {
   }>
 }
 
-type DifferentialPairRoutingInput = {
+export type DifferentialPairRoutingInput = {
   pair: DifferentialPair
   traces: SimplifiedPcbTrace[]
   obstacles: CandidateGeometryContext["obstacles"]
