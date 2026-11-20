@@ -84,7 +84,10 @@ export class DifferentialPairRoutingSession {
 
   getProgress(): number {
     if (this.result) return 1
-    const attemptCount = this.prepared.attempts.length
+    let attemptCount = this.prepared.attempts.length
+    if (this.prepared.prepareFanoutAttempts && this.candidates.length === 0) {
+      attemptCount *= 2
+    }
     const attemptProgress = this.search?.getProgress() ?? 0
     return Math.min(0.99, (this.nextAttempt + attemptProgress) / attemptCount)
   }

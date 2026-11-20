@@ -41,7 +41,13 @@ test("moves the coupled run past an obstacle between side-by-side start pads", (
     layerCount: 2,
   })
 
-  while (!solver.isComplete()) solver.step()
+  let progress = solver.getProgress()
+  while (!solver.isComplete()) {
+    solver.step()
+    const nextProgress = solver.getProgress()
+    expect(nextProgress).toBeGreaterThanOrEqual(progress)
+    progress = nextProgress
+  }
   const result = solver.getResult()
 
   expect(result.status).toBe("accepted")
