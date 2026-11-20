@@ -16,6 +16,7 @@ import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
 import { getForwardPairSearchStart } from "./getForwardPairSearchStart"
+import { hasInlineTerminalPair } from "./hasInlineTerminalPair"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
 import { resolveTerminalFanoutStation } from "./resolveTerminalFanoutStation"
@@ -24,12 +25,15 @@ import type { CoupledPathPoint, CoupledPathSearchInput } from "./types"
 const EDGE_GAP_SAMPLES = [0.75, 0.5, 1, 0.25, 1.25]
 const CENTERLINE_DISTANCE_PENALTY_PER_MM = 100
 
+type TerminalSearchMode = "forward" | "fanout"
+
 type PreparedPair = {
   first: ParsedTrace
   second: ParsedTrace
   reverseSecond: boolean
   terminalFanout: boolean
   context: CandidateGeometryContext
+  prepareFanoutAttempts?: () => PreparedPair["attempts"]
   attempts: Array<{
     edgeGap: number
     side: 1 | -1
@@ -102,6 +106,14 @@ export class DifferentialPairRoutingSession {
     if (this.result) return
     const prepared = this.prepared
     if (!this.search) {
+      if (
+        this.nextAttempt === prepared.attempts.length &&
+        this.candidates.length === 0 &&
+        prepared.prepareFanoutAttempts
+      ) {
+        prepared.attempts.push(...prepared.prepareFanoutAttempts())
+        delete prepared.prepareFanoutAttempts
+      }
       const attempt = prepared.attempts[this.nextAttempt]
       if (!attempt) {
         this.complete()
@@ -253,20 +265,8 @@ export class DifferentialPairRoutingSession {
     }
     const preferredSide: 1 | -1 =
       terminalDelta.x * normal.x + terminalDelta.y * normal.y >= 0 ? 1 : -1
-    const hasInlineTerminalPair = (
-      firstPoint: typeof firstStart,
-      secondPoint: typeof secondStart,
-    ): boolean => {
-      const deltaX = firstPoint.x - secondPoint.x
-      const deltaY = firstPoint.y - secondPoint.y
-      const separation = Math.hypot(deltaX, deltaY)
-      return (
-        separation > 1e-8 &&
-        Math.abs(deltaX * normal.x + deltaY * normal.y) / separation < 0.5
-      )
-    }
-    const startPairIsInline = hasInlineTerminalPair(firstStart, secondStart)
-    const endPairIsInline = hasInlineTerminalPair(firstEnd, secondEnd)
+    const startPairIsInline = hasInlineTerminalPair([firstStart, secondStart], normal)
+    const endPairIsInline = hasInlineTerminalPair([firstEnd, secondEnd], normal)
     const bothEndsAreInline = startPairIsInline && endPairIsInline
     const hasMixedTerminalOrientation = startPairIsInline !== endPairIsInline
     const spineDirection = { x: normal.y, y: -normal.x }
@@ -289,156 +289,161 @@ export class DifferentialPairRoutingSession {
       ),
     })
     const { maxUncoupledLength } = this.input.pair
-    // When spacing is unspecified, keep the usual search for valid copper
-    // so the length matcher can tune the existing pad escapes.
-    const terminalSearchModes: Array<"forward" | "fanout"> =
-      maxUncoupledLength !== undefined
-        ? ["fanout"]
-        : hasMixedTerminalOrientation &&
-            (this.input.pair.minimumCenterlineDistance !== undefined ||
-              this.input.pair.maximumCenterlineDistance !== undefined ||
-              !validateCandidateGeometry(first, second, context))
-          ? ["forward", "fanout"]
-          : ["forward"]
     const sides = [preferredSide, preferredSide === 1 ? -1 : 1] as const
-    const attempts = centerlineDistanceSamples.flatMap((centerlineSpacing) => {
-      const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
-      const grid = resolvePostProcessingGridConfig({
-        config: this.input.routingGrid,
-        bounds: this.input.bounds,
-        defaultInnerGridStep: Math.max(
-          0.25,
-          Math.min(0.5, centerlineSpacing / 2),
-        ),
-      })
-      return sides
-        .flatMap((side) =>
-          terminalSearchModes.map((terminalSearchMode) => ({
-            side,
-            terminalSearchMode,
-          })),
-        )
-        .flatMap(({ side, terminalSearchMode }) => {
-          const useFanoutStations = terminalSearchMode === "fanout"
-          const createValidator = (
-            searchStart: CoupledPathPoint,
-            searchEnd: CoupledPathPoint,
-          ) =>
-            createSearchGeometryValidator({
-              ...context,
-              start: searchStart,
-              end: searchEnd,
-              firstConnectionName: first.source.connection_name,
-              secondConnectionName: second.source.connection_name,
-              firstStartTerminal: firstStart,
-              firstEndTerminal: firstEnd,
-              secondStartTerminal: secondStart,
-              secondEndTerminal: secondEnd,
-              firstWidth: first.width,
-              secondWidth: second.width,
-              firstViaDiameter:
-                first.transitions[0]?.via_diameter ?? first.viaDiameter,
-              secondViaDiameter:
-                second.transitions[0]?.via_diameter ?? second.viaDiameter,
-              centerlineSpacing,
+    const prepareAttempts = (
+      modes: TerminalSearchMode[],
+    ): PreparedPair["attempts"] =>
+      centerlineDistanceSamples.flatMap((centerlineSpacing) => {
+        const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
+        const grid = resolvePostProcessingGridConfig({
+          config: this.input.routingGrid,
+          bounds: this.input.bounds,
+          defaultInnerGridStep: Math.max(
+            0.25,
+            Math.min(0.5, centerlineSpacing / 2),
+          ),
+        })
+        return sides
+          .flatMap((side) =>
+            modes.map((terminalSearchMode) => ({
               side,
-              terminalFanout: bothEndsAreInline,
-              terminalMiterMargin: useFanoutStations
-                ? centerlineSpacing / 2
-                : undefined,
-            })
-          let searchStart = start
-          let searchEnd = end
-          if (!bothEndsAreInline && !useFanoutStations) {
-            searchStart = getForwardPairSearchStart({
-              start,
-              terminals: [firstStart, secondStart],
-              spineDirection,
-              spineNormal: normal,
-              centerlineSpacing,
-              side,
-            })
-          }
-          if (!bothEndsAreInline && useFanoutStations) {
-            const terminalValidator = createValidator(start, end)
-            const startStation = resolveTerminalFanoutStation({
-              anchor: start,
-              escapeDirection: spineDirection,
-              pathDirection: spineDirection,
-              centerlineSpacing,
-              side,
-              lanes: [
-                { point: firstStart, polarity: 1 },
-                { point: secondStart, polarity: -1 },
-              ],
-              maxUncoupledLength,
-              availableTravelDistance: spineLength,
-              maximumTurnDegrees: 55,
-              innerGridStep: grid.innerGridStep,
-              isValid: (station) =>
-                terminalValidator.isTerminalFanoutValid(
-                  station,
-                  spineDirection,
-                  "start",
-                ),
-            })
-            if (!startStation) return []
-            const endStation = resolveTerminalFanoutStation({
-              anchor: end,
-              escapeDirection: {
-                x: -spineDirection.x,
-                y: -spineDirection.y,
-              },
-              pathDirection: spineDirection,
-              centerlineSpacing,
-              side,
-              lanes: [
-                { point: firstEnd, polarity: 1 },
-                { point: secondEnd, polarity: -1 },
-              ],
-              maxUncoupledLength,
-              availableTravelDistance: spineLength,
-              maximumTurnDegrees: 45,
-              innerGridStep: grid.innerGridStep,
-              isValid: (station) =>
-                terminalValidator.isTerminalFanoutValid(
-                  station,
-                  spineDirection,
-                  "end",
-                ),
-            })
-            if (!endStation) return []
-            searchStart = startStation
-            searchEnd = endStation
-            const coupledTravel =
-              (searchEnd.x - searchStart.x) * spineDirection.x +
-              (searchEnd.y - searchStart.y) * spineDirection.y
-            if (coupledTravel <= grid.innerGridStep) return []
-          }
-          const validator = createValidator(searchStart, searchEnd)
-          return [
-            {
-              edgeGap,
-              side,
-              input: {
+              terminalSearchMode,
+            })),
+          )
+          .flatMap(({ side, terminalSearchMode }) => {
+            const useFanoutStations = terminalSearchMode === "fanout"
+            const createValidator = (
+              searchStart: CoupledPathPoint,
+              searchEnd: CoupledPathPoint,
+            ) =>
+              createSearchGeometryValidator({
+                ...context,
                 start: searchStart,
                 end: searchEnd,
-                bounds: this.input.bounds,
-                layerCount: this.input.layerCount,
-                grid,
-                ...validator,
+                firstConnectionName: first.source.connection_name,
+                secondConnectionName: second.source.connection_name,
+                firstStartTerminal: firstStart,
+                firstEndTerminal: firstEnd,
+                secondStartTerminal: secondStart,
+                secondEndTerminal: secondEnd,
+                firstWidth: first.width,
+                secondWidth: second.width,
+                firstViaDiameter:
+                  first.transitions[0]?.via_diameter ?? first.viaDiameter,
+                secondViaDiameter:
+                  second.transitions[0]?.via_diameter ?? second.viaDiameter,
+                centerlineSpacing,
+                side,
+                terminalFanout: bothEndsAreInline,
+                terminalMiterMargin: useFanoutStations
+                  ? centerlineSpacing / 2
+                  : undefined,
+              })
+            let searchStart = start
+            let searchEnd = end
+            if (!bothEndsAreInline && !useFanoutStations) {
+              searchStart = getForwardPairSearchStart({
+                start,
+                terminals: [firstStart, secondStart],
+                spineDirection,
+                spineNormal: normal,
+                centerlineSpacing,
+                side,
+              })
+            }
+            if (!bothEndsAreInline && useFanoutStations) {
+              const terminalValidator = createValidator(start, end)
+              const startStation = resolveTerminalFanoutStation({
+                anchor: start,
+                escapeDirection: spineDirection,
+                pathDirection: spineDirection,
+                centerlineSpacing,
+                side,
+                lanes: [
+                  { point: firstStart, polarity: 1 },
+                  { point: secondStart, polarity: -1 },
+                ],
+                maxUncoupledLength,
+                availableTravelDistance: spineLength,
+                maximumTurnDegrees: 55,
+                innerGridStep: grid.innerGridStep,
+                isValid: (station) =>
+                  terminalValidator.isTerminalFanoutValid(
+                    station,
+                    spineDirection,
+                    "start",
+                  ),
+              })
+              if (!startStation) return []
+              const endStation = resolveTerminalFanoutStation({
+                anchor: end,
+                escapeDirection: {
+                  x: -spineDirection.x,
+                  y: -spineDirection.y,
+                },
+                pathDirection: spineDirection,
+                centerlineSpacing,
+                side,
+                lanes: [
+                  { point: firstEnd, polarity: 1 },
+                  { point: secondEnd, polarity: -1 },
+                ],
+                maxUncoupledLength,
+                availableTravelDistance: spineLength,
+                maximumTurnDegrees: 45,
+                innerGridStep: grid.innerGridStep,
+                isValid: (station) =>
+                  terminalValidator.isTerminalFanoutValid(
+                    station,
+                    spineDirection,
+                    "end",
+                  ),
+              })
+              if (!endStation) return []
+              searchStart = startStation
+              searchEnd = endStation
+              const coupledTravel =
+                (searchEnd.x - searchStart.x) * spineDirection.x +
+                (searchEnd.y - searchStart.y) * spineDirection.y
+              if (coupledTravel <= grid.innerGridStep) return []
+            }
+            const validator = createValidator(searchStart, searchEnd)
+            return [
+              {
+                edgeGap,
+                side,
+                input: {
+                  start: searchStart,
+                  end: searchEnd,
+                  bounds: this.input.bounds,
+                  layerCount: this.input.layerCount,
+                  grid,
+                  ...validator,
+                },
               },
-            },
-          ]
-        })
-    })
+            ]
+          })
+      })
+    const modes: TerminalSearchMode[] = []
+    if (maxUncoupledLength === undefined) modes.push("forward")
+    const scoreBothModes =
+      maxUncoupledLength === undefined && hasMixedTerminalOrientation &&
+      (this.input.pair.minimumCenterlineDistance !== undefined ||
+        this.input.pair.maximumCenterlineDistance !== undefined ||
+        !validateCandidateGeometry(first, second, context))
+    if (maxUncoupledLength !== undefined || scoreBothModes) {
+      modes.push("fanout")
+    }
     return {
       first,
       second,
       reverseSecond,
       terminalFanout: bothEndsAreInline,
       context,
-      attempts,
+      attempts: prepareAttempts(modes),
+      prepareFanoutAttempts: !bothEndsAreInline && !modes.includes("fanout")
+        ? () => prepareAttempts(["fanout"])
+        : undefined,
     }
   }
 
