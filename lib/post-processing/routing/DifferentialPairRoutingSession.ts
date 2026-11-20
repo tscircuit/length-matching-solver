@@ -15,6 +15,10 @@ import type {
 import { parseSimplifiedPcbTrace } from "../model/parseSimplifiedPcbTrace"
 import { createCoupledPairCandidate } from "./createCoupledPairCandidate"
 import { getCenterlineDistanceSamples } from "./getCenterlineDistanceSamples"
+import {
+  getForwardPairSearchStart,
+  MAX_START_TERMINAL_TURN_DEGREES,
+} from "./getForwardPairSearchStart"
 import { IncrementalCoupledPathSearch } from "./IncrementalCoupledPathSearch"
 import { resolvePostProcessingGridConfig } from "./resolvePostProcessingGridConfig"
 import { resolveTerminalFanoutStation } from "./resolveTerminalFanoutStation"
@@ -53,6 +57,7 @@ export class DifferentialPairRoutingSession {
   private readonly candidates: PairCandidate[] = []
   private result: PairSolveResult | null = null
   private search: IncrementalCoupledPathSearch | null = null
+  private fanoutPending = false
   private nextAttempt = 0
   private exploredNodeCount = 0
 
@@ -79,7 +84,9 @@ export class DifferentialPairRoutingSession {
 
   getProgress(): number {
     if (this.result) return 1
-    const attemptCount = this.prepared.attempts.length
+    let attemptCount = this.prepared.attempts.length
+    if (attemptCount === 0) return 0
+    if (this.fanoutPending && this.candidates.length === 0) attemptCount *= 2
     const attemptProgress = this.search?.getProgress() ?? 0
     return Math.min(0.99, (this.nextAttempt + attemptProgress) / attemptCount)
   }
@@ -101,6 +108,24 @@ export class DifferentialPairRoutingSession {
     if (this.result) return
     const prepared = this.prepared
     if (!this.search) {
+      if (
+        this.nextAttempt === prepared.attempts.length &&
+        this.candidates.length === 0 &&
+        this.fanoutPending
+      ) {
+        if (
+          !this.hasSpacingPreference &&
+          validateCandidateGeometry(
+            prepared.first,
+            prepared.second,
+            prepared.context,
+          )
+        ) {
+          this.result = { status: "retained" }
+          return
+        }
+        prepared.attempts.push(...this.prepare("fanout").attempts)
+      }
       const attempt = prepared.attempts[this.nextAttempt]
       if (!attempt) {
         this.complete()
@@ -145,7 +170,14 @@ export class DifferentialPairRoutingSession {
     this.candidates.push(candidate)
   }
 
-  private prepare(): PreparedPair {
+  private get hasSpacingPreference(): boolean {
+    return (
+      this.input.pair.minimumCenterlineDistance !== undefined ||
+      this.input.pair.maximumCenterlineDistance !== undefined
+    )
+  }
+
+  private prepare(search: "initial" | "fanout" = "initial"): PreparedPair {
     const firstMatches = this.input.traces
       .map((trace, index) => ({ trace, index }))
       .filter(
@@ -264,45 +296,10 @@ export class DifferentialPairRoutingSession {
         Math.abs(deltaX * normal.x + deltaY * normal.y) / separation < 0.5
       )
     }
-    const terminalFanout =
-      hasInlineTerminalPair(firstStart, secondStart) &&
-      hasInlineTerminalPair(firstEnd, secondEnd)
+    const inlineStart = hasInlineTerminalPair(firstStart, secondStart)
+    const inlineEnd = hasInlineTerminalPair(firstEnd, secondEnd)
+    const terminalFanout = inlineStart && inlineEnd
     const spineDirection = { x: normal.y, y: -normal.x }
-    const terminalStartRequiresForwardEgress = [firstStart, secondStart].some(
-      (terminal) =>
-        (terminal.x - start.x) * spineDirection.x +
-          (terminal.y - start.y) * spineDirection.y >
-        1e-8,
-    )
-    const createLegacyForwardEgressSearchStart = (
-      centerlineSpacing: number,
-      side: 1 | -1,
-    ): CoupledPathPoint => {
-      if (!terminalStartRequiresForwardEgress || terminalFanout) return start
-      const terminalStations = [
-        { terminal: firstStart, offset: (side * centerlineSpacing) / 2 },
-        { terminal: secondStart, offset: (-side * centerlineSpacing) / 2 },
-      ]
-      const tangentOfMaximumTurn = Math.tan((55 * Math.PI) / 180)
-      const forwardDistance = Math.max(
-        ...terminalStations.map(({ terminal, offset }) => {
-          const parallel =
-            (terminal.x - start.x) * spineDirection.x +
-            (terminal.y - start.y) * spineDirection.y
-          const perpendicular =
-            (terminal.x - start.x) * normal.x +
-            (terminal.y - start.y) * normal.y
-          return (
-            parallel + Math.abs(perpendicular - offset) / tangentOfMaximumTurn
-          )
-        }),
-      )
-      return {
-        x: start.x + spineDirection.x * forwardDistance,
-        y: start.y + spineDirection.y * forwardDistance,
-        layer: start.layer,
-      }
-    }
     const context: CandidateGeometryContext = {
       immutableTraces: this.input.traces.filter(
         (_, index) =>
@@ -321,18 +318,34 @@ export class DifferentialPairRoutingSession {
         (edgeGap) => edgeGap + first.width / 2 + second.width / 2,
       ),
     })
+    const { maxUncoupledLength } = this.input.pair
+    const modes: ("forward" | "fanout")[] = []
+    if (search === "fanout" || maxUncoupledLength !== undefined) {
+      modes.push("fanout")
+    } else {
+      modes.push("forward")
+      if (
+        inlineStart !== inlineEnd &&
+        (this.hasSpacingPreference ||
+          !validateCandidateGeometry(first, second, context))
+      ) {
+        modes.push("fanout")
+      }
+    }
+    this.fanoutPending = !terminalFanout && !modes.includes("fanout")
+    const sides = [preferredSide, preferredSide === 1 ? -1 : 1] as const
     const attempts = centerlineDistanceSamples.flatMap((centerlineSpacing) => {
       const edgeGap = centerlineSpacing - first.width / 2 - second.width / 2
-      return ([preferredSide, preferredSide === 1 ? -1 : 1] as const).flatMap(
-        (side) => {
-          const grid = resolvePostProcessingGridConfig({
-            config: this.input.routingGrid,
-            bounds: this.input.bounds,
-            defaultInnerGridStep: Math.max(
-              0.25,
-              Math.min(0.5, centerlineSpacing / 2),
-            ),
-          })
+      const grid = resolvePostProcessingGridConfig({
+        config: this.input.routingGrid,
+        bounds: this.input.bounds,
+        defaultInnerGridStep: Math.max(
+          0.25,
+          Math.min(0.5, centerlineSpacing / 2),
+        ),
+      })
+      return sides.flatMap((side) =>
+        modes.flatMap((mode) => {
           const createValidator = (
             searchStart: CoupledPathPoint,
             searchEnd: CoupledPathPoint,
@@ -357,19 +370,21 @@ export class DifferentialPairRoutingSession {
               side,
               terminalFanout,
               terminalMiterMargin:
-                this.input.pair.maxUncoupledLength === undefined
-                  ? undefined
-                  : centerlineSpacing / 2,
+                mode === "fanout" ? centerlineSpacing / 2 : undefined,
             })
-          let searchStart =
-            this.input.pair.maxUncoupledLength === undefined
-              ? createLegacyForwardEgressSearchStart(centerlineSpacing, side)
-              : start
+          let searchStart = start
           let searchEnd = end
-          if (
-            !terminalFanout &&
-            this.input.pair.maxUncoupledLength !== undefined
-          ) {
+          if (!terminalFanout && mode === "forward") {
+            searchStart = getForwardPairSearchStart({
+              start,
+              terminals: [firstStart, secondStart],
+              spineDirection,
+              spineNormal: normal,
+              centerlineSpacing,
+              side,
+            })
+          }
+          if (!terminalFanout && mode === "fanout") {
             const terminalValidator = createValidator(start, end)
             const resolvedStart = resolveTerminalFanoutStation({
               anchor: start,
@@ -381,8 +396,9 @@ export class DifferentialPairRoutingSession {
                 { point: firstStart, polarity: 1 },
                 { point: secondStart, polarity: -1 },
               ],
-              maxUncoupledLength: this.input.pair.maxUncoupledLength,
-              maximumTurnDegrees: 55,
+              maxUncoupledLength,
+              availableTravelDistance: spineLength,
+              maximumTurnDegrees: MAX_START_TERMINAL_TURN_DEGREES,
               searchStep: grid.innerGridStep,
               isValid: (station) =>
                 terminalValidator.isTerminalFanoutValid(
@@ -391,6 +407,7 @@ export class DifferentialPairRoutingSession {
                   "start",
                 ),
             })
+            if (!resolvedStart) return []
             const resolvedEnd = resolveTerminalFanoutStation({
               anchor: end,
               escapeDirection: {
@@ -404,7 +421,8 @@ export class DifferentialPairRoutingSession {
                 { point: firstEnd, polarity: 1 },
                 { point: secondEnd, polarity: -1 },
               ],
-              maxUncoupledLength: this.input.pair.maxUncoupledLength,
+              maxUncoupledLength,
+              availableTravelDistance: spineLength,
               maximumTurnDegrees: 45,
               searchStep: grid.innerGridStep,
               isValid: (station) =>
@@ -414,7 +432,7 @@ export class DifferentialPairRoutingSession {
                   "end",
                 ),
             })
-            if (!resolvedStart || !resolvedEnd) return []
+            if (!resolvedEnd) return []
             searchStart = resolvedStart
             searchEnd = resolvedEnd
             const coupledTravel =
@@ -437,7 +455,7 @@ export class DifferentialPairRoutingSession {
               },
             },
           ]
-        },
+        }),
       )
     })
     return { first, second, reverseSecond, terminalFanout, context, attempts }
@@ -459,30 +477,19 @@ export class DifferentialPairRoutingSession {
   }
 
   private score(candidate: PairCandidate): number {
-    const hasCenterlineDistancePreference =
-      this.input.pair.minimumCenterlineDistance !== undefined ||
-      this.input.pair.maximumCenterlineDistance !== undefined
-    const spacingPenalty = hasCenterlineDistancePreference
-      ? Math.max(
-          0,
-          (this.input.pair.minimumCenterlineDistance ??
-            Number.NEGATIVE_INFINITY) - candidate.centerlineDistance,
-        ) *
-          CENTERLINE_DISTANCE_PENALTY_PER_MM +
-        Math.max(
-          0,
-          candidate.centerlineDistance -
-            (this.input.pair.maximumCenterlineDistance ??
-              Number.POSITIVE_INFINITY),
-        ) *
-          CENTERLINE_DISTANCE_PENALTY_PER_MM
-      : candidate.edgeGap < 0.5
-        ? (0.5 - candidate.edgeGap) * CENTERLINE_DISTANCE_PENALTY_PER_MM
-        : candidate.edgeGap > 1
-          ? (candidate.edgeGap - 1) * CENTERLINE_DISTANCE_PENALTY_PER_MM
-          : 0
+    const { edgeGap, centerlineDistance } = candidate
+    let spacingDeviation = Math.max(0, 0.5 - edgeGap, edgeGap - 1)
+    if (this.hasSpacingPreference) {
+      const {
+        minimumCenterlineDistance: min = centerlineDistance,
+        maximumCenterlineDistance: max = centerlineDistance,
+      } = this.input.pair
+      spacingDeviation =
+        Math.max(0, min - centerlineDistance) +
+        Math.max(0, centerlineDistance - max)
+    }
     return (
-      spacingPenalty +
+      spacingDeviation * CENTERLINE_DISTANCE_PENALTY_PER_MM +
       getSimplifiedTraceLength(candidate.firstParsed) +
       getSimplifiedTraceLength(candidate.secondParsed) +
       candidate.bendCount * 0.15 +

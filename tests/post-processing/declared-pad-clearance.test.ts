@@ -23,11 +23,20 @@ test("post-processing honors declared pad clearance without changing legacy defa
   solver.solve()
   expect(solver.solved).toBe(true)
   const output = solver.getOutput()
-  expect(
-    output.postProcessingErrors.some(
-      (error) => error.reason === "invalid-final-copper",
-    ),
-  ).toBe(false)
+  expect(output.postProcessingErrors).toEqual([])
+  const [longer, shorter] = output.hdRoutes
+  expect(longer!.route.map(({ x, y, z }) => [x, y, z])).toEqual(
+    params.hdRoutes[0]!.route.map(({ x, y, z }) => [x, y, z]),
+  )
+  const peaks = shorter!.route.filter(
+    (point, index, route) =>
+      index > 0 &&
+      index + 1 < route.length &&
+      point.y > route[index - 1]!.y &&
+      point.y > route[index + 1]!.y,
+  )
+  expect(peaks).toHaveLength(2)
+  expect(peaks[0]!.y).toBeCloseTo(peaks[1]!.y, 6)
   const lengths = output.hdRoutes.map((route, routeIndex) => {
     expect(route.route[0]).toEqual(params.hdRoutes[routeIndex]!.route[0])
     expect(route.route.at(-1)).toEqual(

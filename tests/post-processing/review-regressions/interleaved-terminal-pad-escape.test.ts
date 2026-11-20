@@ -61,7 +61,7 @@ test("couples an exact-gap pair after escaping an interleaved terminal pad", () 
   while (!solver.isComplete()) solver.step()
   const result = solver.getResult()
 
-  expect(result.status).toBe("accepted")
+  if (result.status !== "accepted") throw new Error("Expected a rerouted pair")
   expect(result.candidate.edgeGap).toBeCloseTo(0.15, 8)
   const firstCoupledPoint = result.candidate.first.route[1]
   if (firstCoupledPoint?.route_type !== "wire")

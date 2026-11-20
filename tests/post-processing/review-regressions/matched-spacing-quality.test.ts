@@ -28,7 +28,7 @@ test("prefers a requested centerline-distance range when rerouting a pair", () =
     bounds: simpleRouteJson.bounds,
     layerCount: simpleRouteJson.layerCount,
   })
-  expect(result.status).toBe("accepted")
+  if (result.status !== "accepted") throw new Error("Expected a rerouted pair")
   expect(result.candidate.centerlineDistance).toBeGreaterThanOrEqual(0.6)
   expect(result.candidate.centerlineDistance).toBeLessThanOrEqual(1.6)
   expect(result.candidate.edgeGap).toBeCloseTo(
