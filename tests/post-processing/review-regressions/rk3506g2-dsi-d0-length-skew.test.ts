@@ -28,7 +28,9 @@ test("snapshots the DSI_D0 length skew on the RK3506G2 board", async (): Promise
   )
   const { connectionNames, lengthTolerance } = params.differentialPairs[0]!
   const [positive, negative] = connectionNames.map((name) =>
-    getRouteLength(hdRoutes.find(({ connectionName }) => connectionName === name)!),
+    getRouteLength(
+      hdRoutes.find(({ connectionName }) => connectionName === name)!,
+    ),
   )
   const skew = Math.abs(positive! - negative!)
 
