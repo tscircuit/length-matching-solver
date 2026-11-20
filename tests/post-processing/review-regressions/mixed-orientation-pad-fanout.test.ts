@@ -4,11 +4,64 @@ import {
   type PostProcessingSolverParams,
 } from "../../../lib"
 import { getRouteLength } from "../../../lib/route-geometry"
-import capturedFixture from "../fixtures/cam-staggered-pads.json"
 
 test("escapes staggered CAM terminals at the requested pair gap", () => {
-  // Capture from Pipeline 9 after route cleanup, before pair post-processing.
-  const fixture = capturedFixture as unknown as PostProcessingSolverParams
+  const terminals = [
+    {
+      connectionName: "CAM_N",
+      centers: [
+        { x: -14, y: -0.3 },
+        { x: 9, y: -0.3 },
+      ],
+      padHeight: 0.25,
+    },
+    {
+      connectionName: "CAM_P",
+      centers: [
+        { x: -14, y: 0.3 },
+        { x: 14, y: 0.3 },
+      ],
+      padHeight: 0.25,
+    },
+    {
+      connectionName: "AUX",
+      centers: [
+        { x: -7.175, y: 6 },
+        { x: 7.175, y: 6 },
+      ],
+      padHeight: 0.95,
+    },
+  ]
+  const fixture: PostProcessingSolverParams = {
+    hdRoutes: terminals.map(({ connectionName, centers }) => ({
+      connectionName,
+      traceThickness: 0.15,
+      viaDiameter: 0.3,
+      route: centers.map(({ x, y }) => ({ x, y, z: 0 })),
+      vias: [],
+    })),
+    obstacles: terminals.flatMap(({ connectionName, centers, padHeight }) =>
+      centers.map((center) => ({
+        type: "rect",
+        center,
+        width: 0.8,
+        height: padHeight,
+        layers: ["top"],
+        connectedTo: [connectionName],
+      })),
+    ),
+    differentialPairs: [
+      {
+        connectionNames: ["CAM_P", "CAM_N"],
+        lengthTolerance: 0.05,
+        minimumCenterlineDistance: 0.4,
+        maximumCenterlineDistance: 0.4,
+      },
+    ],
+    bounds: { minX: -22.5, maxX: 22.5, minY: -12, maxY: 12 },
+    layerCount: 4,
+    minTraceToPadEdgeClearance: 0.1,
+  }
   const solver = new PostProcessingSolver(fixture)
   solver.solve()
   expect(solver.solved).toBe(true)
