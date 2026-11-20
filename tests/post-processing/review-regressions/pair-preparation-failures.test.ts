@@ -3,7 +3,7 @@ import {
   DifferentialPairRoutingError,
   type SimplifiedPcbTrace,
 } from "../../../lib"
-import { solveDifferentialPair } from "../../../lib/post-processing/routing/solveDifferentialPair"
+import { DifferentialPairRoutingSession } from "../../../lib/post-processing/routing/DifferentialPairRoutingSession"
 
 test("names every differential-pair preparation failure", () => {
   const createTrace = (
@@ -19,8 +19,8 @@ test("names every differential-pair preparation failure", () => {
       width: 0.2,
     })),
   })
-  const solve = (traces: SimplifiedPcbTrace[]): void => {
-    solveDifferentialPair({
+  const prepare = (traces: SimplifiedPcbTrace[]): void => {
+    new DifferentialPairRoutingSession({
       pair: { connectionNames: ["P", "N"], lengthTolerance: 0.01 },
       traces,
       obstacles: [],
@@ -58,7 +58,7 @@ test("names every differential-pair preparation failure", () => {
     ],
   ]) {
     try {
-      solve(traces)
+      prepare(traces)
     } catch (error) {
       if (!(error instanceof DifferentialPairRoutingError)) throw error
       failures.push(error)

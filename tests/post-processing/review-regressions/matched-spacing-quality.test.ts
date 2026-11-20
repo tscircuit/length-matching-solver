@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { getMinimumPairEdgeGap } from "../../../lib/post-processing/geometry/getMinimumPairEdgeGap"
-import { solveDifferentialPair } from "../../../lib/post-processing/routing/solveDifferentialPair"
+import { DifferentialPairRoutingSession } from "../../../lib/post-processing/routing/DifferentialPairRoutingSession"
 import { createPostProcessingTestParams } from "../createPostProcessingTestParams"
 
 test("prefers a requested centerline-distance range when rerouting a pair", () => {
@@ -21,13 +21,15 @@ test("prefers a requested centerline-distance range when rerouting a pair", () =
   const last = traces[1]!.route.at(-1)!
   if (last.route_type !== "wire") throw new Error("Expected endpoint wire")
   last.x = 9
-  const result = solveDifferentialPair({
+  const session = new DifferentialPairRoutingSession({
     pair: simpleRouteJson.differentialPairs[0]!,
     traces,
     obstacles: simpleRouteJson.obstacles,
     bounds: simpleRouteJson.bounds,
     layerCount: simpleRouteJson.layerCount,
   })
+  while (!session.isComplete()) session.step()
+  const result = session.getResult()
   if (result.status !== "accepted") throw new Error("Expected a rerouted pair")
   expect(result.candidate.centerlineDistance).toBeGreaterThanOrEqual(0.6)
   expect(result.candidate.centerlineDistance).toBeLessThanOrEqual(1.6)
