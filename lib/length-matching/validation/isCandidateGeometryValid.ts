@@ -1,5 +1,6 @@
 import { getTraceCopperGeometry } from "../../post-processing/model/getTraceCopperGeometry"
 import { getLayerName } from "../../post-processing/geometry/getLayerName"
+import { OBSTACLE_CONTACT_TOLERANCE } from "../../post-processing/geometry/segmentTouchesInflatedObstacle"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
 import type {
@@ -52,7 +53,7 @@ export const isCandidateGeometryValid = (input: {
           end,
           corner,
           corners[(index + 1) % corners.length]!,
-        ) === 0,
+        ) <= OBSTACLE_CONTACT_TOLERANCE,
     )
   }
   if (
@@ -130,10 +131,14 @@ export const isCandidateGeometryValid = (input: {
     const maxSegmentY = Math.max(start.y, end.y) + obstacleMargin
     for (const obstacle of input.obstacles) {
       if (
-        obstacle.center.x + obstacle.width / 2 < minSegmentX ||
-        obstacle.center.x - obstacle.width / 2 > maxSegmentX ||
-        obstacle.center.y + obstacle.height / 2 < minSegmentY ||
-        obstacle.center.y - obstacle.height / 2 > maxSegmentY
+        obstacle.center.x + obstacle.width / 2 <
+          minSegmentX - OBSTACLE_CONTACT_TOLERANCE ||
+        obstacle.center.x - obstacle.width / 2 >
+          maxSegmentX + OBSTACLE_CONTACT_TOLERANCE ||
+        obstacle.center.y + obstacle.height / 2 <
+          minSegmentY - OBSTACLE_CONTACT_TOLERANCE ||
+        obstacle.center.y - obstacle.height / 2 >
+          maxSegmentY + OBSTACLE_CONTACT_TOLERANCE
       )
         continue
       if (
