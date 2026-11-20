@@ -289,12 +289,15 @@ export class DifferentialPairRoutingSession {
       ),
     })
     const { maxUncoupledLength } = this.input.pair
-    // Mixed orientations can put a coupled segment inside a pad. Also try
-    // searching for clear escape stations before coupling the traces.
+    // When spacing is unspecified, keep the usual search for valid copper
+    // so the length matcher can tune the existing pad escapes.
     const terminalSearchModes: Array<"forward" | "fanout"> =
       maxUncoupledLength !== undefined
         ? ["fanout"]
-        : hasMixedTerminalOrientation
+        : hasMixedTerminalOrientation &&
+            (this.input.pair.minimumCenterlineDistance !== undefined ||
+              this.input.pair.maximumCenterlineDistance !== undefined ||
+              !validateCandidateGeometry(first, second, context))
           ? ["forward", "fanout"]
           : ["forward"]
     const sides = [preferredSide, preferredSide === 1 ? -1 : 1] as const
