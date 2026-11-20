@@ -28,9 +28,12 @@ test("post-processing honors declared pad clearance without changing legacy defa
   expect(longer!.route.map(({ x, y, z }) => [x, y, z])).toEqual(
     params.hdRoutes[0]!.route.map(({ x, y, z }) => [x, y, z]),
   )
-  const peaks = shorter!.route.filter((point, index, route) =>
-    index > 0 && index + 1 < route.length &&
-    point.y > route[index - 1]!.y && point.y > route[index + 1]!.y,
+  const peaks = shorter!.route.filter(
+    (point, index, route) =>
+      index > 0 &&
+      index + 1 < route.length &&
+      point.y > route[index - 1]!.y &&
+      point.y > route[index + 1]!.y,
   )
   expect(peaks).toHaveLength(2)
   expect(peaks[0]!.y).toBeCloseTo(peaks[1]!.y, 6)
