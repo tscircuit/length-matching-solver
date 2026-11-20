@@ -17,6 +17,7 @@ export type SegmentCandidate = {
   maximumDepth: number
   minimumHeight: number
   toothPitch: number
+  leadFraction?: number
   placement: MeanderPlacement
   heightProfile: MeanderHeightProfile
 }

@@ -9,6 +9,7 @@ export const getRegressionAttemptKey = (
     | "toothCount"
     | "placement"
     | "toothPitch"
+    | "leadFraction"
     | "heightProfile"
     | "maximumDepth"
     | "minimumHeight"
@@ -20,6 +21,7 @@ export const getRegressionAttemptKey = (
     attempt.toothCount,
     attempt.placement,
     attempt.toothPitch,
+    attempt.leadFraction ?? 0.5,
     attempt.heightProfile,
     attempt.maximumDepth,
     attempt.minimumHeight,

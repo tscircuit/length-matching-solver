@@ -268,6 +268,21 @@ export class LengthMatchingSolver extends BaseSolver {
                   activePair.pair.maximumCenterlineDistance,
               }),
     })
+    // A pad can block a centered lobe while leaving room farther along the segment.
+    if (
+      !activePair.plannedAttemptTargets &&
+      candidate.toothCount === 1 &&
+      candidate.leadFraction === undefined &&
+      candidate.toothPitch === candidate.segmentLength / 2 &&
+      this.currentAttempt.maximumToothDepths[0]! < candidate.maximumDepth &&
+      this.currentAttempt.maximumAddedLength + activePair.pair.lengthTolerance <
+        activePair.remainingAddedLength
+    ) {
+      activePair.candidates.push(
+        { ...candidate, leadFraction: 0.25 },
+        { ...candidate, leadFraction: 0.75 },
+      )
+    }
     this.candidatesTried++
     if (this.currentAttempt.invalidReason === "below-minimum-height")
       activePair.hasMinimumHeightBlockedAttempt = true

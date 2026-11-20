@@ -24,6 +24,12 @@ test("post-processing honors declared pad clearance without changing legacy defa
   expect(solver.solved).toBe(true)
   const output = solver.getOutput()
   expect(output.postProcessingErrors).toEqual([])
+  // Keep the tuning lobe on the outer side of the channel between pad columns.
+  const tuningRun = output.hdRoutes[1]!.route.filter(
+    (point) => point.x >= -2.85 && point.x <= 2.85,
+  )
+  expect(tuningRun.length).toBeGreaterThan(0)
+  expect(Math.min(...tuningRun.map((point) => point.y))).toBeGreaterThan(1.27)
   const lengths = output.hdRoutes.map((route, routeIndex) => {
     expect(route.route[0]).toEqual(params.hdRoutes[routeIndex]!.route[0])
     expect(route.route.at(-1)).toEqual(
