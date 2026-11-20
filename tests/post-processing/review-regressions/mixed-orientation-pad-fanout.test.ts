@@ -7,48 +7,34 @@ import { getRouteLength } from "../../../lib/route-geometry"
 
 test("escapes staggered CAM terminals within the requested pair gap range", () => {
   const terminals = [
-    {
-      connectionName: "CAM_N",
-      centers: [
-        { x: -14, y: -0.3 },
-        { x: 9, y: -0.3 },
-      ],
-      padHeight: 0.25,
-    },
-    {
-      connectionName: "CAM_P",
-      centers: [
-        { x: -14, y: 0.3 },
-        { x: 14, y: 0.3 },
-      ],
-      padHeight: 0.25,
-    },
+    { connectionName: "CAM_N", y: -0.3, startX: -14, endX: 9, padHeight: 0.25 },
+    { connectionName: "CAM_P", y: 0.3, startX: -14, endX: 14, padHeight: 0.25 },
     {
       connectionName: "AUX",
-      centers: [
-        { x: -7.175, y: 6 },
-        { x: 7.175, y: 6 },
-      ],
+      y: 6,
+      startX: -7.175,
+      endX: 7.175,
       padHeight: 0.95,
     },
   ]
   const fixture: PostProcessingSolverParams = {
-    hdRoutes: terminals.map(({ connectionName, centers }) => ({
+    hdRoutes: terminals.map(({ connectionName, y, startX, endX }) => ({
       connectionName,
       traceThickness: 0.15,
       viaDiameter: 0.3,
-      route: centers.map(({ x, y }) => ({ x, y, z: 0 })),
+      route: [startX, endX].map((x) => ({ x, y, z: 0 })),
       vias: [],
     })),
-    obstacles: terminals.flatMap(({ connectionName, centers, padHeight }) =>
-      centers.map((center) => ({
-        type: "rect",
-        center,
-        width: 0.8,
-        height: padHeight,
-        layers: ["top"],
-        connectedTo: [connectionName],
-      })),
+    obstacles: terminals.flatMap(
+      ({ connectionName, y, startX, endX, padHeight }) =>
+        [startX, endX].map((x) => ({
+          type: "rect",
+          center: { x, y },
+          width: 0.8,
+          height: padHeight,
+          layers: ["top"],
+          connectedTo: [connectionName],
+        })),
     ),
     differentialPairs: [
       {

@@ -16,7 +16,7 @@ type ResolveTerminalFanoutStationInput = {
   maxUncoupledLength?: number
   availableTravelDistance: number
   maximumTurnDegrees: number
-  innerGridStep: number
+  searchStep: number
   isValid: (station: CoupledPathPoint) => boolean
 }
 
@@ -48,33 +48,36 @@ export const resolveTerminalFanoutStation = (
       )
     }),
   )
-  const { maxUncoupledLength } = input
   const maximumTravelDistance =
-    maxUncoupledLength ?? input.availableTravelDistance
+    input.maxUncoupledLength ?? input.availableTravelDistance
   if (minimumTravelDistance > maximumTravelDistance + 1e-8) return null
-  const stationStep = Math.max(0.05, Math.min(0.25, input.innerGridStep / 2))
-  const searchDistance = maximumTravelDistance - minimumTravelDistance
-  const stationCount = Math.max(1, Math.ceil(searchDistance / stationStep) + 1)
-  for (let stationIndex = 0; stationIndex < stationCount; stationIndex++) {
+  const increment = Math.max(0.05, Math.min(0.25, input.searchStep / 2))
+  const attemptCount = Math.max(
+    1,
+    Math.ceil((maximumTravelDistance - minimumTravelDistance) / increment) + 1,
+  )
+  for (let attemptIndex = 0; attemptIndex < attemptCount; attemptIndex++) {
     const travelDistance = Math.min(
       maximumTravelDistance,
-      minimumTravelDistance + stationIndex * stationStep,
+      minimumTravelDistance + attemptIndex * increment,
     )
     const station = {
       x: input.anchor.x + input.escapeDirection.x * travelDistance,
       y: input.anchor.y + input.escapeDirection.y * travelDistance,
       layer: input.anchor.layer,
     }
-    const fanoutLengthsAreValid =
-      maxUncoupledLength === undefined ||
-      input.lanes.every(({ point, polarity }) => {
-        const laneOffset = (polarity * input.side * input.centerlineSpacing) / 2
-        const escapeLength = Math.hypot(
-          station.x + normal.x * laneOffset - point.x,
-          station.y + normal.y * laneOffset - point.y,
-        )
-        return escapeLength <= maxUncoupledLength + 1e-8
-      })
+    const fanoutLengthsAreValid = input.lanes.every(({ point, polarity }) => {
+      const laneOffset = (polarity * input.side * input.centerlineSpacing) / 2
+      const lanePoint = {
+        x: station.x + normal.x * laneOffset,
+        y: station.y + normal.y * laneOffset,
+      }
+      return (
+        input.maxUncoupledLength === undefined ||
+        Math.hypot(lanePoint.x - point.x, lanePoint.y - point.y) <=
+          input.maxUncoupledLength + 1e-8
+      )
+    })
     if (fanoutLengthsAreValid && input.isValid(station)) return station
   }
   return null
