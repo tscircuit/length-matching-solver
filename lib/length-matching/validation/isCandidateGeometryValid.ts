@@ -1,4 +1,3 @@
-import { getTraceCopperGeometry } from "../../post-processing/model/getTraceCopperGeometry"
 import { getLayerName } from "../../post-processing/geometry/getLayerName"
 import { getMinimumSegmentDistance } from "../../route-geometry"
 import { getObstacleLayerIndexes } from "../../obstacles/getObstacleLayerIndexes"
@@ -9,6 +8,7 @@ import type {
   SimplifiedPcbTraces,
 } from "../../types"
 import { getLogicalConnectionName } from "../connection-routes"
+import { getTraceCopperIndex } from "./getTraceCopperIndex"
 
 /** Check candidate bounds, obstacle clearance, and clearance from other connections. */
 export const isCandidateGeometryValid = (input: {
@@ -90,20 +90,22 @@ export const isCandidateGeometryValid = (input: {
       point.y - (start.y + progress * dy),
     )
   }
+  const originalRoute = input.route.route
+  const liesOnOriginalRoute = (point: RoutePoint): boolean => {
+    for (let index = 0; index < originalRoute.length - 1; index++) {
+      const start = originalRoute[index]!
+      const end = originalRoute[index + 1]!
+      if (start.z !== point.z || end.z !== point.z) continue
+      if (pointToSegmentDistance(point, start, end) <= 1e-9) return true
+    }
+    return false
+  }
   const hasNewGeometry = input.meanderPoints.some(
-    (point) =>
-      !input.route.route.slice(1).some((end, i): boolean => {
-        const start = input.route.route[i]!
-        return (
-          start.z === point.z &&
-          end.z === point.z &&
-          pointToSegmentDistance(point, start, end) <= 1e-9
-        )
-      }),
+    (point) => !liesOnOriginalRoute(point),
   )
-  const traceCopperGeometry = (input.traces ?? []).map((trace) =>
-    getTraceCopperGeometry(trace, input.layerCount),
-  )
+  const traceCopperIndex = input.traces
+    ? getTraceCopperIndex(input.traces, input.layerCount)
+    : null
   const connectionName = getLogicalConnectionName(input.route)
   const obstacleMargin = input.route.traceThickness / 2 + input.obstacleMargin
   for (let index = 0; index < input.meanderPoints.length - 1; index++) {
@@ -111,14 +113,14 @@ export const isCandidateGeometryValid = (input: {
     const end = input.meanderPoints[index + 1]!
     // A replacement includes unchanged straight leads. Preserve their existing
     // clearance state; only newly introduced copper is subject to this check.
-    const isRetainedSegment = input.route.route
-      .slice(1)
-      .some((originalEnd, i): boolean => {
-        const originalStart = input.route.route[i]!
+    const isRetainedSegment =
+      start.z === end.z &&
+      originalRoute.some((originalStart, originalIndex): boolean => {
+        const originalEnd = originalRoute[originalIndex + 1]
+        if (!originalEnd) return false
+        if (originalStart.z !== start.z) return false
+        if (originalEnd.z !== end.z) return false
         return (
-          start.z === end.z &&
-          originalStart.z === start.z &&
-          originalEnd.z === end.z &&
           pointToSegmentDistance(start, originalStart, originalEnd) <= 1e-9 &&
           pointToSegmentDistance(end, originalStart, originalEnd) <= 1e-9
         )
@@ -148,9 +150,9 @@ export const isCandidateGeometryValid = (input: {
         return false
     }
     const layer = getLayerName(start.z, input.layerCount)
-    for (const { segments, vias } of traceCopperGeometry) {
-      for (const segment of segments) {
-        if (segment.layer !== layer) continue
+    const layerSegments = traceCopperIndex?.segmentsByLayer.get(layer)
+    if (layerSegments)
+      for (const segment of layerSegments) {
         const radius = segment.width / 2
         if (
           Math.max(segment.start.x, segment.end.x) + radius < minSegmentX ||
@@ -165,8 +167,9 @@ export const isCandidateGeometryValid = (input: {
         )
           return false
       }
-      for (const via of vias) {
-        if (!via.layers.includes(layer)) continue
+    const layerVias = traceCopperIndex?.viasByLayer.get(layer)
+    if (layerVias)
+      for (const via of layerVias) {
         const radius = via.diameter / 2
         if (
           via.x + radius < minSegmentX ||
@@ -181,7 +184,6 @@ export const isCandidateGeometryValid = (input: {
         )
           return false
       }
-    }
     for (const otherRoute of input.routedRoutes) {
       const sameConnection =
         getLogicalConnectionName(otherRoute) === connectionName
