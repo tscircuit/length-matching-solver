@@ -27,7 +27,10 @@ test("post-processes a pair with an isolated four-layer stitching via", () => {
   solver.solve()
   expect(solver.solved).toBe(true)
   expect(solver.getOutput().postProcessingErrors).toEqual([])
-  const { segments, vias } = getTraceCopperGeometry(stitchingVia, params.layerCount)
+  const { segments, vias } = getTraceCopperGeometry(
+    stitchingVia,
+    params.layerCount,
+  )
   expect(segments).toHaveLength(0)
   expect(vias).toMatchObject([
     {
