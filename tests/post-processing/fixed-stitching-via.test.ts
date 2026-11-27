@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { PostProcessingSolver, type SimplifiedPcbTrace } from "../../lib"
+import { getTraceCopperGeometry } from "../../lib/post-processing/model/getTraceCopperGeometry"
 import { createPostProcessingTestParams } from "./createPostProcessingTestParams"
 
 test("post-processes a pair with an isolated four-layer stitching via", () => {
@@ -23,6 +24,18 @@ test("post-processes a pair with an isolated four-layer stitching via", () => {
     ],
   }
   const solver = new PostProcessingSolver({ ...params, traces: [stitchingVia] })
-  expect(() => solver.solve()).toThrow("discontinuous via")
-  expect(solver.initialVisualize()).toMatchGraphicsSvg(import.meta.path)
+  solver.solve()
+  expect(solver.solved).toBe(true)
+  expect(solver.getOutput().postProcessingErrors).toEqual([])
+  const { segments, vias } = getTraceCopperGeometry(stitchingVia, params.layerCount)
+  expect(segments).toHaveLength(0)
+  expect(vias).toMatchObject([
+    {
+      x: 5,
+      y: 0,
+      diameter: 0.45,
+      layers: ["top", "inner1", "inner2", "bottom"],
+    },
+  ])
+  expect(solver.finalVisualize()).toMatchGraphicsSvg(import.meta.path)
 })
