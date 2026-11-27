@@ -101,6 +101,8 @@ export const getTraceCopperGeometry = (
               ? "end"
               : null,
       })
+      // A standalone stitching via contributes only its barrel.
+      if (trace.route.length === 1) continue
       const nextWire = trace.route
         .slice(index + 1)
         .find((candidate) => candidate.route_type === "wire")
